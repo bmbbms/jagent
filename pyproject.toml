@@ -1,0 +1,29 @@
+[project]
+name = "acquiring-ai"
+version = "0.1.0"
+description = "Phase 1 MVP for the acquiring AI intelligent service system."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "pydantic-settings>=2.10.0",
+  "sqlalchemy>=2.0.0",
+]
+
+[project.optional-dependencies]
+ai = [
+  "agno>=1.8.0",
+  "openai>=1.99.0",
+]
+mysql = [
+  "pymysql>=1.1.0",
+]
+dev = [
+  "pytest>=8.4.0",
+  "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
