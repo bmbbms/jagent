@@ -4,7 +4,12 @@ from collections import defaultdict
 from typing import DefaultDict, Dict, List, Optional
 
 from app.agents.base import CapabilityAgent, match_capabilities
-from app.registry.base import CapabilityMetadata, CapabilityRegistrar, CapabilityResolver
+from app.registry.base import (
+    CapabilityMetadata,
+    CapabilityRegistrar,
+    CapabilityResolver,
+    CapabilityRoutePlan,
+)
 from app.schemas import BizDomain, ChatRequest
 
 
@@ -32,6 +37,19 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             return matched[0]
         raise ValueError(f"No registered capability for domain: {request.biz_domain}")
 
+    def explain_route(self, request: ChatRequest) -> CapabilityRoutePlan:
+        candidates = self._capabilities.get(request.biz_domain, [])
+        matched = match_capabilities(request, candidates)
+        if not matched:
+            raise ValueError(f"No registered capability for domain: {request.biz_domain}")
+        return CapabilityRoutePlan(
+            selected=self._to_metadata(matched[0]),
+            candidates=[self._to_metadata(item) for item in candidates],
+            matched=[self._to_metadata(item) for item in matched],
+            selected_agent=matched[0],
+            reason="Selected first matched capability after priority sorting.",
+        )
+
     def list_capabilities(self, biz_domain: Optional[BizDomain] = None) -> List[str]:
         if biz_domain is not None:
             return [item.definition.capability_id for item in self._capabilities[biz_domain]]
@@ -45,15 +63,15 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             if biz_domain is not None
             else list(self._all_by_id.values())
         )
-        return [
-            CapabilityMetadata(
-                capability_id=agent.definition.capability_id,
-                capability_name=agent.definition.name,
-                biz_domain=agent.definition.biz_domain,
-                description=agent.definition.description,
-                priority=agent.definition.priority,
-                triggers=agent.definition.triggers,
-                skills=agent.definition.skills,
-            )
-            for agent in agents
-        ]
+        return [self._to_metadata(agent) for agent in agents]
+
+    def _to_metadata(self, agent: CapabilityAgent) -> CapabilityMetadata:
+        return CapabilityMetadata(
+            capability_id=agent.definition.capability_id,
+            capability_name=agent.definition.name,
+            biz_domain=agent.definition.biz_domain,
+            description=agent.definition.description,
+            priority=agent.definition.priority,
+            triggers=agent.definition.triggers,
+            skills=agent.definition.skills,
+        )

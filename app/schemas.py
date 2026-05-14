@@ -20,6 +20,16 @@ class ChatRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class RoutingTrace(BaseModel):
+    requested_domain: BizDomain
+    selected_capability_id: str
+    candidate_capability_ids: List[str] = Field(default_factory=list)
+    matched_capability_ids: List[str] = Field(default_factory=list)
+    declared_skills: List[str] = Field(default_factory=list)
+    strategy: str = "priority_trigger_match"
+    reason: str = ""
+
+
 class ChatResponse(BaseModel):
     domain: BizDomain
     capability_id: str
@@ -33,6 +43,7 @@ class ChatResponse(BaseModel):
     workflow: Optional[str] = None
     audit_tags: List[str] = Field(default_factory=list)
     approval_id: Optional[str] = None
+    routing_trace: Optional[RoutingTrace] = None
 
 
 class ApprovalDecision(str, Enum):

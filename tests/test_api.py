@@ -51,6 +51,9 @@ def test_chat_merchant() -> None:
     assert body["domain"] == "merchant"
     assert body["capability_id"] == "merchant.qa"
     assert body["approval_id"] is None
+    assert body["routing_trace"]["selected_capability_id"] == "merchant.qa"
+    assert "merchant.qa" in body["routing_trace"]["matched_capability_ids"]
+    assert "merchant_qa" in body["routing_trace"]["declared_skills"]
 
 
 def test_chat_operations_creates_approval() -> None:
@@ -67,6 +70,7 @@ def test_chat_operations_creates_approval() -> None:
     assert body["capability_id"] == "operations.quota_review"
     assert body["requires_approval"] is True
     assert body["approval_id"] is not None
+    assert body["routing_trace"]["selected_capability_id"] == "operations.quota_review"
 
 
 def test_knowledge_search() -> None:

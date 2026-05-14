@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Iterable, List, Optional
 
 from app.agents.base import CapabilityAgent
-from app.registry.base import CapabilityMetadata, CapabilityRegistrar, CapabilityResolver
+from app.registry.base import (
+    CapabilityMetadata,
+    CapabilityRegistrar,
+    CapabilityResolver,
+    CapabilityRoutePlan,
+)
 from app.schemas import BizDomain, ChatRequest
 
 
@@ -37,6 +42,17 @@ class CompositeCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             for registry in self._secondary_registries:
                 try:
                     return registry.resolve(request)
+                except Exception:
+                    continue
+            raise
+
+    def explain_route(self, request: ChatRequest) -> CapabilityRoutePlan:
+        try:
+            return self._local_registry.explain_route(request)
+        except Exception:
+            for registry in self._secondary_registries:
+                try:
+                    return registry.explain_route(request)
                 except Exception:
                     continue
             raise

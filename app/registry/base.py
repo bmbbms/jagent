@@ -30,6 +30,16 @@ class CapabilityMetadata:
     extras: Dict[str, str] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class CapabilityRoutePlan:
+    selected: CapabilityMetadata
+    candidates: List[CapabilityMetadata] = field(default_factory=list)
+    matched: List[CapabilityMetadata] = field(default_factory=list)
+    selected_agent: Optional[CapabilityAgent] = None
+    strategy: str = "priority_trigger_match"
+    reason: str = ""
+
+
 class CapabilityRegistrar(ABC):
     @abstractmethod
     def register_local(self, agent: CapabilityAgent) -> None:
@@ -50,3 +60,32 @@ class CapabilityResolver(ABC):
         self, biz_domain: Optional[BizDomain] = None
     ) -> List[CapabilityMetadata]:
         raise NotImplementedError
+
+    def explain_route(self, request: ChatRequest) -> CapabilityRoutePlan:
+        selected_agent = self.resolve(request)
+        selected = self._metadata_from_agent(selected_agent)
+        candidates = self.describe_capabilities(request.biz_domain)
+        matched = [
+            item
+            for item in candidates
+            if not item.triggers
+            or any(trigger.lower() in request.message.lower() for trigger in item.triggers)
+        ]
+        return CapabilityRoutePlan(
+            selected=selected,
+            candidates=candidates,
+            matched=matched or candidates,
+            selected_agent=selected_agent,
+            reason="Selected by resolver priority and trigger matching.",
+        )
+
+    def _metadata_from_agent(self, agent: CapabilityAgent) -> CapabilityMetadata:
+        return CapabilityMetadata(
+            capability_id=agent.definition.capability_id,
+            capability_name=agent.definition.name,
+            biz_domain=agent.definition.biz_domain,
+            description=agent.definition.description,
+            priority=agent.definition.priority,
+            triggers=agent.definition.triggers,
+            skills=agent.definition.skills,
+        )
