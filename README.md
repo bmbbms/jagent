@@ -68,3 +68,26 @@ uvicorn app.main:app --reload
 - 知识检索仍是内存样例数据
 - Nacos 和远程 capability 仍未做真实联调
 - 暂未引入 Alembic 迁移，当前依赖自动建表
+
+## Extension model
+
+Business capabilities are provided by Agent modules instead of being hard-coded
+in the platform. The default module package is `app.agents.capabilities`.
+
+Each module defines one or more `CapabilityAgent` classes and registers them
+with `@register_capability`. The platform imports configured packages on
+startup and publishes registered capability metadata to the local registry and,
+when enabled, to Nacos.
+
+To add an internal business Agent:
+
+1. Create a Python package that contains `CapabilityAgent` implementations.
+2. Decorate each implementation with `@register_capability`.
+3. Add the package to `ACQUIRING_AI_CAPABILITY_MODULE_PACKAGES`.
+4. Add matching skill files under `app/skills/{domain}/{skill_id}/SKILL.md`, or
+   point `ACQUIRING_AI_SKILL_ROOT` to another skill directory.
+
+Skill metadata is loaded from disk and exposed through:
+
+- `GET /api/skills`
+- `GET /api/skills?biz_domain=merchant`

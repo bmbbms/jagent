@@ -53,6 +53,7 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
                 description=agent.definition.description,
                 priority=agent.definition.priority,
                 triggers=agent.definition.triggers,
+                skills=agent.definition.skills,
             )
             for agent in agents
         ]

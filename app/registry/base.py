@@ -16,6 +16,7 @@ class CapabilityMetadata:
     description: str
     priority: int
     triggers: List[str] = field(default_factory=list)
+    skills: List[str] = field(default_factory=list)
     version: str = "v1"
     risk_level: str = "low"
     requires_approval: bool = False

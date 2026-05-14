@@ -11,9 +11,13 @@ class Settings(BaseSettings):
     debug: bool = True
     api_prefix: str = "/api"
     capability_registry_backend: str = "local"
+    capability_module_packages: List[str] = Field(
+        default_factory=lambda: ["app.agents.capabilities"]
+    )
     enabled_domains: List[str] = Field(
         default_factory=lambda: ["merchant", "operations", "data_support"]
     )
+    skill_root: str = "app/skills"
 
     database_enabled: bool = True
     database_url: str = "sqlite+pysqlite:///./acquiring_ai.db"

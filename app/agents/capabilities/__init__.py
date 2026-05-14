@@ -1,5 +1,6 @@
-"""Import capability modules to trigger self-registration."""
+"""Built-in capability Agent package.
 
-from app.agents.capabilities import data  # noqa: F401
-from app.agents.capabilities import merchant  # noqa: F401
-from app.agents.capabilities import operations  # noqa: F401
+Modules in this package are loaded by ``app.agents.loader`` according to
+``ACQUIRING_AI_CAPABILITY_MODULE_PACKAGES``. Each module owns its Agent
+registration via the ``@register_capability`` decorator.
+"""

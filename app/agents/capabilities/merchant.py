@@ -14,6 +14,7 @@ class MerchantQaAgent(CapabilityAgent):
         biz_domain=BizDomain.merchant,
         description="面向商户常见问题的知识问答能力",
         triggers=["规则", "流程", "怎么", "faq", "问答", "咨询"],
+        skills=["merchant_qa"],
         priority=10,
     )
 
@@ -41,6 +42,7 @@ class MerchantIssueHandlingAgent(CapabilityAgent):
         biz_domain=BizDomain.merchant,
         description="面向商户问题分类与处理建议的能力",
         triggers=["问题", "异常", "失败", "工单", "差错", "冻结", "处理"],
+        skills=["merchant_issue_handling"],
         priority=20,
     )
 
@@ -68,6 +70,7 @@ class MerchantOpsAnalysisAgent(CapabilityAgent):
         biz_domain=BizDomain.merchant,
         description="面向商户经营分析和交易表现解读的能力",
         triggers=["经营", "分析", "交易", "增长", "gmv", "退款"],
+        skills=["merchant_ops_analysis"],
         priority=30,
     )
 

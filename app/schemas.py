@@ -101,6 +101,16 @@ class CapabilityInfo(BaseModel):
     description: str
     priority: int
     triggers: List[str] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+
+
+class SkillInfo(BaseModel):
+    skill_id: str
+    biz_domain: BizDomain
+    name: str
+    path: str
+    purpose: str = ""
+    when_to_use: List[str] = Field(default_factory=list)
 
 
 class AuditEventResponse(BaseModel):

@@ -56,5 +56,6 @@ def _proxy_definition(metadata: CapabilityMetadata):
         biz_domain=metadata.biz_domain,
         description=metadata.description,
         triggers=metadata.triggers,
+        skills=metadata.skills,
         priority=metadata.priority,
     )

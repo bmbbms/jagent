@@ -14,6 +14,7 @@ class QuotaReviewAgent(CapabilityAgent):
         biz_domain=BizDomain.operations,
         description="面向调额审核辅助的能力",
         triggers=["调额", "额度", "提额", "限额"],
+        skills=["quota_review"],
         priority=10,
     )
 
@@ -41,6 +42,7 @@ class OnboardingReviewAgent(CapabilityAgent):
         biz_domain=BizDomain.operations,
         description="面向商户入网审核辅助的能力",
         triggers=["入网", "准入", "开户"],
+        skills=["merchant_onboarding_review"],
         priority=20,
     )
 
@@ -68,6 +70,7 @@ class MerchantChangeReviewAgent(CapabilityAgent):
         biz_domain=BizDomain.operations,
         description="面向商户变更审核辅助的能力",
         triggers=["变更", "修改", "更新资料"],
+        skills=["merchant_change_review"],
         priority=30,
     )
 

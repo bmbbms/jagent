@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.agents.loader import load_capability_modules
 from app.agents.router import RouterAgent
 from app.config import get_settings
 from app.db.init_db import init_db
@@ -59,7 +60,7 @@ def get_capability_registry() -> CompositeCapabilityRegistry:
     )
     set_active_registrar(registry)
 
-    import app.agents.capabilities  # noqa: F401
+    load_capability_modules(settings.capability_module_packages)
 
     return registry
 
@@ -102,4 +103,5 @@ def get_knowledge_service() -> KnowledgeService:
 
 @lru_cache
 def get_skill_registry() -> SkillRegistry:
-    return SkillRegistry()
+    settings = get_settings()
+    return SkillRegistry.from_directory(settings.skill_root)

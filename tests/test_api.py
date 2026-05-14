@@ -24,7 +24,17 @@ def test_capabilities() -> None:
     response = client.get("/api/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert any(item["capability_id"] == "merchant.qa" for item in body)
+    merchant_qa = next(item for item in body if item["capability_id"] == "merchant.qa")
+    assert "merchant_qa" in merchant_qa["skills"]
+
+
+def test_skills() -> None:
+    response = client.get("/api/skills", params={"biz_domain": "merchant"})
+    assert response.status_code == 200
+    body = response.json()
+    skill_ids = {item["skill_id"] for item in body}
+    assert "merchant_qa" in skill_ids
+    assert "merchant_ops_analysis" in skill_ids
 
 
 def test_chat_merchant() -> None:

@@ -14,6 +14,7 @@ class CapabilityDefinition:
     biz_domain: BizDomain
     description: str
     triggers: List[str] = field(default_factory=list)
+    skills: List[str] = field(default_factory=list)
     priority: int = 100
 
     def matches(self, request: ChatRequest) -> bool:

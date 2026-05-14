@@ -20,6 +20,7 @@ def list_capabilities(
             description=item.description,
             priority=item.priority,
             triggers=item.triggers,
+            skills=item.skills,
         )
         for item in registry.describe_capabilities(biz_domain)
     ]

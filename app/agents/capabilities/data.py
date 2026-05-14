@@ -14,6 +14,7 @@ class DirectSalesDataAgent(CapabilityAgent):
         biz_domain=BizDomain.data_support,
         description="面向直营销售数据查询与分析的能力",
         triggers=["销售", "直营", "指标", "数据", "业绩"],
+        skills=["direct_sales_data_assistant"],
         priority=10,
     )
 
@@ -41,6 +42,7 @@ class ComplianceReportAgent(CapabilityAgent):
         biz_domain=BizDomain.data_support,
         description="面向固定合规报表生成与口径解释的能力",
         triggers=["报表", "监管", "合规", "导出"],
+        skills=["compliance_report_generation"],
         priority=20,
     )
 
