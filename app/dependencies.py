@@ -14,6 +14,9 @@ from app.registry.nacos_registry import NacosCapabilityRegistry
 from app.repositories.approval_repository import ApprovalRepository
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
+from app.runtimes.agno import AgnoAgentRuntime
+from app.runtimes.base import AgentRuntime
+from app.runtimes.local import LocalAgentRuntime
 from app.services.approval_service import ApprovalService
 from app.services.audit_service import AuditService
 from app.services.chat_service import ChatService
@@ -67,7 +70,18 @@ def get_capability_registry() -> CompositeCapabilityRegistry:
 
 @lru_cache
 def get_router_agent() -> RouterAgent:
-    return RouterAgent(capability_resolver=get_capability_registry())
+    return RouterAgent(
+        capability_resolver=get_capability_registry(),
+        runtime=get_agent_runtime(),
+    )
+
+
+@lru_cache
+def get_agent_runtime() -> AgentRuntime:
+    settings = get_settings()
+    if settings.agent_runtime == "agno":
+        return AgnoAgentRuntime()
+    return LocalAgentRuntime()
 
 
 @lru_cache

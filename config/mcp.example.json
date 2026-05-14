@@ -1,0 +1,11 @@
+{
+  "servers": [
+    {
+      "name": "internal-knowledge",
+      "enabled": false,
+      "transport": "stdio",
+      "command": "python",
+      "args": ["-m", "internal_mcp.knowledge"]
+    }
+  ]
+}

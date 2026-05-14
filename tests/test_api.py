@@ -54,6 +54,7 @@ def test_chat_merchant() -> None:
     assert body["routing_trace"]["selected_capability_id"] == "merchant.qa"
     assert "merchant.qa" in body["routing_trace"]["matched_capability_ids"]
     assert "merchant_qa" in body["routing_trace"]["declared_skills"]
+    assert "Runtime=agno" in body["routing_trace"]["reason"]
 
 
 def test_chat_operations_creates_approval() -> None:
