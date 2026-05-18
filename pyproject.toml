@@ -9,12 +9,13 @@ dependencies = [
   "uvicorn[standard]>=0.35.0",
   "pydantic-settings>=2.10.0",
   "sqlalchemy>=2.0.0",
+  "alembic>=1.16.0",
   "redis>=5.0.0",
 ]
 
 [project.optional-dependencies]
 ai = [
-  "agno>=1.8.0",
+  "agentscope>=0.0.15",
   "openai>=1.99.0",
 ]
 postgres = [
@@ -35,3 +36,9 @@ dev = [
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]

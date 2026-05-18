@@ -23,6 +23,8 @@ def home(
             "/health",
             f"{settings.api_prefix}/chat",
             f"{settings.api_prefix}/capabilities",
+            f"{settings.api_prefix}/external-agents",
+            f"{settings.api_prefix}/workflows",
             f"{settings.api_prefix}/knowledge/search",
             f"{settings.api_prefix}/approvals",
             f"{settings.api_prefix}/audit",

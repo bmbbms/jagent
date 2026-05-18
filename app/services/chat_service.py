@@ -36,7 +36,11 @@ class ChatService:
                 conversation_id=conversation_id,
                 role="user",
                 content=user_message,
-                metadata_json={},
+                metadata_json={
+                    "user_id": user_id,
+                    "message_phase": "user_input",
+                    "msg_type": "text",
+                },
             )
             self._repository.create_message(
                 session,

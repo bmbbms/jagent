@@ -31,6 +31,19 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         )
 
     def resolve(self, request: ChatRequest) -> CapabilityAgent:
+        requested_agent_id = str(request.metadata.get("requested_agent_id") or "").strip()
+        if requested_agent_id:
+            agent = self._all_by_id.get(requested_agent_id)
+            if agent is None:
+                raise ValueError(
+                    f"Requested local capability not found: {requested_agent_id}"
+                )
+            if agent.definition.biz_domain != request.biz_domain:
+                raise ValueError(
+                    "Requested local capability domain mismatch: "
+                    f"{requested_agent_id} != {request.biz_domain.value}"
+                )
+            return agent
         candidates = self._capabilities.get(request.biz_domain, [])
         matched = match_capabilities(request, candidates)
         if matched:
@@ -39,6 +52,16 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
 
     def explain_route(self, request: ChatRequest) -> CapabilityRoutePlan:
         candidates = self._capabilities.get(request.biz_domain, [])
+        requested_agent_id = str(request.metadata.get("requested_agent_id") or "").strip()
+        if requested_agent_id:
+            selected = self.resolve(request)
+            return CapabilityRoutePlan(
+                selected=self._to_metadata(selected),
+                candidates=[self._to_metadata(item) for item in candidates],
+                matched=[self._to_metadata(selected)],
+                selected_agent=selected,
+                reason="Selected by requested_agent_id in local registry.",
+            )
         matched = match_capabilities(request, candidates)
         if not matched:
             raise ValueError(f"No registered capability for domain: {request.biz_domain}")

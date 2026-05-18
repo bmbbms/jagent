@@ -2,87 +2,119 @@
 
 ## 当前已完成
 
-### 1. 方案与实施文档
-
-- 整体规划
-- 架构分层
-- 一期范围与路线图
-- 实施分解
-- WBS 与推进计划
-- 场景、Skill、审批、Tool、知识源模板
-
-### 2. 一期工程骨架
+### 1. 平台主工程骨架
 
 - FastAPI 主服务
 - `/health`
 - `/api/chat`
+- `/api/capabilities`
+- `/api/skills`
 - `/api/knowledge/search`
 - `/api/approvals`
 - `/api/approvals/{approval_id}/decision`
-- 主控路由 + 业务能力 Agent 注册机制
-- registry 抽象层、Nacos 注册发现、远程代理骨架
+- `/api/audit`
+- `/api/tasks`
+- `/api/tasks/{task_id}`
+- `/api/tasks/{task_id}/events/stream`
+- `/api/evaluations`
+- `/api/evaluations/{evaluation_id}`
 
-### 3. 一期三条业务线骨架
+### 2. 业务 Agent 注册发现
 
-- 商户AI
-- 运营支持
-- 数据支持
+当前已注册的一期业务能力：
 
-### 3.1 已注册的一期业务能力
+- `merchant.qa`
+- `merchant.issue_handling`
+- `merchant.ops_analysis`
+- `operations.quota_review`
+- `operations.onboarding_review`
+- `operations.merchant_change_review`
+- `data_support.direct_sales_data`
+- `data_support.compliance_report`
 
-- merchant.qa
-- merchant.issue_handling
-- merchant.ops_analysis
-- operations.quota_review
-- operations.onboarding_review
-- operations.merchant_change_review
-- data_support.direct_sales_data
-- data_support.compliance_report
+### 3. Skill 目录化
 
-### 4. 一期首批技能占位
+当前已加载 Skill：
 
-- merchant_qa
-- merchant_issue_handling
-- quota_review
-- merchant_onboarding_review
-- merchant_change_review
-- direct_sales_data_assistant
-- compliance_report_generation
+- `merchant_qa`
+- `merchant_issue_handling`
+- `merchant_ops_analysis`
+- `quota_review`
+- `merchant_onboarding_review`
+- `merchant_change_review`
+- `direct_sales_data_assistant`
+- `compliance_report_generation`
+
+### 4. 运行时主线
+
+- Runtime 默认值已切到 `AgentScope`
+- `RouterAgent` 已通过运行时边界执行业务 Agent
+- 响应中已带 `routing_trace`
+
+### 5. 任务实时展示闭环
+
+当前已经完成：
+
+- `task` 创建
+- `task event` 记录
+- `artifact` 记录
+- `SSE` 实时事件流
+
+已实现事件：
+
+- `task_created`
+- `agent_selected`
+- `agent_started`
+- `thought_generated`
+- `tool_call_started`
+- `tool_call_finished`
+- `mcp_call_started`
+- `mcp_call_finished`
+- `approval_requested`
+- `approval_finished`
+- `final_response`
+- `artifact_generated`
+- `heartbeat`
+- `task_completed`
+
+### 6. 审批、审计与评估
+
+- 高风险任务可创建审批单
+- 审批结果可回写任务状态与时间线
+- 审计事件可查询
+- 每次任务完成后自动生成在线评估结果
+- 评估详情与优化建议可查询
+
+### 7. MCP 最小接入
+
+- 可从配置识别 MCP 工具
+- 可走统一 `MCPService` 调用入口
+- 可在任务时间线中看到真实 `mcp_call_started / mcp_call_finished`
 
 ## 当前实现边界
 
-当前版本是“一期 MVP 骨架”，主要用于：
+当前版本已经不是最初的“接口骨架”，而是“可运行的一期平台样机”。
 
-- 固化项目目录
-- 固化接口边界
-- 固化主平台与业务能力的解耦边界
-- 为后续接数据库、模型、审批流和内部系统提供落点
+但仍有这些边界：
 
-当前尚未完成：
+- `AgentScope runtime` 还不是完整 AgentScope 编排执行器
+- `MCPService` 还是最小桥接器，不是完整 MCP 客户端
+- 生产目标数据库是 `MySQL 8.0`，但当前仍保留 `SQLite` 开发兜底
+- Alembic 迁移尚未接入
+- Redis 还没有全面接管事件分发与运行态缓存
+- 外部向量检索尚未落地
 
-- 真实 Agno 接入
-- 数据库存储
-- 企业统一认证
-- 企业内部系统联调
-- 真正的审批中心
-- 真正的知识库和向量检索
-- 真实 Nacos 客户端通信与远程 capability 调用
-- 真实远程 capability 服务拆分与多实例负载策略
+## 下一步建议顺序
 
-## 下一步建议实施顺序
+1. 接入 Alembic，冻结 MySQL 8.0 正式库表
+2. 继续把历史文档统一到 AgentScope / MySQL 8.0 最新口径
+3. 将 AgentScope runtime 升级为真实执行器
+4. 将 MCPService 升级为完整 MCP 客户端
+5. 引入 Redis 事件总线与运行态缓存
+6. 深化 Workflow / Risk / Approval 治理链路
 
-1. 接入 PostgreSQL，落地审批、审计、会话表
-2. 接入企业统一认证与 RBAC
-3. 接入 Agno 和模型推理
-4. 接入首批只读 Tool
-5. 接入知识源与搜索
-6. 接入调额审核真实审批流
+## 当前平台状态判断
 
-## 适合作为下个迭代的具体任务
+如果按一期阶段划分，当前状态可以定义为：
 
-- 持久化 approval tasks
-- 持久化 audit logs
-- 把 `/api/chat` 的规则路由替换为 Agno Router
-- 把知识检索替换为真实 Knowledge/RAG
-- 把运营支持 workflow 拆成独立模块
-- 补齐 Nacos 注册、心跳、查询和远程 capability 代理
+`一期平台样机已跑通主闭环，正在从骨架期进入可联调期。`

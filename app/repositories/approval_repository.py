@@ -10,7 +10,7 @@ from app.schemas import ApprovalStatus, ApprovalTask, BizDomain, CreateApprovalR
 
 class ApprovalRepository:
     def list_tasks(self, session: Session) -> List[ApprovalTask]:
-        items = session.query(ApprovalTaskModel).order_by(ApprovalTaskModel.created_at.desc()).all()
+        items = session.query(ApprovalTaskModel).order_by(ApprovalTaskModel.create_time.desc()).all()
         return [self._to_schema(item) for item in items]
 
     def get_task(self, session: Session, approval_id: str) -> ApprovalTask | None:
@@ -25,13 +25,16 @@ class ApprovalRepository:
     ) -> ApprovalTask:
         model = ApprovalTaskModel(
             approval_id=approval_id,
+            task_id=request.payload.get("task_id"),
             title=request.title,
             biz_domain=request.biz_domain.value,
+            approval_type=request.payload.get("approval_type", "manual_review"),
+            reason=request.payload.get("reason"),
             status=ApprovalStatus.pending.value,
             risk_level=request.risk_level,
             requested_by=request.requested_by,
             capability_id=request.capability_id,
-            workflow=request.workflow,
+            workflow_code=request.workflow,
             payload=request.payload,
         )
         session.add(model)
@@ -65,7 +68,7 @@ class ApprovalRepository:
                 risk_level="high",
                 requested_by="system",
                 capability_id="operations.quota_review",
-                workflow="quota_review",
+                workflow_code="quota_review",
                 payload={"seed": True},
             )
         )
@@ -79,6 +82,6 @@ class ApprovalRepository:
             risk_level=model.risk_level,
             requested_by=model.requested_by,
             capability_id=model.capability_id,
-            workflow=model.workflow,
+            workflow=model.workflow_code,
             payload=model.payload or {},
         )

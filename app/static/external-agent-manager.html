@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>外部 Agent 管理</title>
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --panel: #fffdf9;
+      --panel-soft: #fbf6ef;
+      --line: #e1d4c4;
+      --text: #251d17;
+      --muted: #756759;
+      --accent: #b15f33;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --danger: #b64133;
+      --shadow: 0 18px 40px rgba(79, 43, 17, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, #fff6ec 0, #fff6ec 18%, transparent 19%),
+        linear-gradient(180deg, #faf4ec 0%, var(--bg) 100%);
+    }
+    a { color: inherit; text-decoration: none; }
+    .page { max-width: 1500px; margin: 0 auto; padding: 24px; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 10px 0 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav a, button {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 460px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 { margin: 0 0 14px; font-size: 18px; }
+    .panel + .panel { margin-top: 18px; }
+    .form-grid, .cards, .kv { display: grid; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: 13px; color: var(--muted); font-weight: 700; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }
+    .field textarea { min-height: 92px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .hint, .subtle, .empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .status, .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #72563d;
+    }
+    .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
+    .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
+    .danger { background: rgba(182, 65, 51, 0.14); color: var(--danger); }
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .card-title { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.5; }
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .kv-item {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(226, 213, 195, 0.92);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+    .kv-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .kv-label { color: var(--muted); }
+    .kv-value { word-break: break-word; }
+    .payload {
+      background: var(--panel-soft);
+      border-radius: 14px;
+      padding: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      margin: 0;
+    }
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>外部 Agent 管理</h1>
+        <p>支持按 URL 自动发现和添加通用外部 Agent。当前优先支持 A2A Agent Card 自动发现，也支持保留手工指定业务域、触发词、优先级和技能，用于接入企业内部或第三方智能体服务。</p>
+      </div>
+      <div class="nav">
+        <a href="/ui/tasks">任务面板</a>
+        <a href="/api/external-agents">外部 Agent API</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <section class="panel">
+          <h2>通用添加</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="agentUrlInput">Agent URL</label>
+              <input id="agentUrlInput" value="http://172.20.6.16:36483/a2a" placeholder="例如 http://host:port/a2a 或 http://host:port" />
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="bizDomainSelect">业务域</label>
+                <select id="bizDomainSelect">
+                  <option value="merchant" selected>merchant</option>
+                  <option value="operations">operations</option>
+                  <option value="data_support">data_support</option>
+                  <option value="partner">partner</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="priorityInput">优先级</label>
+                <input id="priorityInput" type="number" value="1" min="1" max="999" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="triggersInput">触发词</label>
+              <input id="triggersInput" value="法规,合规,报告,功能" placeholder="逗号分隔，例如 法规,合规,报告" />
+            </div>
+            <div class="field">
+              <label for="skillsInput">技能标识</label>
+              <input id="skillsInput" value="external_task_execution,regulation_query" placeholder="逗号分隔，例如 external_task_execution,regulation_query" />
+            </div>
+            <div class="field">
+              <label for="tagsInput">标签</label>
+              <input id="tagsInput" value="generic-add,a2a" placeholder="逗号分隔，例如 external,a2a" />
+            </div>
+            <div class="actions">
+              <button id="discoverBtn" class="primary">先发现</button>
+              <button id="addBtn" class="primary">直接添加</button>
+              <button id="refreshBtn">刷新列表</button>
+            </div>
+            <div id="pageStatus" class="status">待操作</div>
+            <div class="hint">建议流程：先点“先发现”确认自动识别结果，再点“直接添加”。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>验证执行</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="capabilityIdInput">目标 capability_id</label>
+              <input id="capabilityIdInput" placeholder="先发现或添加后会自动填充" />
+            </div>
+            <div class="field">
+              <label for="verifyMessageInput">验证问题</label>
+              <textarea id="verifyMessageInput">你支持的功能</textarea>
+            </div>
+            <div class="actions">
+              <button id="verifyBtn" class="primary">发送验证任务</button>
+            </div>
+            <div class="hint">验证会直接调用 `/api/chat`，并将 `metadata.requested_agent_id` 指向当前外部 Agent。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>最近结果</h2>
+          <pre id="resultBox" class="payload">等待发现、添加或验证结果...</pre>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>已注册外部 Agent</h2>
+        <div id="listMeta" class="subtle">正在加载...</div>
+        <div id="agentList" class="cards">
+          <div class="empty">正在加载外部 Agent 列表...</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const el = {
+      agentUrlInput: document.getElementById("agentUrlInput"),
+      bizDomainSelect: document.getElementById("bizDomainSelect"),
+      priorityInput: document.getElementById("priorityInput"),
+      triggersInput: document.getElementById("triggersInput"),
+      skillsInput: document.getElementById("skillsInput"),
+      tagsInput: document.getElementById("tagsInput"),
+      capabilityIdInput: document.getElementById("capabilityIdInput"),
+      verifyMessageInput: document.getElementById("verifyMessageInput"),
+      discoverBtn: document.getElementById("discoverBtn"),
+      addBtn: document.getElementById("addBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      verifyBtn: document.getElementById("verifyBtn"),
+      pageStatus: document.getElementById("pageStatus"),
+      resultBox: document.getElementById("resultBox"),
+      listMeta: document.getElementById("listMeta"),
+      agentList: document.getElementById("agentList"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function parseCsv(value) {
+      return String(value || "")
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+
+    function setStatus(text, tone = "") {
+      el.pageStatus.textContent = text;
+      el.pageStatus.className = `status ${tone}`.trim();
+    }
+
+    function showResult(payload) {
+      el.resultBox.textContent = typeof payload === "string"
+        ? payload
+        : JSON.stringify(payload, null, 2);
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        const detail = body?.detail || `HTTP ${response.status}`;
+        throw new Error(detail);
+      }
+      return body;
+    }
+
+    function buildPayload() {
+      return {
+        agent_url: el.agentUrlInput.value.trim(),
+        biz_domain: el.bizDomainSelect.value,
+        priority: Number(el.priorityInput.value || "50"),
+        triggers: parseCsv(el.triggersInput.value),
+        skills: parseCsv(el.skillsInput.value),
+        tags: parseCsv(el.tagsInput.value),
+      };
+    }
+
+    function fillCapability(metadata) {
+      if (metadata?.capability_id) {
+        el.capabilityIdInput.value = metadata.capability_id;
+      }
+    }
+
+    function renderAgentList(items) {
+      el.listMeta.textContent = `当前共 ${items.length} 个已注册外部 Agent`;
+      if (!items.length) {
+        el.agentList.innerHTML = '<div class="empty">当前还没有已注册的外部 Agent。</div>';
+        return;
+      }
+
+      el.agentList.innerHTML = items.map(item => `
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">${escapeHtml(item.capability_name)}</div>
+              <div class="subtle">${escapeHtml(item.capability_id)}</div>
+            </div>
+            <div class="actions">
+              <button data-use-agent="${escapeHtml(item.capability_id)}">用于验证</button>
+              <button data-delete-agent="${escapeHtml(item.capability_id)}">删除</button>
+            </div>
+          </div>
+          <div class="tags">
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            <span class="tag">${escapeHtml(item.transport)}</span>
+            <span class="tag">${escapeHtml(item.source || "manual_remote")}</span>
+            <span class="tag">priority:${escapeHtml(item.priority)}</span>
+          </div>
+          <div class="kv">
+            <div class="kv-item"><div class="kv-label">描述</div><div class="kv-value">${escapeHtml(item.description || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">Endpoint</div><div class="kv-value">${escapeHtml(item.endpoint || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">Service Path</div><div class="kv-value">${escapeHtml(item.service_path || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">Skills</div><div class="kv-value">${escapeHtml((item.skills || []).join(", ") || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">Triggers</div><div class="kv-value">${escapeHtml((item.triggers || []).join(", ") || "-")}</div></div>
+          </div>
+        </div>
+      `).join("");
+
+      el.agentList.querySelectorAll("[data-use-agent]").forEach(node => {
+        node.addEventListener("click", () => {
+          el.capabilityIdInput.value = node.getAttribute("data-use-agent") || "";
+          setStatus("已填充到验证区域", "success");
+        });
+      });
+
+      el.agentList.querySelectorAll("[data-delete-agent]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const capabilityId = node.getAttribute("data-delete-agent") || "";
+          if (!capabilityId) return;
+          if (!window.confirm(`确认删除外部 Agent：${capabilityId} 吗？`)) return;
+          try {
+            setStatus("删除中...");
+            const response = await fetch(`/api/external-agents/${encodeURIComponent(capabilityId)}`, { method: "DELETE" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            setStatus("删除成功", "success");
+            await loadAgentList();
+          } catch (error) {
+            setStatus("删除失败", "danger");
+            showResult(String(error));
+          }
+        });
+      });
+    }
+
+    async function loadAgentList() {
+      try {
+        const items = await requestJson("/api/external-agents");
+        renderAgentList(items);
+      } catch (error) {
+        el.listMeta.textContent = "加载失败";
+        el.agentList.innerHTML = `<div class="empty">加载外部 Agent 列表失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function discoverAgent() {
+      try {
+        setStatus("发现中...");
+        const result = await requestJson("/api/external-agents/discover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        fillCapability(result);
+        showResult(result);
+        setStatus("发现成功", "success");
+      } catch (error) {
+        setStatus("发现失败", "danger");
+        showResult(error.message);
+      }
+    }
+
+    async function addAgent() {
+      try {
+        setStatus("添加中...");
+        const result = await requestJson("/api/external-agents/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        fillCapability(result);
+        showResult(result);
+        setStatus("添加成功", "success");
+        await loadAgentList();
+      } catch (error) {
+        setStatus("添加失败", "danger");
+        showResult(error.message);
+      }
+    }
+
+    async function verifyAgent() {
+      const capabilityId = el.capabilityIdInput.value.trim();
+      if (!capabilityId) {
+        setStatus("请先填写 capability_id", "warning");
+        return;
+      }
+      try {
+        setStatus("发送验证任务中...");
+        const result = await requestJson("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: "ui-external-agent-verifier",
+            biz_domain: el.bizDomainSelect.value,
+            message: el.verifyMessageInput.value.trim() || "你支持的功能",
+            metadata: { requested_agent_id: capabilityId },
+          }),
+        });
+        showResult(result);
+        setStatus("验证成功", "success");
+      } catch (error) {
+        setStatus("验证失败", "danger");
+        showResult(error.message);
+      }
+    }
+
+    el.discoverBtn.addEventListener("click", discoverAgent);
+    el.addBtn.addEventListener("click", addAgent);
+    el.refreshBtn.addEventListener("click", loadAgentList);
+    el.verifyBtn.addEventListener("click", verifyAgent);
+
+    loadAgentList();
+  </script>
+</body>
+</html>

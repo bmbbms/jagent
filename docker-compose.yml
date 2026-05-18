@@ -1,32 +1,58 @@
 services:
-  app:
-    build: .
+  mysql:
+    image: mysql:8.0
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
-      ACQUIRING_AI_AGENT_RUNTIME: agno
-      ACQUIRING_AI_DATABASE_URL: postgresql+psycopg://acquiring_ai:acquiring_ai@postgres:5432/acquiring_ai
-      ACQUIRING_AI_REDIS_URL: redis://redis:6379/0
-      ACQUIRING_AI_VECTOR_STORE_ENABLED: "true"
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: jagent
+      MYSQL_USER: jagent
+      MYSQL_PASSWORD: jagent
     ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - redis
-
-  postgres:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_USER: acquiring_ai
-      POSTGRES_PASSWORD: acquiring_ai
-      POSTGRES_DB: acquiring_ai
-    ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    environment:
+      ACQUIRING_AI_AGENT_RUNTIME: agentscope
+      ACQUIRING_AI_DATABASE_URL: mysql+pymysql://jagent:jagent@mysql:3306/jagent?charset=utf8mb4
+      ACQUIRING_AI_REDIS_URL: redis://redis:6379/0
+      ACQUIRING_AI_DATABASE_AUTO_CREATE: "false"
+      ACQUIRING_AI_DATABASE_RUN_MIGRATIONS: "true"
+      ACQUIRING_AI_VECTOR_STORE_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  external-agent:
+    build: .
+    command: ["uvicorn", "app.external_agent_stub:app", "--host", "0.0.0.0", "--port", "8100"]
+    ports:
+      - "8100:8100"
 
 volumes:
-  postgres_data:
+  mysql_data:

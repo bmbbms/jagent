@@ -1,12 +1,18 @@
+from __future__ import annotations
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
-client = TestClient(app)
+@pytest.fixture(scope="module")
+def client() -> TestClient:
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_home() -> None:
+def test_home(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     body = response.json()
@@ -14,13 +20,13 @@ def test_home() -> None:
     assert body["capabilities"]
 
 
-def test_health() -> None:
+def test_health(client: TestClient) -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_capabilities() -> None:
+def test_capabilities(client: TestClient) -> None:
     response = client.get("/api/capabilities")
     assert response.status_code == 200
     body = response.json()
@@ -28,7 +34,7 @@ def test_capabilities() -> None:
     assert "merchant_qa" in merchant_qa["skills"]
 
 
-def test_skills() -> None:
+def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200
     body = response.json()
@@ -37,7 +43,7 @@ def test_skills() -> None:
     assert "merchant_ops_analysis" in skill_ids
 
 
-def test_chat_merchant() -> None:
+def test_chat_merchant(client: TestClient) -> None:
     response = client.post(
         "/api/chat",
         json={
@@ -54,10 +60,10 @@ def test_chat_merchant() -> None:
     assert body["routing_trace"]["selected_capability_id"] == "merchant.qa"
     assert "merchant.qa" in body["routing_trace"]["matched_capability_ids"]
     assert "merchant_qa" in body["routing_trace"]["declared_skills"]
-    assert "Runtime=agno" in body["routing_trace"]["reason"]
+    assert "Runtime=agentscope" in body["routing_trace"]["reason"]
 
 
-def test_chat_operations_creates_approval() -> None:
+def test_chat_operations_creates_approval(client: TestClient) -> None:
     response = client.post(
         "/api/chat",
         json={
@@ -74,7 +80,7 @@ def test_chat_operations_creates_approval() -> None:
     assert body["routing_trace"]["selected_capability_id"] == "operations.quota_review"
 
 
-def test_knowledge_search() -> None:
+def test_knowledge_search(client: TestClient) -> None:
     response = client.get(
         "/api/knowledge/search",
         params={"biz_domain": "operations", "query": "调额"},
@@ -85,7 +91,7 @@ def test_knowledge_search() -> None:
     assert body["hits"]
 
 
-def test_create_and_decide_approval() -> None:
+def test_create_and_decide_approval(client: TestClient) -> None:
     create_response = client.post(
         "/api/approvals",
         json={
@@ -113,7 +119,202 @@ def test_create_and_decide_approval() -> None:
     assert decide_response.json()["status"] == "approved"
 
 
-def test_audit_events() -> None:
+def test_audit_events(client: TestClient) -> None:
     response = client.get("/api/audit")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-task-detail",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    detail_response = client.get(f"/api/tasks/{task_id}")
+    assert detail_response.status_code == 200
+    body = detail_response.json()
+    assert "tool_calls" in body
+    assert "data_access_logs" in body
+    assert "structured_tool_results" in body
+    assert "evaluation" in body
+    assert isinstance(body["tool_calls"], list)
+    assert isinstance(body["data_access_logs"], list)
+    assert isinstance(body["structured_tool_results"], list)
+    assert body["structured_tool_results"]
+    first_tool_result = body["structured_tool_results"][0]
+    assert "tool_id" in first_tool_result
+    assert "result" in first_tool_result
+    assert body["evaluation"] is not None
+
+
+def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-task-log-api",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    tool_call_response = client.get(f"/api/tasks/{task_id}/tool-calls")
+    assert tool_call_response.status_code == 200
+    tool_calls = tool_call_response.json()
+    assert isinstance(tool_calls, list)
+
+    data_access_response = client.get(f"/api/tasks/{task_id}/data-access")
+    assert data_access_response.status_code == 200
+    data_access_logs = data_access_response.json()
+    assert isinstance(data_access_logs, list)
+
+
+def test_task_evaluation_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-task-evaluation",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    evaluation_response = client.get(f"/api/tasks/{task_id}/evaluation")
+    assert evaluation_response.status_code == 200
+    body = evaluation_response.json()
+    assert body["task_id"] == task_id
+    assert "overall_score" in body
+    assert isinstance(body["details"], list)
+
+
+def test_task_list_supports_filters(client: TestClient) -> None:
+    response = client.get(
+        "/api/tasks",
+        params={
+            "status": "waiting_approval",
+            "biz_domain": "operations",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body["items"], list)
+    assert body["page"] == 1
+    assert body["page_size"] == 50
+    for item in body["items"]:
+        assert item["status"] == "waiting_approval"
+        assert item["biz_domain"] == "operations"
+
+
+def test_task_list_supports_extended_filters(client: TestClient) -> None:
+    response = client.get(
+        "/api/tasks",
+        params={
+            "status": "waiting_approval",
+            "biz_domain": "operations",
+            "selected_agent_id": "operations.quota_review",
+            "start_date_from": "2026-01-01",
+            "start_date_to": "2026-12-31",
+            "page_size": 20,
+            "page": 1,
+            "sort_by": "start_time",
+            "sort_order": "desc",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body["items"], list)
+    assert body["page"] == 1
+    assert body["page_size"] == 20
+    assert body["sort_by"] == "start_time"
+    assert body["sort_order"] == "desc"
+    assert len(body["items"]) <= 20
+    for item in body["items"]:
+        assert item["status"] == "waiting_approval"
+        assert item["biz_domain"] == "operations"
+        assert item["selected_agent_id"] == "operations.quota_review"
+
+
+def test_task_list_supports_pagination_and_legacy_limit(client: TestClient) -> None:
+    response = client.get(
+        "/api/tasks",
+        params={
+            "page": 1,
+            "limit": 10,
+            "sort_by": "start_time",
+            "sort_order": "desc",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["page"] == 1
+    assert body["page_size"] == 10
+    assert body["sort_by"] == "start_time"
+    assert body["sort_order"] == "desc"
+    assert len(body["items"]) <= 10
+    assert body["total"] >= len(body["items"])
+
+
+def test_task_realtime_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/tasks")
+    assert response.status_code == 200
+    assert 'id="agentManagerBtn"' in response.text
+    assert 'id="taskList"' in response.text
+    assert 'id="structuredToolResults"' in response.text
+    assert 'id="pageSizeFilter"' in response.text
+    assert 'id="sortByFilter"' in response.text
+    assert 'id="prevPageBtn"' in response.text
+    assert 'id="nextPageBtn"' in response.text
+
+
+def test_external_agent_manager_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/external-agents")
+    assert response.status_code == 200
+    assert 'id="agentUrlInput"' in response.text
+    assert 'id="discoverBtn"' in response.text
+    assert 'id="addBtn"' in response.text
+    assert 'id="verifyBtn"' in response.text
+    assert 'id="agentList"' in response.text
+
+
+def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
+    list_response = client.get("/api/workflows", params={"biz_domain": "operations"})
+    assert list_response.status_code == 200
+    workflow_items = list_response.json()
+    assert workflow_items
+    workflow_codes = {item["workflow_code"] for item in workflow_items}
+    assert "quota_review" in workflow_codes
+
+    detail_response = client.get("/api/workflows/quota_review")
+    assert detail_response.status_code == 200
+    workflow_detail = detail_response.json()
+    assert workflow_detail["workflow_code"] == "quota_review"
+    assert workflow_detail["steps"]
+
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-workflow",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    task_detail_response = client.get(f"/api/tasks/{task_id}")
+    assert task_detail_response.status_code == 200
+    task_detail = task_detail_response.json()
+    event_types = [item["event_type"] for item in task_detail["events"]]
+    assert "workflow_started" in event_types
+    assert "workflow_step_registered" in event_types
+    assert "workflow_approval_checkpoint" in event_types

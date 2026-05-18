@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent 任务实时展示</title>
+  <style>
+    :root {
+      --bg: #f4efe8;
+      --panel: #fffdf9;
+      --panel-soft: #fbf6ef;
+      --line: #e2d5c3;
+      --text: #211b15;
+      --muted: #6f6254;
+      --accent: #b45e2d;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --danger: #b64133;
+      --shadow: 0 18px 40px rgba(79, 43, 17, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, #fff6ec 0, #fff6ec 18%, transparent 19%),
+        linear-gradient(180deg, #faf4ec 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 900px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .toolbar input,
+    .toolbar select,
+    .toolbar button {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 14px;
+    }
+
+    .toolbar input#taskIdInput { width: 280px; max-width: 100%; }
+    .toolbar input, .toolbar select { min-width: 130px; }
+
+    .toolbar button {
+      cursor: pointer;
+      border: 0;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .toolbar button.secondary {
+      background: #eadbc9;
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr) 380px;
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(255, 253, 249, 0.95);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .task-list-meta,
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    .task-item,
+    .list-card,
+    .event-card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+    }
+
+    .task-item {
+      padding: 12px;
+      cursor: pointer;
+      display: grid;
+      gap: 8px;
+    }
+
+    .task-item.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(180, 94, 45, 0.15);
+    }
+
+    .task-title,
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .meta-list,
+    .stats-list,
+    .detail-list,
+    .score-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meta-item,
+    .stat-item,
+    .detail-item,
+    .score-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(226, 213, 195, 0.92);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .meta-item:last-child,
+    .stat-item:last-child,
+    .detail-item:last-child,
+    .score-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      flex: 0 0 120px;
+    }
+
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .tag,
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #72563d;
+    }
+
+    .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
+    .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
+    .danger { background: rgba(182, 65, 51, 0.14); color: var(--danger); }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      min-height: 160px;
+    }
+
+    .event-card {
+      position: relative;
+      overflow: hidden;
+      padding: 16px 16px 14px 18px;
+    }
+
+    .event-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: var(--accent);
+    }
+
+    .event-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .event-content {
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .payload-box,
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .payload-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--panel-soft);
+      border-radius: 12px;
+      overflow: auto;
+      font-size: 12px;
+    }
+
+    .list-card {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-card h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .pager {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pager button {
+      min-height: 34px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    .score-hero {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+
+    .score-hero strong {
+      font-size: 32px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .suggestion-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 1280px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Agent 任务实时展示</h1>
+        <p>这个页面面向二期联调与验收，重点展示任务时间线、工具真实产出、数据访问、审批状态和评估结果，让“Agent 实际做了什么”可以被直接看见。</p>
+      </div>
+      <div class="toolbar">
+        <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <input id="taskIdInput" placeholder="输入 task_id，例如 task_xxx" />
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+          <option value="running">running</option>
+          <option value="waiting_approval">waiting_approval</option>
+          <option value="success">success</option>
+          <option value="failed">failed</option>
+        </select>
+        <select id="domainFilter">
+          <option value="">全部业务域</option>
+          <option value="merchant">merchant</option>
+          <option value="operations">operations</option>
+          <option value="data_support">data_support</option>
+        </select>
+        <input id="agentFilter" placeholder="按 agent_id 过滤" />
+        <input id="startDateFrom" type="date" />
+        <input id="startDateTo" type="date" />
+        <select id="pageSizeFilter">
+          <option value="20">每页 20 条</option>
+          <option value="50" selected>每页 50 条</option>
+          <option value="100">每页 100 条</option>
+        </select>
+        <select id="sortByFilter">
+          <option value="start_time" selected>按开始时间</option>
+          <option value="end_time">按结束时间</option>
+          <option value="duration_ms">按耗时</option>
+          <option value="status">按状态</option>
+          <option value="biz_domain">按业务域</option>
+          <option value="selected_agent_id">按 Agent</option>
+        </select>
+        <select id="sortOrderFilter">
+          <option value="desc" selected>倒序</option>
+          <option value="asc">正序</option>
+        </select>
+        <button id="loadBtn">加载任务</button>
+        <button id="refreshBtn" class="secondary">刷新详情</button>
+        <button id="reconnectBtn" class="secondary">重连事件流</button>
+        <button id="copyBtn" class="secondary">复制 task_id</button>
+        <span id="statusBadge" class="status-badge">未连接</span>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="stack">
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <h2>最近任务</h2>
+              <div id="taskListMeta" class="task-list-meta">正在加载任务列表...</div>
+            </div>
+            <div class="pager">
+              <button id="prevPageBtn">上一页</button>
+              <button id="nextPageBtn">下一页</button>
+            </div>
+          </div>
+          <div id="taskList" class="task-list">
+            <div class="empty">正在加载最近任务...</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>任务摘要</h2>
+          <div id="summaryMeta" class="meta-list">
+            <div class="empty">请选择任务后查看摘要。</div>
+          </div>
+          <h2 style="margin-top: 22px;">快速统计</h2>
+          <div id="summaryStats" class="stats-list">
+            <div class="empty">暂无统计。</div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="stack">
+        <section class="panel">
+          <h2>结构化工具产出</h2>
+          <div id="structuredToolResults" class="detail-list">
+            <div class="empty">当前任务还没有可展示的结构化工具产出。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>执行时间线</h2>
+          <div id="timeline" class="timeline">
+            <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="stack">
+        <section class="panel">
+          <h2>评估结果</h2>
+          <div id="evaluation">
+            <div class="empty">当前任务暂无评估结果。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>工具调用</h2>
+          <div id="toolCalls" class="detail-list">
+            <div class="empty">暂无工具调用明细。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>数据访问</h2>
+          <div id="dataAccess" class="detail-list">
+            <div class="empty">暂无数据访问明细。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>任务产物</h2>
+          <div id="artifacts" class="detail-list">
+            <div class="empty">暂无任务产物。</div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      taskId: "",
+      task: null,
+      taskList: [],
+      eventSource: null,
+      lastEventSeq: 0,
+      filters: {
+        status: "",
+        bizDomain: "",
+        selectedAgentId: "",
+        startDateFrom: "",
+        startDateTo: "",
+        page: 1,
+        pageSize: "50",
+        sortBy: "start_time",
+        sortOrder: "desc",
+      },
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 50,
+        hasNext: false,
+      },
+    };
+
+    const el = {
+      taskIdInput: document.getElementById("taskIdInput"),
+      agentManagerBtn: document.getElementById("agentManagerBtn"),
+      statusFilter: document.getElementById("statusFilter"),
+      domainFilter: document.getElementById("domainFilter"),
+      agentFilter: document.getElementById("agentFilter"),
+      startDateFrom: document.getElementById("startDateFrom"),
+      startDateTo: document.getElementById("startDateTo"),
+      pageSizeFilter: document.getElementById("pageSizeFilter"),
+      sortByFilter: document.getElementById("sortByFilter"),
+      sortOrderFilter: document.getElementById("sortOrderFilter"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      reconnectBtn: document.getElementById("reconnectBtn"),
+      copyBtn: document.getElementById("copyBtn"),
+      prevPageBtn: document.getElementById("prevPageBtn"),
+      nextPageBtn: document.getElementById("nextPageBtn"),
+      statusBadge: document.getElementById("statusBadge"),
+      taskListMeta: document.getElementById("taskListMeta"),
+      taskList: document.getElementById("taskList"),
+      summaryMeta: document.getElementById("summaryMeta"),
+      summaryStats: document.getElementById("summaryStats"),
+      structuredToolResults: document.getElementById("structuredToolResults"),
+      timeline: document.getElementById("timeline"),
+      evaluation: document.getElementById("evaluation"),
+      toolCalls: document.getElementById("toolCalls"),
+      dataAccess: document.getElementById("dataAccess"),
+      artifacts: document.getElementById("artifacts"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function toneByStatus(status) {
+      if (["success", "approved", "excellent"].includes(status)) return "success";
+      if (["failed", "rejected", "poor"].includes(status)) return "danger";
+      if (["waiting", "waiting_approval", "pending"].includes(status)) return "warning";
+      return "";
+    }
+
+    function setStatus(text, tone = "") {
+      el.statusBadge.textContent = text;
+      el.statusBadge.className = `status-badge ${tone}`.trim();
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function prettyJson(value) {
+      if (!value || (typeof value === "object" && !Object.keys(value).length)) return "";
+      return JSON.stringify(value, null, 2);
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function syncFiltersFromInputs() {
+      state.filters.status = el.statusFilter.value;
+      state.filters.bizDomain = el.domainFilter.value;
+      state.filters.selectedAgentId = el.agentFilter.value.trim();
+      state.filters.startDateFrom = el.startDateFrom.value;
+      state.filters.startDateTo = el.startDateTo.value;
+      state.filters.pageSize = el.pageSizeFilter.value || "50";
+      state.filters.sortBy = el.sortByFilter.value || "start_time";
+      state.filters.sortOrder = el.sortOrderFilter.value || "desc";
+    }
+
+    function applyFiltersToInputs() {
+      el.statusFilter.value = state.filters.status;
+      el.domainFilter.value = state.filters.bizDomain;
+      el.agentFilter.value = state.filters.selectedAgentId;
+      el.startDateFrom.value = state.filters.startDateFrom;
+      el.startDateTo.value = state.filters.startDateTo;
+      el.pageSizeFilter.value = state.filters.pageSize;
+      el.sortByFilter.value = state.filters.sortBy;
+      el.sortOrderFilter.value = state.filters.sortOrder;
+    }
+
+    function updateQuery() {
+      const url = new URL(window.location.href);
+      const pairs = {
+        task_id: state.taskId,
+        status: state.filters.status,
+        biz_domain: state.filters.bizDomain,
+        selected_agent_id: state.filters.selectedAgentId,
+        start_date_from: state.filters.startDateFrom,
+        start_date_to: state.filters.startDateTo,
+        page: String(state.filters.page || 1),
+        page_size: state.filters.pageSize,
+        sort_by: state.filters.sortBy,
+        sort_order: state.filters.sortOrder,
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        const isDefault =
+          (key === "page" && value === "1") ||
+          (key === "page_size" && value === "50") ||
+          (key === "sort_by" && value === "start_time") ||
+          (key === "sort_order" && value === "desc");
+        if (value && !isDefault) {
+          url.searchParams.set(key, value);
+        } else if (key === "task_id" && value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
+      window.history.replaceState({}, "", url);
+    }
+
+    function bootstrapFromQuery() {
+      const query = new URLSearchParams(window.location.search);
+      state.taskId = query.get("task_id") || "";
+      state.filters.status = query.get("status") || "";
+      state.filters.bizDomain = query.get("biz_domain") || "";
+      state.filters.selectedAgentId = query.get("selected_agent_id") || "";
+      state.filters.startDateFrom = query.get("start_date_from") || "";
+      state.filters.startDateTo = query.get("start_date_to") || "";
+      state.filters.page = Number(query.get("page") || "1");
+      state.filters.pageSize = query.get("page_size") || query.get("limit") || "50";
+      state.filters.sortBy = query.get("sort_by") || "start_time";
+      state.filters.sortOrder = query.get("sort_order") || "desc";
+      el.taskIdInput.value = state.taskId;
+      applyFiltersToInputs();
+    }
+
+    function buildTaskListUrl() {
+      syncFiltersFromInputs();
+      const query = new URLSearchParams();
+      if (state.filters.status) query.set("status", state.filters.status);
+      if (state.filters.bizDomain) query.set("biz_domain", state.filters.bizDomain);
+      if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
+      if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
+      if (state.filters.startDateTo) query.set("start_date_to", state.filters.startDateTo);
+      query.set("page", String(state.filters.page || 1));
+      query.set("page_size", state.filters.pageSize || "50");
+      query.set("sort_by", state.filters.sortBy || "start_time");
+      query.set("sort_order", state.filters.sortOrder || "desc");
+      return `/api/tasks?${query.toString()}`;
+    }
+
+    function normalizeTaskListPayload(payload) {
+      if (Array.isArray(payload)) {
+        return {
+          items: payload,
+          total: payload.length,
+          page: 1,
+          page_size: payload.length || Number(state.filters.pageSize || "50"),
+          has_next: false,
+        };
+      }
+      return {
+        items: Array.isArray(payload.items) ? payload.items : [],
+        total: Number(payload.total || 0),
+        page: Number(payload.page || 1),
+        page_size: Number(payload.page_size || state.filters.pageSize || 50),
+        has_next: Boolean(payload.has_next),
+      };
+    }
+
+    async function loadTaskList() {
+      try {
+        const payload = normalizeTaskListPayload(await fetchJson(buildTaskListUrl()));
+        state.taskList = payload.items;
+        state.pagination.total = payload.total;
+        state.pagination.page = payload.page;
+        state.pagination.pageSize = payload.page_size;
+        state.pagination.hasNext = payload.has_next;
+        state.filters.page = payload.page;
+        renderTaskListMeta();
+        renderTaskList();
+        updateQuery();
+      } catch (error) {
+        el.taskListMeta.textContent = "任务列表加载失败";
+        el.taskList.innerHTML = `<div class="empty">任务列表加载失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderTaskListMeta() {
+      const start = state.pagination.total === 0 ? 0 : (state.pagination.page - 1) * state.pagination.pageSize + 1;
+      const end = Math.min(state.pagination.total, (state.pagination.page - 1) * state.pagination.pageSize + state.taskList.length);
+      el.taskListMeta.textContent = `共 ${state.pagination.total} 条，当前第 ${state.pagination.page} 页，显示 ${start}-${end}`;
+      el.prevPageBtn.disabled = state.pagination.page <= 1;
+      el.nextPageBtn.disabled = !state.pagination.hasNext;
+    }
+
+    function renderTaskList() {
+      if (!state.taskList.length) {
+        el.taskList.innerHTML = `<div class="empty">当前筛选条件下没有任务记录。</div>`;
+        return;
+      }
+
+      el.taskList.innerHTML = state.taskList.map(item => `
+        <div class="task-item ${item.task_id === state.taskId ? "active" : ""}" data-task-id="${escapeHtml(item.task_id)}">
+          <div class="task-title">${escapeHtml(item.task_title || item.task_goal || item.task_id)}</div>
+          <div><span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span></div>
+          <div class="subtle">Agent：${escapeHtml(item.selected_agent_id || "-")}</div>
+          <div class="subtle">业务域：${escapeHtml(item.biz_domain || "-")}</div>
+          <div class="subtle">阶段：${escapeHtml(item.current_stage || "-")}</div>
+          <div class="subtle">开始：${escapeHtml(formatDate(item.start_time))}</div>
+        </div>
+      `).join("");
+
+      el.taskList.querySelectorAll("[data-task-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const taskId = node.getAttribute("data-task-id") || "";
+          state.taskId = taskId;
+          el.taskIdInput.value = taskId;
+          await loadAndConnect();
+        });
+      });
+    }
+
+    function renderMeta(task) {
+      const rows = [
+        ["任务 ID", task.task_id],
+        ["业务域", task.biz_domain],
+        ["状态", task.status],
+        ["当前阶段", task.current_stage || "-"],
+        ["执行 Agent", task.selected_agent_id || "-"],
+        ["审批单号", task.approval_id || "-"],
+        ["Trace ID", task.trace_id],
+        ["开始时间", formatDate(task.start_time)],
+        ["结束时间", formatDate(task.end_time)],
+      ];
+      el.summaryMeta.innerHTML = rows.map(([label, value]) => `
+        <div class="meta-item">
+          <div class="label">${escapeHtml(label)}</div>
+          <div class="value">${escapeHtml(value)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderStats(task) {
+      const rows = [
+        ["事件数", task.events?.length || 0],
+        ["产物数", task.artifacts?.length || 0],
+        ["工具调用", task.tool_calls?.length || 0],
+        ["结构化产出", task.structured_tool_results?.length || 0],
+        ["数据访问", task.data_access_logs?.length || 0],
+        ["耗时", task.duration_ms ? `${task.duration_ms} ms` : "-"],
+      ];
+      el.summaryStats.innerHTML = rows.map(([label, value]) => `
+        <div class="stat-item">
+          <div class="label">${escapeHtml(label)}</div>
+          <div class="value">${escapeHtml(value)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderStructuredToolResults(items = []) {
+      if (!items.length) {
+        el.structuredToolResults.innerHTML = `<div class="empty">当前任务还没有可展示的结构化工具产出。</div>`;
+        return;
+      }
+
+      el.structuredToolResults.innerHTML = items.map(item => `
+        <div class="list-card">
+          <div class="card-title">${escapeHtml(item.tool_name || item.tool_id)}</div>
+          <div class="subtle">${escapeHtml(item.tool_type)} / ${escapeHtml(item.provider || "-")} / ${escapeHtml(formatDate(item.event_time))}</div>
+          <div>
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            ${item.agent_id ? `<span class="tag">${escapeHtml(item.agent_id)}</span>` : ""}
+          </div>
+          <div class="detail-item"><div class="label">执行摘要</div><div class="value">${escapeHtml(item.output_summary || "-")}</div></div>
+          <div class="detail-item"><div class="label">请求内容</div><div class="value">${escapeHtml(item.request_query || "-")}</div></div>
+          <div class="detail-item"><div class="label">请求参数</div><div class="value">${escapeHtml(prettyJson(item.request_kwargs) || "-")}</div></div>
+          <div class="detail-item"><div class="label">业务结果</div><div class="value">${escapeHtml(prettyJson(item.result) || "-")}</div></div>
+          <div class="payload-box"><pre>${escapeHtml(prettyJson(item.data_access_records) || "[]")}</pre></div>
+        </div>
+      `).join("");
+    }
+
+    function renderTimeline(events = []) {
+      if (!events.length) {
+        el.timeline.innerHTML = `<div class="empty">当前任务暂无时间线事件。</div>`;
+        return;
+      }
+
+      el.timeline.innerHTML = events.map(event => `
+        <div class="event-card">
+          <div class="event-head">
+            <div>
+              <div class="card-title">${escapeHtml(event.title || event.event_type)}</div>
+              <div style="margin-top: 8px;"><span class="tag ${toneByStatus(event.event_status)}">${escapeHtml(event.event_status)}</span></div>
+            </div>
+            <div class="subtle">#${escapeHtml(event.event_seq)}<br />${escapeHtml(formatDate(event.start_time))}</div>
+          </div>
+          <div class="event-content">${escapeHtml(event.content || "")}</div>
+          ${event.event_payload && Object.keys(event.event_payload).length ? `
+            <div class="payload-box"><pre>${escapeHtml(prettyJson(event.event_payload))}</pre></div>
+          ` : ""}
+        </div>
+      `).join("");
+    }
+
+    function renderToolCalls(toolCalls = []) {
+      if (!toolCalls.length) {
+        el.toolCalls.innerHTML = `<div class="empty">暂无工具调用明细。</div>`;
+        return;
+      }
+      el.toolCalls.innerHTML = toolCalls.map(item => `
+        <div class="list-card">
+          <h3>${escapeHtml(item.tool_name)}</h3>
+          <div class="subtle">${escapeHtml(item.tool_type)} / ${escapeHtml(item.provider || "-")}</div>
+          <div><span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span></div>
+          <div class="detail-item"><div class="label">耗时</div><div class="value">${escapeHtml(item.duration_ms ?? "-")} ms</div></div>
+          <div class="detail-item"><div class="label">摘要</div><div class="value">${escapeHtml(item.response_summary || "-")}</div></div>
+        </div>
+      `).join("");
+    }
+
+    function renderDataAccess(logs = []) {
+      if (!logs.length) {
+        el.dataAccess.innerHTML = `<div class="empty">暂无数据访问明细。</div>`;
+        return;
+      }
+      el.dataAccess.innerHTML = logs.map(item => `
+        <div class="list-card">
+          <h3>${escapeHtml(item.data_object)}</h3>
+          <div class="subtle">${escapeHtml(item.data_source)} / ${escapeHtml(item.access_type)}</div>
+          <div><span class="tag warning">${escapeHtml(item.sensitive_level)}</span></div>
+          <div class="detail-item"><div class="label">行数</div><div class="value">${escapeHtml(item.row_count ?? "-")}</div></div>
+          <div class="detail-item"><div class="label">字段</div><div class="value">${escapeHtml((item.field_scope?.fields || []).join(", ") || "-")}</div></div>
+        </div>
+      `).join("");
+    }
+
+    function renderArtifacts(artifacts = []) {
+      if (!artifacts.length) {
+        el.artifacts.innerHTML = `<div class="empty">暂无任务产物。</div>`;
+        return;
+      }
+      el.artifacts.innerHTML = artifacts.map(item => `
+        <div class="list-card">
+          <h3>${escapeHtml(item.artifact_name)}</h3>
+          <div class="subtle">${escapeHtml(item.artifact_type)}${item.is_final ? " / final" : ""}</div>
+          <div class="detail-item"><div class="label">摘要</div><div class="value">${escapeHtml(item.artifact_summary || "-")}</div></div>
+        </div>
+      `).join("");
+    }
+
+    function renderEvaluation(evaluation) {
+      if (!evaluation) {
+        el.evaluation.innerHTML = `<div class="empty">当前任务暂无评估结果。</div>`;
+        return;
+      }
+
+      const details = (evaluation.details || []).map(item => `
+        <div class="score-item">
+          <div class="label">${escapeHtml(item.dimension_name)}</div>
+          <div class="value">${escapeHtml(item.score)}</div>
+        </div>
+      `).join("");
+
+      const suggestions = (evaluation.suggestions || []).length
+        ? `
+          <div class="suggestion-list">
+            ${evaluation.suggestions.map(item => `
+              <div class="list-card">
+                <h3>${escapeHtml(item.optimization_type)}</h3>
+                <div class="subtle">优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
+                <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+              </div>
+            `).join("")}
+          </div>
+        `
+        : `<div class="empty">暂无优化建议。</div>`;
+
+      el.evaluation.innerHTML = `
+        <div class="score-hero">
+          <div class="subtle">总体评分 / ${escapeHtml(evaluation.result_label)}</div>
+          <div style="margin-top: 6px;"><strong>${escapeHtml(evaluation.overall_score)}</strong></div>
+          <div class="subtle" style="margin-top: 8px;">${escapeHtml(evaluation.summary || "-")}</div>
+        </div>
+        <div class="score-list">${details || '<div class="empty">暂无维度明细。</div>'}</div>
+        <h2 style="margin-top: 18px;">优化建议</h2>
+        ${suggestions}
+      `;
+    }
+
+    function renderTask(task) {
+      state.task = task;
+      state.lastEventSeq = Math.max(0, ...(task.events || []).map(item => item.event_seq || 0));
+      renderMeta(task);
+      renderStats(task);
+      renderStructuredToolResults(task.structured_tool_results || []);
+      renderTimeline(task.events || []);
+      renderToolCalls(task.tool_calls || []);
+      renderDataAccess(task.data_access_logs || []);
+      renderArtifacts(task.artifacts || []);
+      renderEvaluation(task.evaluation || null);
+      renderTaskList();
+      setStatus(`任务状态：${task.status || "unknown"}`, toneByStatus(task.status));
+    }
+
+    async function loadTaskDetail() {
+      if (!state.taskId) {
+        alert("请输入 task_id");
+        return false;
+      }
+      setStatus("加载中...");
+      try {
+        const payload = await fetchJson(`/api/tasks/${encodeURIComponent(state.taskId)}`);
+        renderTask(payload);
+        updateQuery();
+        return true;
+      } catch (error) {
+        setStatus("加载失败", "danger");
+        alert(`任务不存在或加载失败：${error.message}`);
+        return false;
+      }
+    }
+
+    function closeStream() {
+      if (state.eventSource) {
+        state.eventSource.close();
+        state.eventSource = null;
+      }
+    }
+
+    function connectStream() {
+      if (!state.taskId) return;
+      closeStream();
+      const source = new EventSource(`/api/tasks/${encodeURIComponent(state.taskId)}/events/stream?last_event_seq=${state.lastEventSeq}`);
+      state.eventSource = source;
+      setStatus("实时连接中...");
+
+      source.onopen = () => setStatus("实时连接已建立", "success");
+      source.onerror = () => setStatus("实时连接异常", "warning");
+
+      const refreshFromServer = async () => {
+        try {
+          const payload = await fetchJson(`/api/tasks/${encodeURIComponent(state.taskId)}`);
+          renderTask(payload);
+          await loadTaskList();
+        } catch {
+          setStatus("刷新失败", "warning");
+        }
+      };
+
+      [
+        "task_created",
+        "agent_selected",
+        "agent_started",
+        "runtime_session_started",
+        "skill_bundle_loaded",
+        "tool_inventory_prepared",
+        "planner_started",
+        "execution_plan_created",
+        "planner_completed",
+        "executor_started",
+        "thought_generated",
+        "executor_completed",
+        "tool_call_started",
+        "tool_call_finished",
+        "mcp_call_started",
+        "mcp_call_finished",
+        "workflow_started",
+        "workflow_step_registered",
+        "workflow_approval_checkpoint",
+        "approval_requested",
+        "approval_finished",
+        "final_response",
+        "artifact_generated"
+      ].forEach(type => source.addEventListener(type, refreshFromServer));
+
+      source.addEventListener("task_completed", async () => {
+        await refreshFromServer();
+        setStatus("任务已完成", "success");
+        closeStream();
+      });
+    }
+
+    async function loadAndConnect() {
+      state.taskId = el.taskIdInput.value.trim();
+      if (!state.taskId) {
+        alert("请输入 task_id");
+        return;
+      }
+      const ok = await loadTaskDetail();
+      if (ok) connectStream();
+    }
+
+    function bindFilterChange(node) {
+      node.addEventListener("change", async () => {
+        state.filters.page = 1;
+        await loadTaskList();
+      });
+    }
+
+    el.loadBtn.addEventListener("click", loadAndConnect);
+    el.agentManagerBtn.addEventListener("click", () => {
+      window.location.href = "/ui/external-agents";
+    });
+    el.refreshBtn.addEventListener("click", async () => {
+      state.taskId = el.taskIdInput.value.trim() || state.taskId;
+      if (!state.taskId) {
+        alert("请输入 task_id");
+        return;
+      }
+      await loadTaskDetail();
+      await loadTaskList();
+    });
+    el.reconnectBtn.addEventListener("click", () => {
+      state.taskId = el.taskIdInput.value.trim() || state.taskId;
+      connectStream();
+    });
+    el.prevPageBtn.addEventListener("click", async () => {
+      if (state.filters.page <= 1) return;
+      state.filters.page -= 1;
+      await loadTaskList();
+    });
+    el.nextPageBtn.addEventListener("click", async () => {
+      if (!state.pagination.hasNext) return;
+      state.filters.page += 1;
+      await loadTaskList();
+    });
+    el.copyBtn.addEventListener("click", async () => {
+      const taskId = el.taskIdInput.value.trim() || state.taskId;
+      if (!taskId) {
+        alert("当前没有可复制的 task_id");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(taskId);
+        setStatus("task_id 已复制", "success");
+      } catch {
+        setStatus("复制失败", "warning");
+      }
+    });
+
+    [el.statusFilter, el.domainFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
+
+    el.agentFilter.addEventListener("keydown", async event => {
+      if (event.key === "Enter") {
+        state.filters.page = 1;
+        await loadTaskList();
+      }
+    });
+
+    el.taskIdInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadAndConnect();
+    });
+
+    async function bootstrap() {
+      bootstrapFromQuery();
+      await loadTaskList();
+      const initialTaskId = state.taskId || state.taskList[0]?.task_id || "";
+      if (!initialTaskId) return;
+      state.taskId = initialTaskId;
+      el.taskIdInput.value = initialTaskId;
+      await loadAndConnect();
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

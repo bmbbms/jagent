@@ -38,3 +38,12 @@ def test_skill_registry_loads_skill_files() -> None:
     skill_ids = {item.skill_id for item in all_skills}
     assert "merchant_qa" in skill_ids
     assert "direct_sales_data_assistant" in skill_ids
+
+
+def test_skill_registry_loads_runtime_spec() -> None:
+    registry = SkillRegistry.from_directory("app/skills")
+    runtime_spec = registry.get_runtime_spec("quota_review")
+    assert runtime_spec is not None
+    assert "merchant_id" in runtime_spec.required_inputs
+    assert "merchant_profile_query" in runtime_spec.allowed_tools
+    assert runtime_spec.steps

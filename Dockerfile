@@ -7,10 +7,12 @@ WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 COPY scripts ./scripts
 COPY config ./config
 
-RUN pip install --no-cache-dir -e ".[ai,postgres,mcp]"
+RUN pip install --no-cache-dir -e ".[ai,mysql,mcp]"
 
 EXPOSE 8000
 

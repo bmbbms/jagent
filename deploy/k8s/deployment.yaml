@@ -20,7 +20,7 @@ spec:
             - containerPort: 8000
           env:
             - name: ACQUIRING_AI_AGENT_RUNTIME
-              value: agno
+              value: agentscope
             - name: ACQUIRING_AI_DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -31,8 +31,12 @@ spec:
                 secretKeyRef:
                   name: acquiring-ai-secrets
                   key: redis-url
-            - name: ACQUIRING_AI_VECTOR_STORE_ENABLED
+            - name: ACQUIRING_AI_DATABASE_AUTO_CREATE
+              value: "false"
+            - name: ACQUIRING_AI_DATABASE_RUN_MIGRATIONS
               value: "true"
+            - name: ACQUIRING_AI_VECTOR_STORE_ENABLED
+              value: "false"
           readinessProbe:
             httpGet:
               path: /health

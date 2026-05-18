@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.dependencies import get_approval_service, get_audit_service
+from app.dependencies import get_approval_service, get_audit_service, get_task_service
 from app.schemas import (
     ApprovalDecisionRequest,
     ApprovalDecisionResponse,
@@ -9,6 +9,7 @@ from app.schemas import (
 )
 from app.services.approval_service import ApprovalService
 from app.services.audit_service import AuditService
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
 
@@ -46,6 +47,7 @@ def decide_approval(
     request: ApprovalDecisionRequest,
     approval_service: ApprovalService = Depends(get_approval_service),
     audit_service: AuditService = Depends(get_audit_service),
+    task_service: TaskService = Depends(get_task_service),
 ) -> ApprovalDecisionResponse:
     try:
         response = approval_service.decide(approval_id, request)
@@ -60,5 +62,11 @@ def decide_approval(
             "decision": request.decision.value,
             "comment": request.comment,
         },
+    )
+    task_service.resolve_approval_task(
+        approval_id=approval_id,
+        approval_status=response.status,
+        reviewer_id=request.reviewer_id,
+        comment=request.comment,
     )
     return response
