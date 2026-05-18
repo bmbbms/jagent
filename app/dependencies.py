@@ -157,6 +157,8 @@ def get_evaluation_service() -> EvaluationService:
     return EvaluationService(
         session_factory=get_session_factory(),
         repository=EvaluationRepository(),
+        observation_service=get_observation_service(),
+        tool_execution_log_service=get_tool_execution_log_service(),
     )
 
 

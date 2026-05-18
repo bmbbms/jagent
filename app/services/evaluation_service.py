@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.session import session_scope
@@ -9,9 +11,27 @@ from app.schemas import (
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
     AgentOptimizationSuggestionResponse,
+    AgentObservationLogResponse,
     ChatRequest,
     ChatResponse,
+    DataAccessLogResponse,
+    ToolCallLogResponse,
 )
+from app.services.observation_service import ObservationService
+from app.services.tool_execution_log_service import ToolExecutionLogService
+
+
+@dataclass(frozen=True)
+class EvaluationRuntimeFacts:
+    observations: list[AgentObservationLogResponse]
+    tool_calls: list[ToolCallLogResponse]
+    data_access_logs: list[DataAccessLogResponse]
+    fallback_count: int
+    total_latency_ms: int
+    sensitive_access_count: int
+    approved_access_count: int
+    planner_observed: bool
+    executor_observed: bool
 
 
 class EvaluationService:
@@ -19,9 +39,13 @@ class EvaluationService:
         self,
         session_factory: sessionmaker[Session],
         repository: EvaluationRepository,
+        observation_service: ObservationService | None = None,
+        tool_execution_log_service: ToolExecutionLogService | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._repository = repository
+        self._observation_service = observation_service
+        self._tool_execution_log_service = tool_execution_log_service
 
     def evaluate_chat_result(
         self,
@@ -31,10 +55,27 @@ class EvaluationService:
         request: ChatRequest,
         response: ChatResponse,
     ) -> str:
-        scores = self._build_scores(request=request, response=response)
-        summary = self._build_summary(response=response, overall_score=scores["overall"])
-        details = self._build_details(response=response, scores=scores)
-        suggestions = self._build_suggestions(response=response, scores=scores)
+        runtime_facts = self._collect_runtime_facts(task_id=task_id)
+        scores = self._build_scores(
+            request=request,
+            response=response,
+            runtime_facts=runtime_facts,
+        )
+        summary = self._build_summary(
+            response=response,
+            overall_score=scores["overall"],
+            runtime_facts=runtime_facts,
+        )
+        details = self._build_details(
+            response=response,
+            scores=scores,
+            runtime_facts=runtime_facts,
+        )
+        suggestions = self._build_suggestions(
+            response=response,
+            scores=scores,
+            runtime_facts=runtime_facts,
+        )
 
         with session_scope(self._session_factory) as session:
             item = self._repository.create_evaluation(
@@ -67,6 +108,41 @@ class EvaluationService:
                 suggestions=suggestions,
             )
             return item.evaluation_id
+
+    def _collect_runtime_facts(self, *, task_id: str) -> EvaluationRuntimeFacts:
+        observations = (
+            self._observation_service.list_observations(task_id=task_id)
+            if self._observation_service is not None
+            else []
+        )
+        tool_calls = (
+            self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
+            if self._tool_execution_log_service is not None
+            else []
+        )
+        data_access_logs = (
+            self._tool_execution_log_service.list_data_access_logs(task_id=task_id)
+            if self._tool_execution_log_service is not None
+            else []
+        )
+        fallback_count = sum(1 for item in observations if item.fallback_used)
+        total_latency_ms = sum(item.latency_ms or 0 for item in observations)
+        sensitive_access_count = sum(
+            1 for item in data_access_logs if item.sensitive_level in {"high", "medium"}
+        )
+        approved_access_count = sum(1 for item in data_access_logs if item.approved)
+        phase_set = {item.phase for item in observations if item.phase}
+        return EvaluationRuntimeFacts(
+            observations=observations,
+            tool_calls=tool_calls,
+            data_access_logs=data_access_logs,
+            fallback_count=fallback_count,
+            total_latency_ms=total_latency_ms,
+            sensitive_access_count=sensitive_access_count,
+            approved_access_count=approved_access_count,
+            planner_observed="planner" in phase_set,
+            executor_observed="executor" in phase_set,
+        )
 
     def list_evaluations(self) -> list[AgentEvaluationSummaryResponse]:
         with self._session_factory() as session:
@@ -112,14 +188,59 @@ class EvaluationService:
         return AgentEvaluationResponse(**payload)
 
     @staticmethod
-    def _build_scores(*, request: ChatRequest, response: ChatResponse) -> dict[str, float]:
+    def _build_scores(
+        *,
+        request: ChatRequest,
+        response: ChatResponse,
+        runtime_facts: EvaluationRuntimeFacts,
+    ) -> dict[str, float]:
         completion = 95.0 if response.summary else 40.0
+        if runtime_facts.planner_observed and runtime_facts.executor_observed:
+            completion = min(98.0, completion + 2.0)
+
         accuracy = 90.0 if response.references else 80.0
-        tool_usage = 92.0 if response.selected_tools else 75.0
-        efficiency = 85.0 if len(response.selected_tools) <= 2 else 72.0
-        compliance = 88.0 if not response.requires_approval else 80.0
+        if runtime_facts.tool_calls:
+            accuracy = min(95.0, accuracy + 2.0)
+
+        selected_tool_count = len(response.selected_tools)
+        executed_tool_count = len(runtime_facts.tool_calls)
+        if selected_tool_count == 0:
+            tool_usage = 80.0 if executed_tool_count == 0 else 74.0
+        elif executed_tool_count >= selected_tool_count:
+            tool_usage = 93.0
+        elif executed_tool_count > 0:
+            tool_usage = 84.0
+        else:
+            tool_usage = 70.0
+
+        efficiency = 88.0 if selected_tool_count <= 2 else 78.0
+        if runtime_facts.total_latency_ms >= 1500:
+            efficiency -= 8.0
+        elif runtime_facts.total_latency_ms >= 500:
+            efficiency -= 4.0
+        if runtime_facts.fallback_count > 0:
+            efficiency -= min(8.0, runtime_facts.fallback_count * 3.0)
+        efficiency = max(55.0, efficiency)
+
+        compliance = 88.0 if not response.requires_approval else 82.0
+        if runtime_facts.sensitive_access_count > runtime_facts.approved_access_count:
+            compliance -= 10.0
+        if runtime_facts.data_access_logs and runtime_facts.approved_access_count == len(
+            runtime_facts.data_access_logs
+        ):
+            compliance += 2.0
+        compliance = max(60.0, min(95.0, compliance))
+
         user_feedback = 75.0
         cost = 86.0 if len(request.message) < 200 else 78.0
+        if executed_tool_count >= 3:
+            cost -= 6.0
+        elif executed_tool_count == 2:
+            cost -= 2.0
+        if runtime_facts.total_latency_ms >= 1500:
+            cost -= 4.0
+        cost = max(68.0, cost)
+
         overall = round(
             (
                 completion
@@ -145,14 +266,28 @@ class EvaluationService:
         }
 
     @staticmethod
-    def _build_summary(*, response: ChatResponse, overall_score: float) -> str:
+    def _build_summary(
+        *,
+        response: ChatResponse,
+        overall_score: float,
+        runtime_facts: EvaluationRuntimeFacts,
+    ) -> str:
         return (
             f"评估 Agent 认为当前任务总体表现为 {overall_score:.2f} 分，"
-            f"主要由 {response.capability_name} 完成，可用于后续路由优化、提示词优化和工具编排调整。"
+            f"主要由 {response.capability_name} 完成。"
+            f"本次观测到 {len(runtime_facts.observations)} 条运行观测、"
+            f"{len(runtime_facts.tool_calls)} 次工具调用，"
+            f"fallback {runtime_facts.fallback_count} 次，"
+            f"可用于后续路由优化、提示词优化和工具编排调整。"
         )
 
     @staticmethod
-    def _build_details(*, response: ChatResponse, scores: dict[str, float]) -> list[dict]:
+    def _build_details(
+        *,
+        response: ChatResponse,
+        scores: dict[str, float],
+        runtime_facts: EvaluationRuntimeFacts,
+    ) -> list[dict]:
         return [
             {
                 "dimension_code": "completion",
@@ -165,20 +300,42 @@ class EvaluationService:
                 "dimension_code": "tool_usage",
                 "dimension_name": "工具使用合理性",
                 "score": scores["tool_usage"],
-                "evidence": ",".join(response.selected_tools) or "未使用工具",
+                "evidence": (
+                    f"selected={','.join(response.selected_tools) or 'none'};"
+                    f" executed={len(runtime_facts.tool_calls)}"
+                ),
                 "suggestion": "保持工具选择收敛，减少低收益调用，提升执行稳定性。",
+            },
+            {
+                "dimension_code": "efficiency",
+                "dimension_name": "执行效率",
+                "score": scores["efficiency"],
+                "evidence": (
+                    f"latency_ms={runtime_facts.total_latency_ms};"
+                    f" fallback_count={runtime_facts.fallback_count}"
+                ),
+                "suggestion": "持续降低 fallback 频率和总执行耗时，提升稳定性与实时性。",
             },
             {
                 "dimension_code": "compliance",
                 "dimension_name": "合规与风险控制",
                 "score": scores["compliance"],
-                "evidence": f"requires_approval={response.requires_approval}",
+                "evidence": (
+                    f"requires_approval={response.requires_approval};"
+                    f" sensitive_access={runtime_facts.sensitive_access_count};"
+                    f" approved_access={runtime_facts.approved_access_count}"
+                ),
                 "suggestion": "高风险场景继续绑定审批、审计和数据访问留痕策略。",
             },
         ]
 
     @staticmethod
-    def _build_suggestions(*, response: ChatResponse, scores: dict[str, float]) -> list[dict]:
+    def _build_suggestions(
+        *,
+        response: ChatResponse,
+        scores: dict[str, float],
+        runtime_facts: EvaluationRuntimeFacts,
+    ) -> list[dict]:
         suggestions = [
             {
                 "optimization_type": "prompt",
@@ -196,6 +353,29 @@ class EvaluationService:
                     "current_value_summary": ",".join(response.selected_tools),
                     "suggested_change": "收敛工具清单，仅保留高命中率工具，并增加工具选择规则。",
                     "priority": "high",
+                }
+            )
+        if runtime_facts.fallback_count > 0:
+            suggestions.append(
+                {
+                    "optimization_type": "runtime",
+                    "target_ref": response.capability_id,
+                    "current_value_summary": (
+                        f"fallback_count={runtime_facts.fallback_count}, "
+                        f"observations={len(runtime_facts.observations)}"
+                    ),
+                    "suggested_change": "补齐 AgentScope 模型桥接配置或增强 runtime session 编排，降低本地 fallback 比例。",
+                    "priority": "high",
+                }
+            )
+        if scores["efficiency"] < 80:
+            suggestions.append(
+                {
+                    "optimization_type": "workflow",
+                    "target_ref": response.workflow or response.capability_id,
+                    "current_value_summary": f"total_latency_ms={runtime_facts.total_latency_ms}",
+                    "suggested_change": "优化 planner 到 executor 的链路，收敛工具数和中间阶段，缩短端到端耗时。",
+                    "priority": "medium",
                 }
             )
         return suggestions

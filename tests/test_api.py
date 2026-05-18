@@ -207,6 +207,10 @@ def test_task_evaluation_api(client: TestClient) -> None:
     assert body["task_id"] == task_id
     assert "overall_score" in body
     assert isinstance(body["details"], list)
+    assert any(item["dimension_code"] == "efficiency" for item in body["details"])
+    assert "fallback" in body["summary"] or "工具调用" in body["summary"] or "次工具调用" in body["summary"]
+    assert isinstance(body["suggestions"], list)
+    assert any(item["optimization_type"] in {"runtime", "workflow", "tool", "prompt"} for item in body["suggestions"])
 
 
 def test_task_list_supports_filters(client: TestClient) -> None:
