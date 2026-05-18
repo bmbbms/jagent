@@ -437,6 +437,13 @@
         </section>
 
         <section class="panel">
+          <h2>运行观测</h2>
+          <div id="observations" class="detail-list">
+            <div class="empty">暂无运行观测明细。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>数据访问</h2>
           <div id="dataAccess" class="detail-list">
             <div class="empty">暂无数据访问明细。</div>
@@ -505,6 +512,7 @@
       timeline: document.getElementById("timeline"),
       evaluation: document.getElementById("evaluation"),
       toolCalls: document.getElementById("toolCalls"),
+      observations: document.getElementById("observations"),
       dataAccess: document.getElementById("dataAccess"),
       artifacts: document.getElementById("artifacts"),
     };
@@ -728,6 +736,7 @@
       const rows = [
         ["事件数", task.events?.length || 0],
         ["产物数", task.artifacts?.length || 0],
+        ["运行观测", task.observations?.length || 0],
         ["工具调用", task.tool_calls?.length || 0],
         ["结构化产出", task.structured_tool_results?.length || 0],
         ["数据访问", task.data_access_logs?.length || 0],
@@ -801,6 +810,37 @@
           <div class="detail-item"><div class="label">摘要</div><div class="value">${escapeHtml(item.response_summary || "-")}</div></div>
         </div>
       `).join("");
+    }
+
+    function renderObservations(observations = []) {
+      if (!observations.length) {
+        el.observations.innerHTML = `<div class="empty">暂无运行观测明细。</div>`;
+        return;
+      }
+
+      el.observations.innerHTML = observations.map(item => {
+        const fallbackTag = item.fallback_used
+          ? `<span class="tag warning">fallback</span>`
+          : "";
+        const extraInfo = prettyJson(item.extra_info);
+        return `
+          <div class="list-card">
+            <h3>${escapeHtml(item.phase || item.call_type || "runtime")}</h3>
+            <div class="subtle">${escapeHtml(item.runtime_name)} / ${escapeHtml(item.model_provider || "-")} / ${escapeHtml(item.model_name || "-")}</div>
+            <div>
+              <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+              ${item.agent_id ? `<span class="tag">${escapeHtml(item.agent_id)}</span>` : ""}
+              ${fallbackTag}
+            </div>
+            <div class="detail-item"><div class="label">耗时</div><div class="value">${escapeHtml(item.latency_ms ?? "-")} ms</div></div>
+            <div class="detail-item"><div class="label">输入快照</div><div class="value">${escapeHtml(item.input_snapshot || "-")}</div></div>
+            <div class="detail-item"><div class="label">输出快照</div><div class="value">${escapeHtml(item.output_snapshot || "-")}</div></div>
+            <div class="detail-item"><div class="label">回退原因</div><div class="value">${escapeHtml(item.fallback_reason || "-")}</div></div>
+            <div class="detail-item"><div class="label">时间</div><div class="value">${escapeHtml(formatDate(item.start_time))}</div></div>
+            ${extraInfo ? `<div class="payload-box"><pre>${escapeHtml(extraInfo)}</pre></div>` : ""}
+          </div>
+        `;
+      }).join("");
     }
 
     function renderDataAccess(logs = []) {
@@ -880,6 +920,7 @@
       renderStructuredToolResults(task.structured_tool_results || []);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
+      renderObservations(task.observations || []);
       renderDataAccess(task.data_access_logs || []);
       renderArtifacts(task.artifacts || []);
       renderEvaluation(task.evaluation || null);
