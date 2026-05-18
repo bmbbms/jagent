@@ -321,6 +321,27 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="evaluationList"' in response.text
     assert 'id="evaluationDetail"' in response.text
     assert 'id="evaluationIdInput"' in response.text
+    assert 'id="analyticsList"' in response.text
+    assert 'id="agentFilterInput"' in response.text
+    assert 'id="resultFilterInput"' in response.text
+
+
+def test_evaluation_analytics_api(client: TestClient) -> None:
+    client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-eval-analytics",
+            "biz_domain": "merchant",
+            "message": "请帮我解答商户规则问题",
+        },
+    )
+    response = client.get("/api/evaluations/analytics/by-agent")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert body
+    assert "agent_id" in body[0]
+    assert "average_overall_score" in body[0]
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

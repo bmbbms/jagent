@@ -422,6 +422,17 @@ class AgentEvaluationResponse(AgentEvaluationSummaryResponse):
     suggestions: List[AgentOptimizationSuggestionResponse] = Field(default_factory=list)
 
 
+class AgentEvaluationAnalyticsItemResponse(BaseModel):
+    agent_id: str
+    evaluation_count: int = 0
+    excellent_count: int = 0
+    good_count: int = 0
+    poor_count: int = 0
+    average_overall_score: float = 0.0
+    average_efficiency_score: float = 0.0
+    average_tool_usage_score: float = 0.0
+
+
 class HomeResponse(BaseModel):
     app_name: str
     version: str

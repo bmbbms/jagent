@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
+    AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationDetailResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
@@ -147,6 +148,38 @@ class EvaluationService:
     def list_evaluations(self) -> list[AgentEvaluationSummaryResponse]:
         with self._session_factory() as session:
             return [self._to_summary(item) for item in self._repository.list_evaluations(session)]
+
+    def summarize_by_agent(self) -> list[AgentEvaluationAnalyticsItemResponse]:
+        evaluations = self.list_evaluations()
+        grouped: dict[str, list[AgentEvaluationSummaryResponse]] = {}
+        for item in evaluations:
+            grouped.setdefault(item.agent_id, []).append(item)
+
+        result: list[AgentEvaluationAnalyticsItemResponse] = []
+        for agent_id, items in grouped.items():
+            total = len(items)
+            result.append(
+                AgentEvaluationAnalyticsItemResponse(
+                    agent_id=agent_id,
+                    evaluation_count=total,
+                    excellent_count=sum(1 for item in items if item.result_label == "excellent"),
+                    good_count=sum(1 for item in items if item.result_label == "good"),
+                    poor_count=sum(1 for item in items if item.result_label == "poor"),
+                    average_overall_score=round(
+                        sum(item.overall_score for item in items) / total,
+                        2,
+                    ),
+                    average_efficiency_score=round(
+                        sum(item.efficiency_score for item in items) / total,
+                        2,
+                    ),
+                    average_tool_usage_score=round(
+                        sum(item.tool_usage_score for item in items) / total,
+                        2,
+                    ),
+                )
+            )
+        return sorted(result, key=lambda item: item.average_overall_score, reverse=True)
 
     def get_evaluation(self, evaluation_id: str) -> AgentEvaluationResponse | None:
         with self._session_factory() as session:

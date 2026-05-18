@@ -210,6 +210,8 @@
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
+        <input id="agentFilterInput" placeholder="按 agent_id 过滤" />
+        <input id="resultFilterInput" placeholder="按结果标签过滤" />
         <button id="loadBtn">加载评估</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
       </div>
@@ -217,6 +219,10 @@
 
     <div class="layout">
       <section class="panel">
+        <h2>Agent 评估分析</h2>
+        <div id="analyticsList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">正在加载评估分析...</div>
+        </div>
         <h2>最近评估</h2>
         <div id="evaluationList" class="list">
           <div class="empty">正在加载评估列表...</div>
@@ -236,13 +242,17 @@
     const state = {
       evaluationId: "",
       evaluations: [],
+      analytics: [],
     };
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
       evaluationIdInput: document.getElementById("evaluationIdInput"),
+      agentFilterInput: document.getElementById("agentFilterInput"),
+      resultFilterInput: document.getElementById("resultFilterInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
+      analyticsList: document.getElementById("analyticsList"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
     };
@@ -271,6 +281,23 @@
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
+    }
+
+    function renderAnalyticsList() {
+      if (!state.analytics.length) {
+        el.analyticsList.innerHTML = '<div class="empty">暂无分析结果。</div>';
+        return;
+      }
+
+      el.analyticsList.innerHTML = state.analytics.map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.agent_id)}</div>
+          <div><span class="tag ${toneByScore(item.average_overall_score)}">${escapeHtml(item.average_overall_score)}</span></div>
+          <div class="subtle">评估数：${escapeHtml(item.evaluation_count)}</div>
+          <div class="subtle">excellent / good / poor：${escapeHtml(item.excellent_count)} / ${escapeHtml(item.good_count)} / ${escapeHtml(item.poor_count)}</div>
+          <div class="subtle">效率均分：${escapeHtml(item.average_efficiency_score)} / 工具均分：${escapeHtml(item.average_tool_usage_score)}</div>
+        </div>
+      `).join("");
     }
 
     function renderEvaluationList() {
@@ -339,12 +366,20 @@
     }
 
     async function loadEvaluationList() {
-      state.evaluations = await fetchJson("/api/evaluations");
+      const query = new URLSearchParams();
+      if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      if (el.resultFilterInput.value.trim()) query.set("result_label", el.resultFilterInput.value.trim());
+      state.evaluations = await fetchJson(`/api/evaluations?${query.toString()}`);
       renderEvaluationList();
       if (!state.evaluationId && state.evaluations[0]?.evaluation_id) {
         state.evaluationId = state.evaluations[0].evaluation_id;
         el.evaluationIdInput.value = state.evaluationId;
       }
+    }
+
+    async function loadAnalytics() {
+      state.analytics = await fetchJson("/api/evaluations/analytics/by-agent");
+      renderAnalyticsList();
     }
 
     async function loadEvaluationDetail() {
@@ -362,7 +397,10 @@
     async function bootstrap() {
       const query = new URLSearchParams(window.location.search);
       state.evaluationId = query.get("evaluation_id") || "";
+      el.agentFilterInput.value = query.get("agent_id") || "";
+      el.resultFilterInput.value = query.get("result_label") || "";
       el.evaluationIdInput.value = state.evaluationId;
+      await loadAnalytics();
       await loadEvaluationList();
       if (state.evaluationId) {
         await loadEvaluationDetail();
@@ -378,6 +416,12 @@
     });
     el.loadBtn.addEventListener("click", loadEvaluationDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
+    el.agentFilterInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
+    });
+    el.resultFilterInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
+    });
     el.evaluationIdInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadEvaluationDetail();
     });
