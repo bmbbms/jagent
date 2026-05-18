@@ -298,6 +298,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="taskList"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="observations"' in response.text
+    assert 'id="runtimeSessions"' in response.text
     assert 'id="pageSizeFilter"' in response.text
     assert 'id="sortByFilter"' in response.text
     assert 'id="prevPageBtn"' in response.text

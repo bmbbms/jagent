@@ -444,6 +444,13 @@
         </section>
 
         <section class="panel">
+          <h2>运行会话</h2>
+          <div id="runtimeSessions" class="detail-list">
+            <div class="empty">暂无运行会话视图。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>数据访问</h2>
           <div id="dataAccess" class="detail-list">
             <div class="empty">暂无数据访问明细。</div>
@@ -513,6 +520,7 @@
       evaluation: document.getElementById("evaluation"),
       toolCalls: document.getElementById("toolCalls"),
       observations: document.getElementById("observations"),
+      runtimeSessions: document.getElementById("runtimeSessions"),
       dataAccess: document.getElementById("dataAccess"),
       artifacts: document.getElementById("artifacts"),
     };
@@ -737,6 +745,7 @@
         ["事件数", task.events?.length || 0],
         ["产物数", task.artifacts?.length || 0],
         ["运行观测", task.observations?.length || 0],
+        ["运行会话", task.runtime_sessions?.length || 0],
         ["工具调用", task.tool_calls?.length || 0],
         ["结构化产出", task.structured_tool_results?.length || 0],
         ["数据访问", task.data_access_logs?.length || 0],
@@ -843,6 +852,25 @@
       }).join("");
     }
 
+    function renderRuntimeSessions(runtimeSessions = []) {
+      if (!runtimeSessions.length) {
+        el.runtimeSessions.innerHTML = `<div class="empty">暂无运行会话视图。</div>`;
+        return;
+      }
+
+      el.runtimeSessions.innerHTML = runtimeSessions.map(item => `
+        <div class="list-card">
+          <h3>${escapeHtml(item.session_id)}</h3>
+          <div class="subtle">${escapeHtml(item.runtime_name)} / ${escapeHtml(item.agent_id || "-")}</div>
+          <div class="detail-item"><div class="label">阶段</div><div class="value">${escapeHtml((item.phases || []).join(" -> ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">状态</div><div class="value">${escapeHtml((item.statuses || []).join(", ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">回退原因</div><div class="value">${escapeHtml((item.fallback_reasons || []).join(", ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">观测 / 工具 / 数据</div><div class="value">${escapeHtml(item.observation_count)} / ${escapeHtml(item.tool_call_count)} / ${escapeHtml(item.data_access_count)}</div></div>
+          <div class="detail-item"><div class="label">总耗时</div><div class="value">${escapeHtml(item.total_latency_ms ?? 0)} ms</div></div>
+        </div>
+      `).join("");
+    }
+
     function renderDataAccess(logs = []) {
       if (!logs.length) {
         el.dataAccess.innerHTML = `<div class="empty">暂无数据访问明细。</div>`;
@@ -921,6 +949,7 @@
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);
+      renderRuntimeSessions(task.runtime_sessions || []);
       renderDataAccess(task.data_access_logs || []);
       renderArtifacts(task.artifacts || []);
       renderEvaluation(task.evaluation || null);
