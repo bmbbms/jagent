@@ -279,6 +279,7 @@ class AgentTaskDetailResponse(AgentTaskSummaryResponse):
     tool_calls: List["ToolCallLogResponse"] = Field(default_factory=list)
     data_access_logs: List["DataAccessLogResponse"] = Field(default_factory=list)
     structured_tool_results: List["StructuredToolResultResponse"] = Field(default_factory=list)
+    observations: List["AgentObservationLogResponse"] = Field(default_factory=list)
     evaluation: Optional["AgentEvaluationResponse"] = None
 
 
@@ -333,6 +334,32 @@ class StructuredToolResultResponse(BaseModel):
     result: Dict[str, Any] = Field(default_factory=dict)
     data_access_records: List[Dict[str, Any]] = Field(default_factory=list)
     event_time: Optional[str] = None
+
+
+class AgentObservationLogResponse(BaseModel):
+    id: int
+    task_id: str
+    trace_id: str
+    session_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    runtime_name: str
+    call_type: str
+    phase: Optional[str] = None
+    model_provider: Optional[str] = None
+    model_name: Optional[str] = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    latency_ms: Optional[int] = None
+    first_token_ms: Optional[int] = None
+    status: str
+    fallback_used: bool = False
+    fallback_reason: Optional[str] = None
+    input_snapshot: str = ""
+    output_snapshot: str = ""
+    extra_info: Dict[str, Any] = Field(default_factory=dict)
+    start_time: str
+    end_time: Optional[str] = None
 
 
 class AgentEvaluationDetailResponse(BaseModel):

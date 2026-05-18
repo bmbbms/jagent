@@ -19,6 +19,7 @@ from app.schemas import (
     StructuredToolResultResponse,
 )
 from app.services.mcp_service import MCPService
+from app.services.observation_service import ObservationService
 from app.services.tool_execution_log_service import ToolExecutionLogService
 from app.services.tool_execution_service import ToolExecutionService
 
@@ -31,6 +32,7 @@ class TaskService:
         mcp_service: MCPService | None = None,
         tool_execution_service: ToolExecutionService | None = None,
         tool_execution_log_service: ToolExecutionLogService | None = None,
+        observation_service: ObservationService | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._repository = repository
@@ -39,6 +41,7 @@ class TaskService:
             mcp_service=self._mcp_service
         )
         self._tool_execution_log_service = tool_execution_log_service
+        self._observation_service = observation_service
 
     def create_runtime_task(
         self,
@@ -319,7 +322,13 @@ class TaskService:
             data["tool_calls"] = []
             data["data_access_logs"] = []
             data["structured_tool_results"] = []
+            data["observations"] = []
             data["evaluation"] = None
+            if self._observation_service is not None:
+                data["observations"] = [
+                    item.model_dump()
+                    for item in self._observation_service.list_observations(task_id=task_id)
+                ]
             if self._tool_execution_log_service is not None:
                 tool_calls = self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
                 data_access_logs = self._tool_execution_log_service.list_data_access_logs(

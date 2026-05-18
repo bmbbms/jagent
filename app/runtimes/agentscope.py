@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from app.agents.base import CapabilityAgent
 from app.config import Settings
 from app.runtimes.base import RuntimeContext
 from app.schemas import ChatRequest, ChatResponse
+from app.services.observation_service import ObservationService
 from app.services.skill_registry import SkillRegistry, SkillRuntimeSpec
 from app.services.tool_execution_service import ToolExecutionService
 from app.tools import ToolSpec, list_tool_specs
@@ -107,10 +109,12 @@ class AgentScopeAgentRuntime:
         skill_registry: SkillRegistry | None = None,
         settings: Settings | None = None,
         tool_execution_service: ToolExecutionService | None = None,
+        observation_service: ObservationService | None = None,
     ) -> None:
         self._skill_registry = skill_registry
         self._settings = settings or Settings()
         self._tool_execution_service = tool_execution_service or ToolExecutionService()
+        self._observation_service = observation_service
 
     def run(
         self,
@@ -118,6 +122,7 @@ class AgentScopeAgentRuntime:
         request: ChatRequest,
         context: RuntimeContext,
     ) -> ChatResponse:
+        run_started_at = datetime.utcnow()
         framework = self._detect_framework()
         session = self._build_session(agent=agent, context=context, framework=framework)
         context.metadata["request_message"] = request.message
@@ -138,6 +143,27 @@ class AgentScopeAgentRuntime:
             session=session,
             execution_plan=execution_plan,
             runtime_skills=runtime_skills,
+        )
+        planner_finished_at = datetime.utcnow()
+        self._record_observation(
+            task_id=context.task_id,
+            trace_id=context.trace_id,
+            session_id=session.session_id,
+            agent_id=agent.definition.capability_id,
+            call_type="runtime",
+            phase="planner",
+            status="success",
+            input_snapshot=request.message,
+            output_snapshot=planner_result.planning_summary,
+            extra_info={
+                "selected_skill_ids": execution_plan.selected_skill_ids,
+                "loaded_skill_ids": execution_plan.loaded_skill_ids,
+                "tool_inventory_ids": execution_plan.tool_inventory_ids,
+                "required_inputs": execution_plan.required_inputs,
+                "step_count": planner_result.step_count,
+            },
+            start_time=run_started_at,
+            end_time=planner_finished_at,
         )
 
         self._emit_event(
@@ -215,6 +241,58 @@ class AgentScopeAgentRuntime:
             response=response,
             bridge_result=bridge_result,
         )
+        executor_finished_at = datetime.utcnow()
+        self._record_observation(
+            task_id=context.task_id,
+            trace_id=context.trace_id,
+            session_id=session.session_id,
+            agent_id=agent.definition.capability_id,
+            call_type="runtime",
+            phase="bridge",
+            model_provider="openai"
+            if bridge_result.bridge_mode == "agentscope_react"
+            else None,
+            model_name=self._settings.agentscope_model_name or None,
+            status="success" if bridge_result.bridge_mode == "agentscope_react" else "fallback",
+            fallback_used=bridge_result.bridge_mode != "agentscope_react",
+            fallback_reason=bridge_result.framework_reason or None,
+            input_snapshot=request.message,
+            output_snapshot=bridge_result.bridge_summary,
+            extra_info={
+                "bridge_mode": bridge_result.bridge_mode,
+                "selected_tool_ids": bridge_result.selected_tool_ids,
+                "response_summary": bridge_result.response_summary,
+                "response_next_action": bridge_result.response_next_action,
+            },
+            start_time=planner_finished_at,
+            end_time=executor_finished_at,
+        )
+        self._record_observation(
+            task_id=context.task_id,
+            trace_id=context.trace_id,
+            session_id=session.session_id,
+            agent_id=agent.definition.capability_id,
+            call_type="runtime",
+            phase="executor",
+            model_provider="openai"
+            if bridge_result.bridge_mode == "agentscope_react"
+            else None,
+            model_name=self._settings.agentscope_model_name or None,
+            status="success",
+            fallback_used=bridge_result.bridge_mode != "agentscope_react",
+            fallback_reason=bridge_result.framework_reason or None,
+            input_snapshot=request.message,
+            output_snapshot=response.summary,
+            extra_info={
+                "selected_skills": response.selected_skills,
+                "selected_tools": response.selected_tools,
+                "requires_approval": response.requires_approval,
+                "workflow": response.workflow,
+                "reference_count": len(response.references),
+            },
+            start_time=planner_finished_at,
+            end_time=executor_finished_at,
+        )
 
         self._emit_event(
             context=context,
@@ -242,6 +320,50 @@ class AgentScopeAgentRuntime:
             current_stage="executing",
         )
         return response
+
+    def _record_observation(
+        self,
+        *,
+        task_id: str,
+        trace_id: str,
+        session_id: str | None,
+        agent_id: str | None,
+        call_type: str,
+        phase: str | None,
+        status: str,
+        input_snapshot: str,
+        output_snapshot: str,
+        extra_info: dict[str, Any] | None,
+        start_time: datetime,
+        end_time: datetime,
+        model_provider: str | None = None,
+        model_name: str | None = None,
+        fallback_used: bool = False,
+        fallback_reason: str | None = None,
+    ) -> None:
+        if self._observation_service is None:
+            return
+        latency_ms = max(0, int((end_time - start_time).total_seconds() * 1000))
+        self._observation_service.record_observation(
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            agent_id=agent_id,
+            runtime_name=self.runtime_name,
+            call_type=call_type,
+            phase=phase,
+            model_provider=model_provider,
+            model_name=model_name,
+            status=status,
+            fallback_used=fallback_used,
+            fallback_reason=fallback_reason,
+            input_snapshot=input_snapshot,
+            output_snapshot=output_snapshot,
+            extra_info=extra_info,
+            latency_ms=latency_ms,
+            start_time=start_time,
+            end_time=end_time,
+        )
 
     def _load_runtime_skills(self, skill_ids: list[str]) -> list[SkillRuntimeSpec]:
         if self._skill_registry is None:

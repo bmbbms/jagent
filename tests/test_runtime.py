@@ -1,8 +1,14 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.agents.base import CapabilityAgent, CapabilityDefinition
+from app.db.base import Base
+from app.repositories.observation_repository import ObservationRepository
 from app.registry.base import CapabilityMetadata, CapabilityRoutePlan
 from app.runtimes.agentscope import AgentScopeAgentRuntime
 from app.runtimes.base import RuntimeContext
 from app.schemas import BizDomain, ChatRequest, ChatResponse
+from app.services.observation_service import ObservationService
 from app.services.skill_registry import SkillRegistry
 
 
@@ -34,7 +40,17 @@ class DummyMerchantAgent(CapabilityAgent):
 
 def test_agentscope_runtime_emits_planner_executor_events() -> None:
     registry = SkillRegistry.from_directory("app/skills")
-    runtime = AgentScopeAgentRuntime(skill_registry=registry)
+    engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    observation_service = ObservationService(
+        session_factory=session_factory,
+        repository=ObservationRepository(),
+    )
+    runtime = AgentScopeAgentRuntime(
+        skill_registry=registry,
+        observation_service=observation_service,
+    )
     agent = DummyMerchantAgent()
     request = ChatRequest(user_id="u-runtime", biz_domain=BizDomain.merchant, message="faq")
 
@@ -92,3 +108,10 @@ def test_agentscope_runtime_emits_planner_executor_events() -> None:
         item for item in captured_events if item["event_type"] == "executor_completed"
     )
     assert executor_completed["event_payload"]["metadata"]["bridge_mode"] == "local_capability"
+
+    observations = observation_service.list_observations(task_id="task_runtime")
+    assert len(observations) == 3
+    phases = [item.phase for item in observations]
+    assert phases == ["planner", "bridge", "executor"]
+    assert observations[1].status == "fallback"
+    assert observations[1].fallback_used is True

@@ -16,6 +16,7 @@ from app.repositories.approval_repository import ApprovalRepository
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
+from app.repositories.observation_repository import ObservationRepository
 from app.repositories.task_repository import TaskRepository
 from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.runtimes.agentscope import AgentScopeAgentRuntime
@@ -31,6 +32,7 @@ from app.services.internal_tool_http_provider import HttpInternalToolProvider
 from app.services.internal_tool_provider import InternalToolProvider, LocalDbInternalToolProvider
 from app.services.knowledge_service import KnowledgeService
 from app.services.mcp_service import MCPService
+from app.services.observation_service import ObservationService
 from app.services.skill_registry import SkillRegistry
 from app.services.task_service import TaskService
 from app.services.tool_execution_service import ToolExecutionService
@@ -107,6 +109,7 @@ def get_agent_runtime() -> AgentRuntime:
             skill_registry=get_skill_registry(),
             settings=settings,
             tool_execution_service=get_tool_execution_service(),
+            observation_service=get_observation_service(),
         )
     return LocalAgentRuntime()
 
@@ -145,6 +148,7 @@ def get_task_service() -> TaskService:
         mcp_service=get_mcp_service(),
         tool_execution_service=get_tool_execution_service(),
         tool_execution_log_service=get_tool_execution_log_service(),
+        observation_service=get_observation_service(),
     )
 
 
@@ -207,6 +211,14 @@ def get_tool_execution_log_service() -> ToolExecutionLogService:
     return ToolExecutionLogService(
         session_factory=get_session_factory(),
         repository=ToolExecutionRepository(),
+    )
+
+
+@lru_cache
+def get_observation_service() -> ObservationService:
+    return ObservationService(
+        session_factory=get_session_factory(),
+        repository=ObservationRepository(),
     )
 
 

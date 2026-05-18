@@ -143,14 +143,19 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert "tool_calls" in body
     assert "data_access_logs" in body
     assert "structured_tool_results" in body
+    assert "observations" in body
     assert "evaluation" in body
     assert isinstance(body["tool_calls"], list)
     assert isinstance(body["data_access_logs"], list)
     assert isinstance(body["structured_tool_results"], list)
+    assert isinstance(body["observations"], list)
     assert body["structured_tool_results"]
+    assert body["observations"]
     first_tool_result = body["structured_tool_results"][0]
     assert "tool_id" in first_tool_result
     assert "result" in first_tool_result
+    phases = {item["phase"] for item in body["observations"]}
+    assert {"planner", "bridge", "executor"}.issubset(phases)
     assert body["evaluation"] is not None
 
 
@@ -175,6 +180,13 @@ def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
     assert data_access_response.status_code == 200
     data_access_logs = data_access_response.json()
     assert isinstance(data_access_logs, list)
+
+    observation_response = client.get(f"/api/tasks/{task_id}/observations")
+    assert observation_response.status_code == 200
+    observations = observation_response.json()
+    assert isinstance(observations, list)
+    assert observations
+    assert observations[0]["task_id"] == task_id
 
 
 def test_task_evaluation_api(client: TestClient) -> None:

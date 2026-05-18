@@ -8,17 +8,20 @@ from fastapi.responses import StreamingResponse
 
 from app.dependencies import (
     get_evaluation_service,
+    get_observation_service,
     get_task_service,
     get_tool_execution_log_service,
 )
 from app.schemas import (
     AgentEvaluationResponse,
+    AgentObservationLogResponse,
     AgentTaskDetailResponse,
     AgentTaskListResponse,
     DataAccessLogResponse,
     ToolCallLogResponse,
 )
 from app.services.evaluation_service import EvaluationService
+from app.services.observation_service import ObservationService
 from app.services.task_service import TaskService
 from app.services.tool_execution_log_service import ToolExecutionLogService
 
@@ -121,6 +124,18 @@ def list_task_data_access(
     if detail is None:
         raise HTTPException(status_code=404, detail="task not found")
     return tool_execution_log_service.list_data_access_logs(task_id=task_id)
+
+
+@router.get("/{task_id}/observations", response_model=list[AgentObservationLogResponse])
+def list_task_observations(
+    task_id: str,
+    task_service: TaskService = Depends(get_task_service),
+    observation_service: ObservationService = Depends(get_observation_service),
+) -> list[AgentObservationLogResponse]:
+    detail = task_service.get_task_detail(task_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="task not found")
+    return observation_service.list_observations(task_id=task_id)
 
 
 @router.get("/{task_id}/events/stream")
