@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent 评估中心</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --panel: #fffdf9;
+      --line: #e6d7c4;
+      --text: #221a13;
+      --muted: #6f6559;
+      --accent: #9a4f25;
+      --success: #1d7a4a;
+      --warning: #9b6d1f;
+      --danger: #b53f35;
+      --radius: 18px;
+      --shadow: 0 16px 36px rgba(73, 42, 19, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar button,
+    .toolbar input {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+    }
+
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(154, 79, 37, 0.14);
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+    }
+
+    .success { background: rgba(29, 122, 74, 0.12); color: var(--success); }
+    .warning { background: rgba(155, 109, 31, 0.14); color: var(--warning); }
+    .danger { background: rgba(181, 63, 53, 0.12); color: var(--danger); }
+
+    .stats,
+    .details {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      flex: 0 0 140px;
+    }
+
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .hero {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+
+    .hero strong {
+      font-size: 34px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Agent 评估中心</h1>
+        <p>集中查看任务级评估结果、维度得分与优化建议，帮助我们快速识别哪些 Agent、哪些运行链路需要优先优化。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
+        <button id="loadBtn">加载评估</button>
+        <button id="refreshBtn" class="secondary">刷新列表</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>最近评估</h2>
+        <div id="evaluationList" class="list">
+          <div class="empty">正在加载评估列表...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>评估详情</h2>
+        <div id="evaluationDetail">
+          <div class="empty">请选择左侧评估记录查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      evaluationId: "",
+      evaluations: [],
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      evaluationIdInput: document.getElementById("evaluationIdInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      evaluationList: document.getElementById("evaluationList"),
+      evaluationDetail: document.getElementById("evaluationDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function toneByScore(score) {
+      if (score >= 90) return "success";
+      if (score >= 75) return "warning";
+      return "danger";
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    function renderEvaluationList() {
+      if (!state.evaluations.length) {
+        el.evaluationList.innerHTML = '<div class="empty">暂无评估记录。</div>';
+        return;
+      }
+
+      el.evaluationList.innerHTML = state.evaluations.map(item => `
+        <div class="card ${item.evaluation_id === state.evaluationId ? "active" : ""}" data-evaluation-id="${escapeHtml(item.evaluation_id)}">
+          <div class="title">${escapeHtml(item.agent_id)} / ${escapeHtml(item.task_id)}</div>
+          <div><span class="tag ${toneByScore(item.overall_score)}">${escapeHtml(item.result_label)} / ${escapeHtml(item.overall_score)}</span></div>
+          <div class="subtle">评估 Agent：${escapeHtml(item.evaluator_agent_id)}</div>
+          <div class="subtle">时间：${escapeHtml(formatDate(item.create_time))}</div>
+        </div>
+      `).join("");
+
+      el.evaluationList.querySelectorAll("[data-evaluation-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const evaluationId = node.getAttribute("data-evaluation-id") || "";
+          state.evaluationId = evaluationId;
+          el.evaluationIdInput.value = evaluationId;
+          await loadEvaluationDetail();
+        });
+      });
+    }
+
+    function renderEvaluationDetail(detail) {
+      const detailsHtml = (detail.details || []).map(item => `
+        <div class="row">
+          <div class="label">${escapeHtml(item.dimension_name)}</div>
+          <div class="value">${escapeHtml(item.score)}</div>
+        </div>
+      `).join("");
+
+      const suggestionsHtml = (detail.suggestions || []).length
+        ? detail.suggestions.map(item => `
+          <div class="card">
+            <div class="title">${escapeHtml(item.optimization_type)}</div>
+            <div class="subtle">优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
+            <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+          </div>
+        `).join("")
+        : '<div class="empty">暂无优化建议。</div>';
+
+      el.evaluationDetail.innerHTML = `
+        <div class="hero">
+          <div class="subtle">${escapeHtml(detail.agent_id)} / ${escapeHtml(detail.task_id)}</div>
+          <div style="margin-top: 8px;"><strong>${escapeHtml(detail.overall_score)}</strong></div>
+          <div class="subtle" style="margin-top: 8px;">${escapeHtml(detail.summary || "-")}</div>
+        </div>
+        <div class="stats">
+          <div class="row"><div class="label">结果标签</div><div class="value">${escapeHtml(detail.result_label)}</div></div>
+          <div class="row"><div class="label">完成度</div><div class="value">${escapeHtml(detail.completion_score)}</div></div>
+          <div class="row"><div class="label">准确性</div><div class="value">${escapeHtml(detail.accuracy_score)}</div></div>
+          <div class="row"><div class="label">工具使用</div><div class="value">${escapeHtml(detail.tool_usage_score)}</div></div>
+          <div class="row"><div class="label">效率</div><div class="value">${escapeHtml(detail.efficiency_score)}</div></div>
+          <div class="row"><div class="label">合规</div><div class="value">${escapeHtml(detail.compliance_score)}</div></div>
+          <div class="row"><div class="label">成本</div><div class="value">${escapeHtml(detail.cost_score)}</div></div>
+        </div>
+        <h2 style="margin-top: 18px;">维度明细</h2>
+        <div class="details">${detailsHtml || '<div class="empty">暂无维度明细。</div>'}</div>
+        <h2 style="margin-top: 18px;">优化建议</h2>
+        <div class="list">${suggestionsHtml}</div>
+      `;
+    }
+
+    async function loadEvaluationList() {
+      state.evaluations = await fetchJson("/api/evaluations");
+      renderEvaluationList();
+      if (!state.evaluationId && state.evaluations[0]?.evaluation_id) {
+        state.evaluationId = state.evaluations[0].evaluation_id;
+        el.evaluationIdInput.value = state.evaluationId;
+      }
+    }
+
+    async function loadEvaluationDetail() {
+      const evaluationId = el.evaluationIdInput.value.trim() || state.evaluationId;
+      if (!evaluationId) return;
+      state.evaluationId = evaluationId;
+      const detail = await fetchJson(`/api/evaluations/${encodeURIComponent(evaluationId)}`);
+      renderEvaluationList();
+      renderEvaluationDetail(detail);
+      const url = new URL(window.location.href);
+      url.searchParams.set("evaluation_id", evaluationId);
+      window.history.replaceState({}, "", url);
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      state.evaluationId = query.get("evaluation_id") || "";
+      el.evaluationIdInput.value = state.evaluationId;
+      await loadEvaluationList();
+      if (state.evaluationId) {
+        await loadEvaluationDetail();
+      } else if (state.evaluations[0]?.evaluation_id) {
+        state.evaluationId = state.evaluations[0].evaluation_id;
+        el.evaluationIdInput.value = state.evaluationId;
+        await loadEvaluationDetail();
+      }
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.loadBtn.addEventListener("click", loadEvaluationDetail);
+    el.refreshBtn.addEventListener("click", bootstrap);
+    el.evaluationIdInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadEvaluationDetail();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

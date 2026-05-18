@@ -315,6 +315,14 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="agentList"' in response.text
 
 
+def test_evaluations_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/evaluations")
+    assert response.status_code == 200
+    assert 'id="evaluationList"' in response.text
+    assert 'id="evaluationDetail"' in response.text
+    assert 'id="evaluationIdInput"' in response.text
+
+
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     list_response = client.get("/api/workflows", params={"biz_domain": "operations"})
     assert list_response.status_code == 200
