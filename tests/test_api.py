@@ -144,18 +144,22 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert "data_access_logs" in body
     assert "structured_tool_results" in body
     assert "observations" in body
+    assert "runtime_sessions" in body
     assert "evaluation" in body
     assert isinstance(body["tool_calls"], list)
     assert isinstance(body["data_access_logs"], list)
     assert isinstance(body["structured_tool_results"], list)
     assert isinstance(body["observations"], list)
+    assert isinstance(body["runtime_sessions"], list)
     assert body["structured_tool_results"]
     assert body["observations"]
+    assert body["runtime_sessions"]
     first_tool_result = body["structured_tool_results"][0]
     assert "tool_id" in first_tool_result
     assert "result" in first_tool_result
     phases = {item["phase"] for item in body["observations"]}
     assert {"planner", "bridge", "executor"}.issubset(phases)
+    assert body["runtime_sessions"][0]["observation_count"] >= 1
     assert body["evaluation"] is not None
 
 
@@ -187,6 +191,13 @@ def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
     assert isinstance(observations, list)
     assert observations
     assert observations[0]["task_id"] == task_id
+
+    runtime_session_response = client.get(f"/api/tasks/{task_id}/runtime-sessions")
+    assert runtime_session_response.status_code == 200
+    runtime_sessions = runtime_session_response.json()
+    assert isinstance(runtime_sessions, list)
+    assert runtime_sessions
+    assert runtime_sessions[0]["session_id"]
 
 
 def test_task_evaluation_api(client: TestClient) -> None:

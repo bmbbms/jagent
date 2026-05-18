@@ -18,6 +18,7 @@ from app.schemas import (
     AgentTaskDetailResponse,
     AgentTaskListResponse,
     DataAccessLogResponse,
+    RuntimeSessionViewResponse,
     ToolCallLogResponse,
 )
 from app.services.evaluation_service import EvaluationService
@@ -136,6 +137,17 @@ def list_task_observations(
     if detail is None:
         raise HTTPException(status_code=404, detail="task not found")
     return observation_service.list_observations(task_id=task_id)
+
+
+@router.get("/{task_id}/runtime-sessions", response_model=list[RuntimeSessionViewResponse])
+def list_task_runtime_sessions(
+    task_id: str,
+    task_service: TaskService = Depends(get_task_service),
+) -> list[RuntimeSessionViewResponse]:
+    detail = task_service.get_task_detail(task_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="task not found")
+    return detail.runtime_sessions
 
 
 @router.get("/{task_id}/events/stream")

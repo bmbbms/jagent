@@ -12,11 +12,15 @@ from app.schemas import (
     AgentTaskDetailResponse,
     AgentTaskEventResponse,
     AgentTaskListResponse,
+    AgentObservationLogResponse,
     AgentTaskSummaryResponse,
     ApprovalStatus,
     ChatRequest,
     ChatResponse,
+    DataAccessLogResponse,
+    RuntimeSessionViewResponse,
     StructuredToolResultResponse,
+    ToolCallLogResponse,
 )
 from app.services.mcp_service import MCPService
 from app.services.observation_service import ObservationService
@@ -323,27 +327,37 @@ class TaskService:
             data["data_access_logs"] = []
             data["structured_tool_results"] = []
             data["observations"] = []
+            data["runtime_sessions"] = []
             data["evaluation"] = None
+            observation_items: list[AgentObservationLogResponse] = []
+            tool_call_items: list[ToolCallLogResponse] = []
+            data_access_items: list[DataAccessLogResponse] = []
             if self._observation_service is not None:
-                data["observations"] = [
-                    item.model_dump()
-                    for item in self._observation_service.list_observations(task_id=task_id)
-                ]
+                observation_items = self._observation_service.list_observations(task_id=task_id)
+                data["observations"] = [item.model_dump() for item in observation_items]
             if self._tool_execution_log_service is not None:
-                tool_calls = self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
-                data_access_logs = self._tool_execution_log_service.list_data_access_logs(
+                tool_call_items = self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
+                data_access_items = self._tool_execution_log_service.list_data_access_logs(
                     task_id=task_id
                 )
-                data["tool_calls"] = [item.model_dump() for item in tool_calls]
-                data["data_access_logs"] = [item.model_dump() for item in data_access_logs]
+                data["tool_calls"] = [item.model_dump() for item in tool_call_items]
+                data["data_access_logs"] = [item.model_dump() for item in data_access_items]
                 data["structured_tool_results"] = [
                     item.model_dump()
                     for item in self._build_structured_tool_results(
                         raw_events=raw_events,
-                        tool_calls=tool_calls,
-                        data_access_logs=data_access_logs,
+                        tool_calls=tool_call_items,
+                        data_access_logs=data_access_items,
                     )
                 ]
+            data["runtime_sessions"] = [
+                item.model_dump()
+                for item in self._build_runtime_sessions(
+                    observations=observation_items,
+                    tool_calls=tool_call_items,
+                    data_access_logs=data_access_items,
+                )
+            ]
             return AgentTaskDetailResponse(**data)
 
     def list_task_events_after(
@@ -428,8 +442,8 @@ class TaskService:
     def _build_structured_tool_results(
         *,
         raw_events: list[Any],
-        tool_calls: list[Any],
-        data_access_logs: list[Any],
+        tool_calls: list[ToolCallLogResponse],
+        data_access_logs: list[DataAccessLogResponse],
     ) -> list[StructuredToolResultResponse]:
         finished_event_map: dict[str, Any] = {}
         for event in raw_events:
@@ -471,6 +485,59 @@ class TaskService:
                 )
             )
         return results
+
+    @staticmethod
+    def _build_runtime_sessions(
+        *,
+        observations: list[AgentObservationLogResponse],
+        tool_calls: list[ToolCallLogResponse],
+        data_access_logs: list[DataAccessLogResponse],
+    ) -> list[RuntimeSessionViewResponse]:
+        session_groups: dict[str, list[AgentObservationLogResponse]] = {}
+        for item in observations:
+            if not item.session_id:
+                continue
+            session_groups.setdefault(item.session_id, []).append(item)
+
+        runtime_sessions: list[RuntimeSessionViewResponse] = []
+        for session_id, items in session_groups.items():
+            first = items[0]
+            phases = [item.phase for item in items if item.phase]
+            statuses = [item.status for item in items if item.status]
+            fallback_reasons = [
+                item.fallback_reason for item in items if item.fallback_reason
+            ]
+            tool_call_count = 0
+            data_access_count = 0
+            for tool_call in tool_calls:
+                request_context = tool_call.request_args.get("request_context", {})
+                if request_context.get("runtime_session_id") == session_id:
+                    tool_call_count += 1
+            for data_access in data_access_logs:
+                if any(
+                    tool_call.tool_call_id == data_access.tool_call_id
+                    and tool_call.request_args.get("request_context", {}).get("runtime_session_id")
+                    == session_id
+                    for tool_call in tool_calls
+                ):
+                    data_access_count += 1
+            runtime_sessions.append(
+                RuntimeSessionViewResponse(
+                    session_id=session_id,
+                    trace_id=first.trace_id,
+                    agent_id=first.agent_id,
+                    runtime_name=first.runtime_name,
+                    phases=phases,
+                    statuses=statuses,
+                    fallback_reasons=fallback_reasons,
+                    total_latency_ms=sum(item.latency_ms or 0 for item in items),
+                    observation_count=len(items),
+                    tool_call_count=tool_call_count,
+                    data_access_count=data_access_count,
+                    observations=items,
+                )
+            )
+        return runtime_sessions
 
     @staticmethod
     def _to_summary(task) -> AgentTaskSummaryResponse:
