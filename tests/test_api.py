@@ -362,6 +362,9 @@ def test_evaluation_analytics_api(client: TestClient) -> None:
     assert body
     assert "agent_id" in body[0]
     assert "average_overall_score" in body[0]
+    assert "poor_rate" in body[0]
+    assert "fallback_related_count" in body[0]
+    assert "attention_level" in body[0]
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

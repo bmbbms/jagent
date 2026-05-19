@@ -434,6 +434,9 @@ class AgentEvaluationAnalyticsItemResponse(BaseModel):
     average_overall_score: float = 0.0
     average_efficiency_score: float = 0.0
     average_tool_usage_score: float = 0.0
+    poor_rate: float = 0.0
+    fallback_related_count: int = 0
+    attention_level: str = "normal"
 
 
 class HomeResponse(BaseModel):

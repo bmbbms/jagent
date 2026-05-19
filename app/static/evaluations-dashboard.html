@@ -243,6 +243,7 @@
       evaluationId: "",
       evaluations: [],
       analytics: [],
+      selectedAnalyticsAgentId: "",
     };
 
     const el = {
@@ -270,6 +271,10 @@
       return "danger";
     }
 
+    function toneByAttention(level) {
+      return level === "high" ? "danger" : "success";
+    }
+
     function formatDate(value) {
       if (!value) return "-";
       const date = new Date(value);
@@ -283,6 +288,26 @@
       return response.json();
     }
 
+    function syncQuery() {
+      const url = new URL(window.location.href);
+      if (state.evaluationId) {
+        url.searchParams.set("evaluation_id", state.evaluationId);
+      } else {
+        url.searchParams.delete("evaluation_id");
+      }
+      if (el.agentFilterInput.value.trim()) {
+        url.searchParams.set("agent_id", el.agentFilterInput.value.trim());
+      } else {
+        url.searchParams.delete("agent_id");
+      }
+      if (el.resultFilterInput.value.trim()) {
+        url.searchParams.set("result_label", el.resultFilterInput.value.trim());
+      } else {
+        url.searchParams.delete("result_label");
+      }
+      window.history.replaceState({}, "", url);
+    }
+
     function renderAnalyticsList() {
       if (!state.analytics.length) {
         el.analyticsList.innerHTML = '<div class="empty">暂无分析结果。</div>';
@@ -290,14 +315,28 @@
       }
 
       el.analyticsList.innerHTML = state.analytics.map(item => `
-        <div class="card">
+        <div class="card ${item.agent_id === state.selectedAnalyticsAgentId ? "active" : ""}" data-agent-id="${escapeHtml(item.agent_id)}">
           <div class="title">${escapeHtml(item.agent_id)}</div>
-          <div><span class="tag ${toneByScore(item.average_overall_score)}">${escapeHtml(item.average_overall_score)}</span></div>
+          <div>
+            <span class="tag ${toneByScore(item.average_overall_score)}">${escapeHtml(item.average_overall_score)}</span>
+            <span class="tag ${toneByAttention(item.attention_level)}">${escapeHtml(item.attention_level)}</span>
+          </div>
           <div class="subtle">评估数：${escapeHtml(item.evaluation_count)}</div>
           <div class="subtle">excellent / good / poor：${escapeHtml(item.excellent_count)} / ${escapeHtml(item.good_count)} / ${escapeHtml(item.poor_count)}</div>
           <div class="subtle">效率均分：${escapeHtml(item.average_efficiency_score)} / 工具均分：${escapeHtml(item.average_tool_usage_score)}</div>
+          <div class="subtle">poor rate：${escapeHtml(item.poor_rate)}% / fallback 关联：${escapeHtml(item.fallback_related_count)}</div>
         </div>
       `).join("");
+
+      el.analyticsList.querySelectorAll("[data-agent-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const agentId = node.getAttribute("data-agent-id") || "";
+          state.selectedAnalyticsAgentId = agentId;
+          el.agentFilterInput.value = agentId;
+          await loadEvaluationList();
+          renderAnalyticsList();
+        });
+      });
     }
 
     function renderEvaluationList() {
@@ -370,7 +409,9 @@
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
       if (el.resultFilterInput.value.trim()) query.set("result_label", el.resultFilterInput.value.trim());
       state.evaluations = await fetchJson(`/api/evaluations?${query.toString()}`);
+      state.selectedAnalyticsAgentId = el.agentFilterInput.value.trim();
       renderEvaluationList();
+      syncQuery();
       if (!state.evaluationId && state.evaluations[0]?.evaluation_id) {
         state.evaluationId = state.evaluations[0].evaluation_id;
         el.evaluationIdInput.value = state.evaluationId;
@@ -389,14 +430,13 @@
       const detail = await fetchJson(`/api/evaluations/${encodeURIComponent(evaluationId)}`);
       renderEvaluationList();
       renderEvaluationDetail(detail);
-      const url = new URL(window.location.href);
-      url.searchParams.set("evaluation_id", evaluationId);
-      window.history.replaceState({}, "", url);
+      syncQuery();
     }
 
     async function bootstrap() {
       const query = new URLSearchParams(window.location.search);
       state.evaluationId = query.get("evaluation_id") || "";
+      state.selectedAnalyticsAgentId = query.get("agent_id") || "";
       el.agentFilterInput.value = query.get("agent_id") || "";
       el.resultFilterInput.value = query.get("result_label") || "";
       el.evaluationIdInput.value = state.evaluationId;

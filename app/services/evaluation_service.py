@@ -158,13 +158,19 @@ class EvaluationService:
         result: list[AgentEvaluationAnalyticsItemResponse] = []
         for agent_id, items in grouped.items():
             total = len(items)
+            poor_count = sum(1 for item in items if item.result_label == "poor")
+            fallback_related_count = sum(
+                1 for item in items if "fallback" in (item.summary or "").lower()
+            )
+            poor_rate = round((poor_count / total) * 100, 2) if total else 0.0
+            attention_level = "high" if poor_rate >= 40 or fallback_related_count >= 2 else "normal"
             result.append(
                 AgentEvaluationAnalyticsItemResponse(
                     agent_id=agent_id,
                     evaluation_count=total,
                     excellent_count=sum(1 for item in items if item.result_label == "excellent"),
                     good_count=sum(1 for item in items if item.result_label == "good"),
-                    poor_count=sum(1 for item in items if item.result_label == "poor"),
+                    poor_count=poor_count,
                     average_overall_score=round(
                         sum(item.overall_score for item in items) / total,
                         2,
@@ -177,6 +183,9 @@ class EvaluationService:
                         sum(item.tool_usage_score for item in items) / total,
                         2,
                     ),
+                    poor_rate=poor_rate,
+                    fallback_related_count=fallback_related_count,
+                    attention_level=attention_level,
                 )
             )
         return sorted(result, key=lambda item: item.average_overall_score, reverse=True)
