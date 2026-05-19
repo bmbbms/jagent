@@ -841,6 +841,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="suggestionList"' in response.text
     assert 'id="executionBacklogOverview"' in response.text
     assert 'id="executionBacklogList"' in response.text
+    assert 'id="executionPlanOverview"' in response.text
+    assert 'id="executionPlanList"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
@@ -851,6 +853,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert response.text.count("function renderSuggestionOverview()") == 1
     assert response.text.count("function renderExecutionBacklogOverview()") == 1
     assert response.text.count("async function loadExecutionBacklog()") == 1
+    assert response.text.count("function renderExecutionPlanOverview()") == 1
+    assert response.text.count("async function loadExecutionPlan()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
@@ -1216,6 +1220,26 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert "execution_stage" in first_backlog_item
     assert "attention_level" in first_backlog_item
     assert "recommended_action" in first_backlog_item
+
+    execution_plan_response = client.get(
+        "/api/evaluations/suggestions/execution-plan",
+        params={"agent_id": agent_id},
+    )
+    assert execution_plan_response.status_code == 200
+    execution_plan = execution_plan_response.json()
+    assert "total_agents" in execution_plan
+    assert "high_attention_agent_count" in execution_plan
+    assert "automation_ready_agent_count" in execution_plan
+    assert "blocked_agent_count" in execution_plan
+    assert "items" in execution_plan
+    assert execution_plan["items"]
+    first_plan_item = execution_plan["items"][0]
+    assert "agent_id" in first_plan_item
+    assert "backlog_count" in first_plan_item
+    assert "automation_ready_count" in first_plan_item
+    assert "dependency_ticket_ids" in first_plan_item
+    assert "next_step" in first_plan_item
+    assert "recommended_actions" in first_plan_item
 
     update_response = client.put(
         f"/api/evaluations/suggestions/{first['suggestion_id']}",

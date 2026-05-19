@@ -758,6 +758,31 @@ class AgentOptimizationExecutionBacklogResponse(BaseModel):
     items: List[AgentOptimizationExecutionBacklogItemResponse] = Field(default_factory=list)
 
 
+class AgentOptimizationExecutionPlanItemResponse(BaseModel):
+    agent_id: str
+    suggestion_count: int = 0
+    backlog_count: int = 0
+    high_priority_count: int = 0
+    automation_ready_count: int = 0
+    overdue_count: int = 0
+    blocked_count: int = 0
+    owner_count: int = 0
+    target_refs: List[str] = Field(default_factory=list)
+    owners: List[str] = Field(default_factory=list)
+    dependency_ticket_ids: List[str] = Field(default_factory=list)
+    recommended_actions: List[str] = Field(default_factory=list)
+    next_step: str = ""
+    attention_level: str = "normal"
+
+
+class AgentOptimizationExecutionPlanResponse(BaseModel):
+    total_agents: int = 0
+    high_attention_agent_count: int = 0
+    automation_ready_agent_count: int = 0
+    blocked_agent_count: int = 0
+    items: List[AgentOptimizationExecutionPlanItemResponse] = Field(default_factory=list)
+
+
 class AgentEvaluationSummaryResponse(BaseModel):
     evaluation_id: str
     task_id: str

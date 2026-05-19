@@ -11,6 +11,7 @@ from app.schemas import (
     AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationTrendResponse,
     AgentOptimizationExecutionBacklogResponse,
+    AgentOptimizationExecutionPlanResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
     AgentOptimizationSuggestionTicketRequest,
@@ -155,6 +156,23 @@ def get_optimization_execution_backlog(
         owner=owner,
         priority=priority,
         backlog_only=backlog_only,
+    )
+
+
+@router.get(
+    "/suggestions/execution-plan",
+    response_model=AgentOptimizationExecutionPlanResponse,
+)
+def get_optimization_execution_plan(
+    agent_id: str | None = Query(default=None),
+    owner: str | None = Query(default=None),
+    priority: str | None = Query(default=None),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentOptimizationExecutionPlanResponse:
+    return evaluation_service.build_execution_plan(
+        agent_id=agent_id,
+        owner=owner,
+        priority=priority,
     )
 
 

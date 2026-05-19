@@ -24,6 +24,8 @@ from app.schemas import (
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationExecutionBacklogItemResponse,
     AgentOptimizationExecutionBacklogResponse,
+    AgentOptimizationExecutionPlanItemResponse,
+    AgentOptimizationExecutionPlanResponse,
     AgentOptimizationSuggestionResponse,
     AgentOptimizationSuggestionTicketRequest,
     AgentOptimizationSuggestionUpdateRequest,
@@ -784,6 +786,85 @@ class EvaluationService:
             items=backlog_items,
         )
 
+    def build_execution_plan(
+        self,
+        *,
+        agent_id: str | None = None,
+        owner: str | None = None,
+        priority: str | None = None,
+    ) -> AgentOptimizationExecutionPlanResponse:
+        backlog = self.build_execution_backlog(
+            agent_id=agent_id,
+            owner=owner,
+            priority=priority,
+            backlog_only=False,
+        )
+        grouped: dict[str, list[AgentOptimizationExecutionBacklogItemResponse]] = {}
+        for item in backlog.items:
+            grouped.setdefault(item.agent_id, []).append(item)
+
+        results: list[AgentOptimizationExecutionPlanItemResponse] = []
+        for current_agent_id, items in grouped.items():
+            backlog_count = sum(1 for item in items if item.status != "completed")
+            high_priority_count = sum(1 for item in items if item.priority == "high")
+            automation_ready_count = sum(
+                1
+                for item in items
+                if item.execution_stage in {"untriaged", "ticket_pending"}
+                and item.priority in {"high", "medium"}
+            )
+            overdue_count = sum(1 for item in items if item.overdue)
+            blocked_count = sum(
+                1 for item in items if item.execution_stage == "ticket_pending" and not item.ticket_id
+            )
+            owner_count = len({item.owner for item in items if item.owner})
+            target_refs = sorted({item.optimization_type for item in items})
+            owners = sorted({item.owner for item in items if item.owner})
+            dependency_ticket_ids = sorted({item.ticket_id for item in items if item.ticket_id})
+            recommended_actions = self._build_execution_plan_actions(items)
+            attention_level = (
+                "high"
+                if overdue_count > 0 or high_priority_count > 0 or blocked_count > 0
+                else "normal"
+            )
+            next_step = recommended_actions[0] if recommended_actions else "持续跟踪优化执行进度。"
+            results.append(
+                AgentOptimizationExecutionPlanItemResponse(
+                    agent_id=current_agent_id,
+                    suggestion_count=len(items),
+                    backlog_count=backlog_count,
+                    high_priority_count=high_priority_count,
+                    automation_ready_count=automation_ready_count,
+                    overdue_count=overdue_count,
+                    blocked_count=blocked_count,
+                    owner_count=owner_count,
+                    target_refs=target_refs,
+                    owners=owners,
+                    dependency_ticket_ids=dependency_ticket_ids,
+                    recommended_actions=recommended_actions,
+                    next_step=next_step,
+                    attention_level=attention_level,
+                )
+            )
+
+        results = sorted(
+            results,
+            key=lambda item: (
+                0 if item.attention_level == "high" else 1,
+                -item.overdue_count,
+                -item.high_priority_count,
+                -item.automation_ready_count,
+                item.agent_id,
+            ),
+        )
+        return AgentOptimizationExecutionPlanResponse(
+            total_agents=len(results),
+            high_attention_agent_count=sum(1 for item in results if item.attention_level == "high"),
+            automation_ready_agent_count=sum(1 for item in results if item.automation_ready_count > 0),
+            blocked_agent_count=sum(1 for item in results if item.blocked_count > 0),
+            items=results,
+        )
+
     def update_optimization_suggestion(
         self,
         suggestion_id: int,
@@ -1254,3 +1335,23 @@ class EvaluationService:
         if execution_stage == "processing":
             return "持续跟踪工单处理进度，确认变更已在运行链路生效。"
         return "建议回收优化结果并沉淀为标准配置或执行模板。"
+
+    @staticmethod
+    def _build_execution_plan_actions(
+        items: list[AgentOptimizationExecutionBacklogItemResponse],
+    ) -> list[str]:
+        actions: list[str] = []
+        if any(item.overdue for item in items):
+            actions.append("优先处理超时积压项，并安排治理复盘。")
+        if any(
+            item.execution_stage in {"untriaged", "ticket_pending"} and item.priority == "high"
+            for item in items
+        ):
+            actions.append("先推进高优建议分诊和工单化，避免长期停留在分析阶段。")
+        if any(item.execution_stage == "processing" for item in items):
+            actions.append("跟进处理中工单，确认优化已落到实际 Agent 配置与运行链路。")
+        if any(not item.owner for item in items if item.status != "completed"):
+            actions.append("补齐责任人归属，减少执行链路空转。")
+        if not actions:
+            actions.append("当前闭环节奏稳定，建议持续回收优化成果并标准化。")
+        return actions[:3]
