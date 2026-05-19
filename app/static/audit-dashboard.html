@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审计中心</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #241b15;
+      --muted: #726657;
+      --accent: #a15428;
+      --radius: 18px;
+      --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+    .page {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar button,
+    .toolbar input {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+    }
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #fbf6ef;
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 12px;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>审计中心</h1>
+        <p>集中查看平台审计事件，支持按操作类型、操作者、任务和审批单过滤，方便联调审批、任务执行和外部 Agent 接入过程中的审计留痕。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="approvalPageBtn" class="secondary">审批中心</button>
+        <input id="actionFilterInput" placeholder="按 action 过滤" />
+        <input id="actorFilterInput" placeholder="按 actor_id 过滤" />
+        <input id="taskFilterInput" placeholder="按 task_id 过滤" />
+        <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
+        <button id="loadBtn">加载审计</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>审计事件列表</h2>
+        <div id="auditMeta" class="subtle">正在加载审计事件...</div>
+        <div id="auditList" class="list" style="margin-top: 12px;">
+          <div class="empty">正在加载审计事件...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>审计详情</h2>
+        <div id="auditDetail">
+          <div class="empty">请选择左侧审计事件查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      events: [],
+      selectedIndex: 0,
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      approvalPageBtn: document.getElementById("approvalPageBtn"),
+      actionFilterInput: document.getElementById("actionFilterInput"),
+      actorFilterInput: document.getElementById("actorFilterInput"),
+      taskFilterInput: document.getElementById("taskFilterInput"),
+      approvalFilterInput: document.getElementById("approvalFilterInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      auditMeta: document.getElementById("auditMeta"),
+      auditList: document.getElementById("auditList"),
+      auditDetail: document.getElementById("auditDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    function buildQuery() {
+      const query = new URLSearchParams();
+      if (el.actionFilterInput.value.trim()) query.set("action", el.actionFilterInput.value.trim());
+      if (el.actorFilterInput.value.trim()) query.set("actor_id", el.actorFilterInput.value.trim());
+      if (el.taskFilterInput.value.trim()) query.set("task_id", el.taskFilterInput.value.trim());
+      if (el.approvalFilterInput.value.trim()) query.set("approval_id", el.approvalFilterInput.value.trim());
+      return query;
+    }
+
+    function renderList() {
+      el.auditMeta.textContent = `当前共 ${state.events.length} 条审计事件`;
+      if (!state.events.length) {
+        el.auditList.innerHTML = '<div class="empty">当前筛选条件下没有审计事件。</div>';
+        el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
+        return;
+      }
+      el.auditList.innerHTML = state.events.map((item, index) => `
+        <div class="card ${index === state.selectedIndex ? "active" : ""}" data-index="${index}">
+          <div class="title">${escapeHtml(item.action)}</div>
+          <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
+          <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
+        </div>
+      `).join("");
+
+      el.auditList.querySelectorAll("[data-index]").forEach(node => {
+        node.addEventListener("click", () => {
+          state.selectedIndex = Number(node.getAttribute("data-index") || "0");
+          renderList();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const item = state.events[state.selectedIndex];
+      if (!item) {
+        el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
+        return;
+      }
+      el.auditDetail.innerHTML = `
+        <div class="card">
+          <div class="title">${escapeHtml(item.action)}</div>
+          <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
+          <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
+          <pre>${escapeHtml(JSON.stringify(item.payload || {}, null, 2))}</pre>
+        </div>
+      `;
+    }
+
+    async function loadAudit() {
+      const query = buildQuery();
+      state.events = await fetchJson(`/api/audit?${query.toString()}`);
+      state.selectedIndex = 0;
+      renderList();
+      renderDetail();
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.approvalPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/approvals";
+    });
+    el.loadBtn.addEventListener("click", loadAudit);
+    [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await loadAudit();
+      });
+    });
+
+    loadAudit();
+  </script>
+</body>
+</html>

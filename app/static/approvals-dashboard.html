@@ -188,6 +188,7 @@
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <button id="evaluationPageBtn" class="secondary">评估中心</button>
+        <button id="auditPageBtn" class="secondary">审计中心</button>
         <input id="approvalIdInput" placeholder="输入 approval_id 直接打开" />
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -236,6 +237,7 @@
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
+      auditPageBtn: document.getElementById("auditPageBtn"),
       approvalIdInput: document.getElementById("approvalIdInput"),
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
@@ -455,6 +457,13 @@
     });
     el.evaluationPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/evaluations";
+    });
+    el.auditPageBtn.addEventListener("click", () => {
+      const approvalId = state.approvalId || "";
+      const target = approvalId
+        ? `/ui/audit?approval_id=${encodeURIComponent(approvalId)}`
+        : "/ui/audit";
+      window.location.href = target;
     });
     el.loadBtn.addEventListener("click", loadApprovalDetail);
     el.refreshBtn.addEventListener("click", bootstrap);

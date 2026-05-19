@@ -27,6 +27,19 @@ class AuditService:
                 payload=payload,
             )
 
-    def list_events(self) -> List[AuditEventResponse]:
+    def list_events(
+        self,
+        *,
+        action: str | None = None,
+        actor_id: str | None = None,
+        task_id: str | None = None,
+        approval_id: str | None = None,
+    ) -> List[AuditEventResponse]:
         with self._session_factory() as session:
-            return self._repository.list_events(session)
+            return self._repository.list_events(
+                session,
+                action=action,
+                actor_id=actor_id,
+                task_id=task_id,
+                approval_id=approval_id,
+            )

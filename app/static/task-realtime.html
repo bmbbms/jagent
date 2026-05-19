@@ -335,6 +335,7 @@
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
         <button id="approvalCenterBtn" class="secondary">审批中心</button>
+        <button id="auditCenterBtn" class="secondary">审计中心</button>
         <input id="taskIdInput" placeholder="输入 task_id，例如 task_xxx" />
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -500,6 +501,7 @@
       agentManagerBtn: document.getElementById("agentManagerBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
       approvalCenterBtn: document.getElementById("approvalCenterBtn"),
+      auditCenterBtn: document.getElementById("auditCenterBtn"),
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
       agentFilter: document.getElementById("agentFilter"),
@@ -1088,6 +1090,13 @@
       const target = approvalId
         ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`
         : "/ui/approvals";
+      window.location.href = target;
+    });
+    el.auditCenterBtn.addEventListener("click", () => {
+      const taskId = state.task?.task_id || "";
+      const target = taskId
+        ? `/ui/audit?task_id=${encodeURIComponent(taskId)}`
+        : "/ui/audit";
       window.location.href = target;
     });
     el.refreshBtn.addEventListener("click", async () => {

@@ -51,8 +51,25 @@ class AuditRepository:
         )
         session.flush()
 
-    def list_events(self, session: Session) -> List[AuditEventResponse]:
-        items = session.query(AuditLogModel).order_by(AuditLogModel.create_time.desc()).all()
+    def list_events(
+        self,
+        session: Session,
+        *,
+        action: str | None = None,
+        actor_id: str | None = None,
+        task_id: str | None = None,
+        approval_id: str | None = None,
+    ) -> List[AuditEventResponse]:
+        query = session.query(AuditLogModel)
+        if action:
+            query = query.filter(AuditLogModel.op_type == action)
+        if actor_id:
+            query = query.filter(AuditLogModel.user_id == actor_id)
+        if task_id:
+            query = query.filter(AuditLogModel.task_id == task_id)
+        if approval_id:
+            query = query.filter(AuditLogModel.approval_id == approval_id)
+        items = query.order_by(AuditLogModel.create_time.desc()).all()
         return [
             AuditEventResponse(
                 action=item.op_type,

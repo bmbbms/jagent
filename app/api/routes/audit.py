@@ -9,6 +9,15 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 
 @router.get("", response_model=list[AuditEventResponse])
 def list_audit_events(
+    action: str | None = None,
+    actor_id: str | None = None,
+    task_id: str | None = None,
+    approval_id: str | None = None,
     audit_service: AuditService = Depends(get_audit_service),
 ) -> list[AuditEventResponse]:
-    return audit_service.list_events()
+    return audit_service.list_events(
+        action=action,
+        actor_id=actor_id,
+        task_id=task_id,
+        approval_id=approval_id,
+    )

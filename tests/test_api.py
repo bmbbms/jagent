@@ -161,6 +161,33 @@ def test_audit_events(client: TestClient) -> None:
     assert isinstance(response.json(), list)
 
 
+def test_audit_events_support_filters(client: TestClient) -> None:
+    client.post(
+        "/api/approvals",
+        json={
+            "title": "审计过滤测试",
+            "biz_domain": "operations",
+            "requested_by": "u-audit-filter",
+            "risk_level": "high",
+            "capability_id": "operations.quota_review",
+            "workflow": "quota_review",
+            "payload": {"task_id": "task-audit-filter"},
+        },
+    )
+    response = client.get(
+        "/api/audit",
+        params={
+            "action": "approval.create",
+            "actor_id": "u-audit-filter",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert any(item["action"] == "approval.create" for item in body)
+    assert all(item["actor_id"] == "u-audit-filter" for item in body)
+
+
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
         "/api/chat",
@@ -356,6 +383,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="agentManagerBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
     assert 'id="approvalCenterBtn"' in response.text
+    assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="observations"' in response.text
@@ -400,6 +428,16 @@ def test_approvals_ui_page(client: TestClient) -> None:
     assert 'id="approvalIdInput"' in response.text
     assert 'id="statusFilter"' in response.text
     assert 'id="requestedByFilter"' in response.text
+    assert 'id="auditPageBtn"' in response.text
+
+
+def test_audit_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/audit")
+    assert response.status_code == 200
+    assert 'id="auditList"' in response.text
+    assert 'id="auditDetail"' in response.text
+    assert 'id="actionFilterInput"' in response.text
+    assert 'id="actorFilterInput"' in response.text
 
 
 def test_evaluation_analytics_api(client: TestClient) -> None:
