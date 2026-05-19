@@ -686,6 +686,14 @@ def test_task_runtime_governance_overview_api(client: TestClient) -> None:
     assert "multi_session_task_count" in body
     assert "risk_flag_counts" in body
     assert "active_agent_counts" in body
+    assert "focus_tasks" in body
+    assert isinstance(body["focus_tasks"], list)
+    if body["focus_tasks"]:
+        first = body["focus_tasks"][0]
+        assert "task_id" in first
+        assert "risk_score" in first
+        assert "risk_flags" in first
+        assert "fallback_count" in first
 
 
 def test_task_realtime_ui_page(client: TestClient) -> None:

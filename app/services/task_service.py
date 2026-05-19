@@ -22,6 +22,7 @@ from app.schemas import (
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
     TaskAgentCollaborationViewResponse,
+    TaskRuntimeGovernanceFocusTaskResponse,
     TaskRuntimeGovernanceOverviewResponse,
     TaskRuntimeGovernanceSummaryResponse,
     StructuredToolResultResponse,
@@ -375,6 +376,7 @@ class TaskService:
 
         risk_flag_counts: dict[str, int] = {}
         active_agent_counts: dict[str, int] = {}
+        focus_tasks: list[TaskRuntimeGovernanceFocusTaskResponse] = []
         completed_task_count = 0
         failed_task_count = 0
         fallback_task_count = 0
@@ -408,6 +410,43 @@ class TaskService:
             for agent_id in summary.active_agents:
                 active_agent_counts[agent_id] = active_agent_counts.get(agent_id, 0) + 1
 
+            risk_score = (
+                summary.external_agent_error_count * 4
+                + summary.mcp_error_count * 3
+                + summary.fallback_count * 2
+                + summary.agent_handoff_count
+                + len(summary.risk_flags)
+            )
+            if risk_score > 0:
+                focus_tasks.append(
+                    TaskRuntimeGovernanceFocusTaskResponse(
+                        task_id=item.task_id,
+                        task_title=item.task_title,
+                        selected_agent_id=item.selected_agent_id,
+                        status=item.status,
+                        current_stage=item.current_stage,
+                        start_time=item.start_time,
+                        risk_score=risk_score,
+                        risk_flags=summary.risk_flags,
+                        fallback_count=summary.fallback_count,
+                        mcp_error_count=summary.mcp_error_count,
+                        external_agent_error_count=summary.external_agent_error_count,
+                        handoff_count=summary.agent_handoff_count,
+                        runtime_session_count=summary.runtime_session_count,
+                    )
+                )
+
+        focus_tasks.sort(
+            key=lambda item: (
+                -item.risk_score,
+                -item.external_agent_error_count,
+                -item.mcp_error_count,
+                -item.fallback_count,
+                -item.handoff_count,
+                item.task_id,
+            )
+        )
+
         return TaskRuntimeGovernanceOverviewResponse(
             task_count=len(valid_details),
             completed_task_count=completed_task_count,
@@ -419,6 +458,7 @@ class TaskService:
             multi_session_task_count=multi_session_task_count,
             risk_flag_counts=risk_flag_counts,
             active_agent_counts=active_agent_counts,
+            focus_tasks=focus_tasks[:10],
         )
 
     def list_task_events_after(

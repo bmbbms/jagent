@@ -701,6 +701,22 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     collaboration_view: Optional["TaskAgentCollaborationViewResponse"] = None
 
 
+class TaskRuntimeGovernanceFocusTaskResponse(BaseModel):
+    task_id: str
+    task_title: str = ""
+    selected_agent_id: Optional[str] = None
+    status: str = ""
+    current_stage: Optional[str] = None
+    start_time: str = ""
+    risk_score: int = 0
+    risk_flags: List[str] = Field(default_factory=list)
+    fallback_count: int = 0
+    mcp_error_count: int = 0
+    external_agent_error_count: int = 0
+    handoff_count: int = 0
+    runtime_session_count: int = 0
+
+
 class TaskRuntimeGovernanceOverviewResponse(BaseModel):
     task_count: int = 0
     completed_task_count: int = 0
@@ -712,6 +728,7 @@ class TaskRuntimeGovernanceOverviewResponse(BaseModel):
     multi_session_task_count: int = 0
     risk_flag_counts: Dict[str, int] = Field(default_factory=dict)
     active_agent_counts: Dict[str, int] = Field(default_factory=dict)
+    focus_tasks: List["TaskRuntimeGovernanceFocusTaskResponse"] = Field(default_factory=list)
 
 
 class AgentEvaluationDetailResponse(BaseModel):
