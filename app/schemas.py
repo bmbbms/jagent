@@ -289,6 +289,7 @@ class ToolCallLogResponse(BaseModel):
     task_id: str
     event_id: Optional[str] = None
     agent_id: Optional[str] = None
+    runtime_session_id: Optional[str] = None
     tool_id: str
     tool_name: str
     tool_type: str
@@ -309,6 +310,7 @@ class DataAccessLogResponse(BaseModel):
     task_id: str
     agent_id: Optional[str] = None
     tool_call_id: Optional[str] = None
+    runtime_session_id: Optional[str] = None
     data_source: str
     data_object: str
     access_type: str
@@ -328,6 +330,7 @@ class StructuredToolResultResponse(BaseModel):
     tool_type: str
     provider: Optional[str] = None
     agent_id: Optional[str] = None
+    runtime_session_id: Optional[str] = None
     status: str
     output_summary: str = ""
     request_query: str = ""

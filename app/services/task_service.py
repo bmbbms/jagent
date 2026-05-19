@@ -143,6 +143,9 @@ class TaskService:
             if task is None:
                 return None
             contact_id = task.contact_id
+            trace_id = task.trace_id
+
+        runtime_session_id = self._resolve_runtime_session_id(task_id)
 
         tool_names = response.selected_tools or []
         executed_tool_ids = {
@@ -159,6 +162,8 @@ class TaskService:
                 request_context={
                     "task_id": task_id,
                     "contact_id": contact_id,
+                    "trace_id": trace_id,
+                    "runtime_session_id": runtime_session_id,
                     "agent_id": response.capability_id,
                     "request_message": response.summary,
                 },
@@ -438,6 +443,22 @@ class TaskService:
                 status=status,
             )
 
+    def _resolve_runtime_session_id(self, task_id: str) -> str | None:
+        if self._observation_service is not None:
+            observations = self._observation_service.list_observations(task_id=task_id)
+            for item in reversed(observations):
+                if item.session_id:
+                    return item.session_id
+
+        with self._session_factory() as session:
+            events = self._repository.list_events(session, task_id)
+            for item in reversed(events):
+                event_payload = item.event_payload if isinstance(item.event_payload, dict) else {}
+                runtime_session_id = event_payload.get("runtime_session_id")
+                if isinstance(runtime_session_id, str) and runtime_session_id:
+                    return runtime_session_id
+        return None
+
     @staticmethod
     def _build_structured_tool_results(
         *,
@@ -472,6 +493,7 @@ class TaskService:
                     tool_type=tool_call.tool_type,
                     provider=tool_call.provider,
                     agent_id=tool_call.agent_id,
+                    runtime_session_id=tool_call.runtime_session_id,
                     status=tool_call.status,
                     output_summary=event_payload.get("output_summary")
                     or tool_call.response_summary
@@ -499,6 +521,24 @@ class TaskService:
                 continue
             session_groups.setdefault(item.session_id, []).append(item)
 
+        tool_call_groups: dict[str, list[ToolCallLogResponse]] = {}
+        for item in tool_calls:
+            if not item.runtime_session_id:
+                continue
+            tool_call_groups.setdefault(item.runtime_session_id, []).append(item)
+
+        tool_call_session_map = {
+            item.tool_call_id: item.runtime_session_id
+            for item in tool_calls
+            if item.runtime_session_id
+        }
+        data_access_groups: dict[str, list[DataAccessLogResponse]] = {}
+        for item in data_access_logs:
+            runtime_session_id = item.runtime_session_id or tool_call_session_map.get(item.tool_call_id or "")
+            if not runtime_session_id:
+                continue
+            data_access_groups.setdefault(runtime_session_id, []).append(item)
+
         runtime_sessions: list[RuntimeSessionViewResponse] = []
         for session_id, items in session_groups.items():
             first = items[0]
@@ -507,20 +547,8 @@ class TaskService:
             fallback_reasons = [
                 item.fallback_reason for item in items if item.fallback_reason
             ]
-            tool_call_count = 0
-            data_access_count = 0
-            for tool_call in tool_calls:
-                request_context = tool_call.request_args.get("request_context", {})
-                if request_context.get("runtime_session_id") == session_id:
-                    tool_call_count += 1
-            for data_access in data_access_logs:
-                if any(
-                    tool_call.tool_call_id == data_access.tool_call_id
-                    and tool_call.request_args.get("request_context", {}).get("runtime_session_id")
-                    == session_id
-                    for tool_call in tool_calls
-                ):
-                    data_access_count += 1
+            tool_call_count = len(tool_call_groups.get(session_id, []))
+            data_access_count = len(data_access_groups.get(session_id, []))
             runtime_sessions.append(
                 RuntimeSessionViewResponse(
                     session_id=session_id,

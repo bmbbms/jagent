@@ -90,6 +90,7 @@ class ToolExecutionLogService:
                     task_id=item.task_id,
                     event_id=item.event_id,
                     agent_id=item.agent_id,
+                    runtime_session_id=self._extract_runtime_session_id(item.request_args),
                     tool_id=item.tool_id,
                     tool_name=item.tool_name,
                     tool_type=item.tool_type,
@@ -109,12 +110,18 @@ class ToolExecutionLogService:
 
     def list_data_access_logs(self, *, task_id: str) -> list[DataAccessLogResponse]:
         with self._session_factory() as session:
+            tool_call_items = self._repository.list_tool_call_logs(session, task_id=task_id)
+            runtime_session_by_tool_call_id = {
+                item.tool_call_id: self._extract_runtime_session_id(item.request_args)
+                for item in tool_call_items
+            }
             return [
                 DataAccessLogResponse(
                     id=item.id,
                     task_id=item.task_id,
                     agent_id=item.agent_id,
                     tool_call_id=item.tool_call_id,
+                    runtime_session_id=runtime_session_by_tool_call_id.get(item.tool_call_id),
                     data_source=item.data_source,
                     data_object=item.data_object,
                     access_type=item.access_type,
@@ -128,3 +135,13 @@ class ToolExecutionLogService:
                 )
                 for item in self._repository.list_data_access_logs(session, task_id=task_id)
             ]
+
+    @staticmethod
+    def _extract_runtime_session_id(request_args: dict[str, Any] | None) -> str | None:
+        if not isinstance(request_args, dict):
+            return None
+        request_context = request_args.get("request_context")
+        if not isinstance(request_context, dict):
+            return None
+        runtime_session_id = request_context.get("runtime_session_id")
+        return runtime_session_id if isinstance(runtime_session_id, str) and runtime_session_id else None

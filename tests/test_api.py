@@ -157,10 +157,26 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     first_tool_result = body["structured_tool_results"][0]
     assert "tool_id" in first_tool_result
     assert "result" in first_tool_result
+    assert "runtime_session_id" in first_tool_result
     phases = {item["phase"] for item in body["observations"]}
     assert {"planner", "bridge", "executor"}.issubset(phases)
     assert body["runtime_sessions"][0]["observation_count"] >= 1
+    assert body["runtime_sessions"][0]["tool_call_count"] >= 1
     assert body["evaluation"] is not None
+    tool_runtime_session_ids = {
+        item["runtime_session_id"] for item in body["tool_calls"] if item.get("runtime_session_id")
+    }
+    observation_session_ids = {
+        item["session_id"] for item in body["observations"] if item.get("session_id")
+    }
+    assert tool_runtime_session_ids
+    assert tool_runtime_session_ids.issubset(observation_session_ids)
+    data_access_runtime_session_ids = {
+        item["runtime_session_id"]
+        for item in body["data_access_logs"]
+        if item.get("runtime_session_id")
+    }
+    assert data_access_runtime_session_ids.issubset(tool_runtime_session_ids)
 
 
 def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
@@ -179,11 +195,15 @@ def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
     assert tool_call_response.status_code == 200
     tool_calls = tool_call_response.json()
     assert isinstance(tool_calls, list)
+    assert tool_calls
+    assert any(item.get("runtime_session_id") for item in tool_calls)
 
     data_access_response = client.get(f"/api/tasks/{task_id}/data-access")
     assert data_access_response.status_code == 200
     data_access_logs = data_access_response.json()
     assert isinstance(data_access_logs, list)
+    assert data_access_logs
+    assert all("runtime_session_id" in item for item in data_access_logs)
 
     observation_response = client.get(f"/api/tasks/{task_id}/observations")
     assert observation_response.status_code == 200
