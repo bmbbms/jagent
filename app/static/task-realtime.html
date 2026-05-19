@@ -486,17 +486,24 @@
           </div>
         </section>
 
-        <section class="panel">
-          <h2>运行会话</h2>
-          <div id="runtimeSessions" class="detail-list">
-            <div class="empty">暂无运行会话视图。</div>
-          </div>
-        </section>
+          <section class="panel">
+            <h2>运行会话</h2>
+            <div id="runtimeSessions" class="detail-list">
+              <div class="empty">暂无运行会话视图。</div>
+            </div>
+          </section>
 
-        <section class="panel">
-          <h2>数据访问</h2>
-          <div id="dataAccess" class="detail-list">
-            <div class="empty">暂无数据访问明细。</div>
+          <section class="panel">
+            <h2>运行治理摘要</h2>
+            <div id="runtimeGovernance" class="detail-list">
+              <div class="empty">暂无运行治理摘要。</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>数据访问</h2>
+            <div id="dataAccess" class="detail-list">
+              <div class="empty">暂无数据访问明细。</div>
           </div>
         </section>
 
@@ -576,13 +583,14 @@
       workflowSnapshot: document.getElementById("workflowSnapshot"),
       skillSnapshot: document.getElementById("skillSnapshot"),
       timeline: document.getElementById("timeline"),
-      evaluation: document.getElementById("evaluation"),
-      toolCalls: document.getElementById("toolCalls"),
-      observations: document.getElementById("observations"),
-      runtimeSessions: document.getElementById("runtimeSessions"),
-      dataAccess: document.getElementById("dataAccess"),
-      artifacts: document.getElementById("artifacts"),
-    };
+        evaluation: document.getElementById("evaluation"),
+        toolCalls: document.getElementById("toolCalls"),
+        observations: document.getElementById("observations"),
+        runtimeSessions: document.getElementById("runtimeSessions"),
+        runtimeGovernance: document.getElementById("runtimeGovernance"),
+        dataAccess: document.getElementById("dataAccess"),
+        artifacts: document.getElementById("artifacts"),
+      };
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -1126,7 +1134,30 @@
           <div class="detail-item"><div class="label">观测 / 工具 / 数据</div><div class="value">${escapeHtml(item.observation_count)} / ${escapeHtml(item.tool_call_count)} / ${escapeHtml(item.data_access_count)}</div></div>
           <div class="detail-item"><div class="label">总耗时</div><div class="value">${escapeHtml(item.total_latency_ms ?? 0)} ms</div></div>
         </div>
-      `).join("");
+        `).join("");
+    }
+
+    function renderRuntimeGovernance(summary) {
+      if (!summary) {
+        el.runtimeGovernance.innerHTML = `<div class="empty">暂无运行治理摘要。</div>`;
+        return;
+      }
+      const riskFlags = (summary.risk_flags || []).length
+        ? (summary.risk_flags || []).map(item => `<span class="tag warning">${escapeHtml(item)}</span>`).join("")
+        : `<span class="tag success">healthy</span>`;
+      el.runtimeGovernance.innerHTML = `
+        <div class="list-card">
+          <div class="detail-item"><div class="label">运行会话</div><div class="value">${escapeHtml(summary.runtime_session_count)}</div></div>
+          <div class="detail-item"><div class="label">观测数</div><div class="value">${escapeHtml(summary.observation_count)}</div></div>
+          <div class="detail-item"><div class="label">Fallback</div><div class="value">${escapeHtml(summary.fallback_count)}</div></div>
+          <div class="detail-item"><div class="label">外部 Agent 调用</div><div class="value">${escapeHtml(summary.external_agent_call_count)} / 失败 ${escapeHtml(summary.external_agent_error_count)}</div></div>
+          <div class="detail-item"><div class="label">Agent 切换</div><div class="value">${escapeHtml(summary.agent_handoff_count)} / ${escapeHtml(summary.unique_agent_count)}</div></div>
+          <div class="detail-item"><div class="label">活跃 Agent</div><div class="value">${escapeHtml((summary.active_agents || []).join(", ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">阶段</div><div class="value">${escapeHtml((summary.observed_phases || []).join(" -> ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">回退原因</div><div class="value">${escapeHtml((summary.fallback_reasons || []).join(", ") || "-")}</div></div>
+          <div class="detail-item"><div class="label">风险标记</div><div class="value">${riskFlags}</div></div>
+        </div>
+      `;
     }
 
     function renderDataAccess(logs = []) {
@@ -1235,6 +1266,7 @@
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);
       renderRuntimeSessions(task.runtime_sessions || []);
+      renderRuntimeGovernance(task.runtime_governance || null);
       renderDataAccess(task.data_access_logs || []);
       renderArtifacts(task.artifacts || []);
       renderEvaluation(task.evaluation || null);

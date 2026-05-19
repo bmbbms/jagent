@@ -322,6 +322,7 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert "output_overview" in body
     assert "observations" in body
     assert "runtime_sessions" in body
+    assert "runtime_governance" in body
     assert "evaluation" in body
     assert isinstance(body["tool_calls"], list)
     assert isinstance(body["data_access_logs"], list)
@@ -329,6 +330,7 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert isinstance(body["output_overview"], dict)
     assert isinstance(body["observations"], list)
     assert isinstance(body["runtime_sessions"], list)
+    assert isinstance(body["runtime_governance"], dict)
     assert body["structured_tool_results"]
     assert body["output_overview"]["total_deliverables"] >= 1
     assert body["output_overview"]["deliverables"]
@@ -342,6 +344,9 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert {"planner", "bridge", "executor"}.issubset(phases)
     assert body["runtime_sessions"][0]["observation_count"] >= 1
     assert body["runtime_sessions"][0]["tool_call_count"] >= 1
+    assert "runtime_session_count" in body["runtime_governance"]
+    assert "fallback_count" in body["runtime_governance"]
+    assert "risk_flags" in body["runtime_governance"]
     assert body["evaluation"] is not None
     event_titles = {item["title"] for item in body["events"]}
     assert "任务已创建" in event_titles
@@ -543,6 +548,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="skillSnapshot"' in response.text
     assert 'id="observations"' in response.text
     assert 'id="runtimeSessions"' in response.text
+    assert 'id="runtimeGovernance"' in response.text
     assert 'id="pageSizeFilter"' in response.text
     assert 'id="sortByFilter"' in response.text
     assert 'id="prevPageBtn"' in response.text

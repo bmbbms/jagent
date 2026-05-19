@@ -378,6 +378,7 @@ class AgentTaskDetailResponse(AgentTaskSummaryResponse):
     structured_tool_results: List["StructuredToolResultResponse"] = Field(default_factory=list)
     observations: List["AgentObservationLogResponse"] = Field(default_factory=list)
     runtime_sessions: List["RuntimeSessionViewResponse"] = Field(default_factory=list)
+    runtime_governance: Optional["TaskRuntimeGovernanceSummaryResponse"] = None
     evaluation: Optional["AgentEvaluationResponse"] = None
 
 
@@ -476,6 +477,20 @@ class RuntimeSessionViewResponse(BaseModel):
     tool_call_count: int = 0
     data_access_count: int = 0
     observations: List["AgentObservationLogResponse"] = Field(default_factory=list)
+
+
+class TaskRuntimeGovernanceSummaryResponse(BaseModel):
+    runtime_session_count: int = 0
+    observation_count: int = 0
+    fallback_count: int = 0
+    external_agent_call_count: int = 0
+    external_agent_error_count: int = 0
+    agent_handoff_count: int = 0
+    unique_agent_count: int = 0
+    active_agents: List[str] = Field(default_factory=list)
+    observed_phases: List[str] = Field(default_factory=list)
+    fallback_reasons: List[str] = Field(default_factory=list)
+    risk_flags: List[str] = Field(default_factory=list)
 
 
 class AgentEvaluationDetailResponse(BaseModel):

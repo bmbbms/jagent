@@ -21,6 +21,7 @@ from app.schemas import (
     ChatResponse,
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
+    TaskRuntimeGovernanceSummaryResponse,
     StructuredToolResultResponse,
     ToolCallLogResponse,
 )
@@ -385,6 +386,14 @@ class TaskService:
                     data_access_logs=data_access_items,
                 )
             ]
+            data["runtime_governance"] = self._build_runtime_governance_summary(
+                events=events,
+                observations=observation_items,
+                runtime_sessions=[
+                    RuntimeSessionViewResponse(**item)
+                    for item in data["runtime_sessions"]
+                ],
+            ).model_dump()
             return AgentTaskDetailResponse(**data)
 
     def get_task_output_overview(
@@ -597,6 +606,58 @@ class TaskService:
                 )
             )
         return runtime_sessions
+
+    @staticmethod
+    def _build_runtime_governance_summary(
+        *,
+        events: list[AgentTaskEventResponse],
+        observations: list[AgentObservationLogResponse],
+        runtime_sessions: list[RuntimeSessionViewResponse],
+    ) -> TaskRuntimeGovernanceSummaryResponse:
+        fallback_reasons = sorted(
+            {
+                reason
+                for item in observations
+                for reason in ([item.fallback_reason] if item.fallback_reason else [])
+            }
+        )
+        phases = sorted({item.phase for item in observations if item.phase})
+        active_agents = []
+        for item in events:
+            if item.agent_id and item.agent_id not in active_agents:
+                active_agents.append(item.agent_id)
+        agent_handoff_count = max(0, len(active_agents) - 1)
+        external_agent_call_count = sum(
+            1 for item in events if item.event_type == "external_agent_call_finished"
+        )
+        external_agent_error_count = sum(
+            1 for item in events if item.event_type == "external_agent_call_failed"
+        )
+        fallback_count = sum(1 for item in observations if item.fallback_used) + sum(
+            1 for item in events if item.event_type == "runtime_fallback"
+        )
+        risk_flags: list[str] = []
+        if fallback_count:
+            risk_flags.append("runtime_fallback_detected")
+        if external_agent_error_count:
+            risk_flags.append("external_agent_error_detected")
+        if agent_handoff_count > 0:
+            risk_flags.append("multi_agent_handoff_detected")
+        if len(runtime_sessions) > 1:
+            risk_flags.append("multi_session_execution")
+        return TaskRuntimeGovernanceSummaryResponse(
+            runtime_session_count=len(runtime_sessions),
+            observation_count=len(observations),
+            fallback_count=fallback_count,
+            external_agent_call_count=external_agent_call_count,
+            external_agent_error_count=external_agent_error_count,
+            agent_handoff_count=agent_handoff_count,
+            unique_agent_count=len(active_agents),
+            active_agents=active_agents,
+            observed_phases=phases,
+            fallback_reasons=fallback_reasons,
+            risk_flags=risk_flags,
+        )
 
     @staticmethod
     def build_output_overview(
