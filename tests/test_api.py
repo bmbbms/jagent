@@ -206,11 +206,17 @@ def test_approval_list_filters_and_detail_api(client: TestClient) -> None:
             "status": "pending",
             "biz_domain": "operations",
             "requested_by": "u-approval-filter",
+            "risk_level": "high",
+            "capability_id": "operations.quota_review",
+            "workflow": "quota_review",
         },
     )
     assert list_response.status_code == 200
     approvals = list_response.json()
     assert any(item["approval_id"] == approval["approval_id"] for item in approvals)
+    assert all(item["risk_level"] == "high" for item in approvals)
+    assert all(item["capability_id"] == "operations.quota_review" for item in approvals)
+    assert all(item["workflow"] == "quota_review" for item in approvals)
 
     detail_response = client.get(f"/api/approvals/{approval['approval_id']}")
     assert detail_response.status_code == 200
@@ -527,7 +533,10 @@ def test_approvals_ui_page(client: TestClient) -> None:
     assert 'id="approvalDetail"' in response.text
     assert 'id="approvalIdInput"' in response.text
     assert 'id="statusFilter"' in response.text
+    assert 'id="riskFilter"' in response.text
     assert 'id="requestedByFilter"' in response.text
+    assert 'id="capabilityFilterInput"' in response.text
+    assert 'id="workflowFilterInput"' in response.text
     assert 'id="workflowPageBtn"' in response.text
     assert 'id="capabilityPageBtn"' in response.text
     assert 'id="auditPageBtn"' in response.text

@@ -16,6 +16,9 @@ class ApprovalRepository:
         status: str | None = None,
         biz_domain: str | None = None,
         requested_by: str | None = None,
+        risk_level: str | None = None,
+        capability_id: str | None = None,
+        workflow: str | None = None,
     ) -> List[ApprovalTask]:
         query = session.query(ApprovalTaskModel)
         if status:
@@ -24,6 +27,12 @@ class ApprovalRepository:
             query = query.filter(ApprovalTaskModel.biz_domain == biz_domain)
         if requested_by:
             query = query.filter(ApprovalTaskModel.requested_by == requested_by)
+        if risk_level:
+            query = query.filter(ApprovalTaskModel.risk_level == risk_level)
+        if capability_id:
+            query = query.filter(ApprovalTaskModel.capability_id == capability_id)
+        if workflow:
+            query = query.filter(ApprovalTaskModel.workflow_code == workflow)
         items = query.order_by(ApprovalTaskModel.create_time.desc()).all()
         return [self._to_schema(item) for item in items]
 

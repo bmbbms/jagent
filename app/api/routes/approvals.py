@@ -19,12 +19,18 @@ def list_approvals(
     status: str | None = None,
     biz_domain: str | None = None,
     requested_by: str | None = None,
+    risk_level: str | None = None,
+    capability_id: str | None = None,
+    workflow: str | None = None,
     approval_service: ApprovalService = Depends(get_approval_service),
 ) -> list[ApprovalTask]:
     return approval_service.list_tasks(
         status=status,
         biz_domain=biz_domain,
         requested_by=requested_by,
+        risk_level=risk_level,
+        capability_id=capability_id,
+        workflow=workflow,
     )
 
 

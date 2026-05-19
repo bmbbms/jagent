@@ -28,6 +28,9 @@ class ApprovalService:
         status: str | None = None,
         biz_domain: str | None = None,
         requested_by: str | None = None,
+        risk_level: str | None = None,
+        capability_id: str | None = None,
+        workflow: str | None = None,
     ) -> list[ApprovalTask]:
         with self._session_factory() as session:
             return self._repository.list_tasks(
@@ -35,6 +38,9 @@ class ApprovalService:
                 status=status,
                 biz_domain=biz_domain,
                 requested_by=requested_by,
+                risk_level=risk_level,
+                capability_id=capability_id,
+                workflow=workflow,
             )
 
     def get_task(self, approval_id: str) -> ApprovalTask:
