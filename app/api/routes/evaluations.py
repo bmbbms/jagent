@@ -10,6 +10,7 @@ from app.schemas import (
     AgentEvaluationFocusAgentResponse,
     AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationTrendResponse,
+    AgentOptimizationExecutionBacklogResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
     AgentOptimizationSuggestionTicketRequest,
@@ -135,6 +136,25 @@ def get_optimization_suggestion_overview(
         status=status,
         owner=owner,
         priority=priority,
+    )
+
+
+@router.get(
+    "/suggestions/execution-backlog",
+    response_model=AgentOptimizationExecutionBacklogResponse,
+)
+def get_optimization_execution_backlog(
+    agent_id: str | None = Query(default=None),
+    owner: str | None = Query(default=None),
+    priority: str | None = Query(default=None),
+    backlog_only: bool = Query(default=False),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentOptimizationExecutionBacklogResponse:
+    return evaluation_service.build_execution_backlog(
+        agent_id=agent_id,
+        owner=owner,
+        priority=priority,
+        backlog_only=backlog_only,
     )
 
 

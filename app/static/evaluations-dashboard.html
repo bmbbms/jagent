@@ -330,8 +330,16 @@
 
         <div class="section-split">
           <h2>优化建议概览</h2>
-          <div id="suggestionOverviewGrid" class="overview-grid">
-            <div class="empty">正在加载优化建议概览...</div>
+        <div id="suggestionOverviewGrid" class="overview-grid">
+          <div class="empty">正在加载优化建议概览...</div>
+        </div>
+
+          <h2>优化执行闭环</h2>
+          <div id="executionBacklogOverview" class="overview-grid">
+            <div class="empty">正在加载优化执行闭环...</div>
+          </div>
+          <div id="executionBacklogList" class="list" style="margin-bottom: 12px;">
+            <div class="empty">正在加载执行闭环待办...</div>
           </div>
 
           <div class="inline-form" style="margin-bottom: 12px;">
@@ -378,6 +386,7 @@
       trend: null,
       suggestions: [],
       suggestionOverview: null,
+      executionBacklog: null,
       selectedAnalyticsAgentId: "",
       selectedSuggestionId: "",
       suggestionView: {
@@ -408,6 +417,8 @@
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
       suggestionOverviewGrid: document.getElementById("suggestionOverviewGrid"),
+      executionBacklogOverview: document.getElementById("executionBacklogOverview"),
+      executionBacklogList: document.getElementById("executionBacklogList"),
       suggestionStatusFilter: document.getElementById("suggestionStatusFilter"),
       suggestionPriorityFilter: document.getElementById("suggestionPriorityFilter"),
       suggestionOwnerFilter: document.getElementById("suggestionOwnerFilter"),
@@ -608,6 +619,81 @@
         });
     }
 
+    function renderExecutionBacklogOverview() {
+      if (!state.executionBacklog) {
+        el.executionBacklogOverview.innerHTML = '<div class="empty">暂无执行闭环概览。</div>';
+        return;
+      }
+      const cards = [
+        ["闭环总数", state.executionBacklog.total],
+        ["待分诊", state.executionBacklog.untriaged_count],
+        ["待转工单", state.executionBacklog.ticket_pending_count],
+        ["处理中", state.executionBacklog.processing_count],
+        ["已闭环", state.executionBacklog.completed_count],
+        ["超时积压", state.executionBacklog.overdue_count],
+        ["高优积压", state.executionBacklog.high_priority_backlog_count],
+        ["可自动推进", state.executionBacklog.automation_ready_count],
+      ];
+      el.executionBacklogOverview.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderExecutionBacklogList() {
+      const items = state.executionBacklog?.items || [];
+      if (!items.length) {
+        el.executionBacklogList.innerHTML = '<div class="empty">当前没有需要跟进的执行闭环项。</div>';
+        return;
+      }
+      el.executionBacklogList.innerHTML = items.slice(0, 8).map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.optimization_type)} / ${escapeHtml(item.agent_id)}</div>
+          <div>
+            <span class="tag ${item.attention_level === "high" ? "danger" : "success"}">${escapeHtml(item.attention_level)}</span>
+            <span class="tag">${escapeHtml(item.priority)}</span>
+            <span class="tag">${escapeHtml(item.execution_stage)}</span>
+            <span class="tag ${item.overdue ? "danger" : ""}">${item.overdue ? "overdue" : `aging:${escapeHtml(item.aging_days)}`}</span>
+          </div>
+          <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+          <div class="subtle">建议ID：${escapeHtml(item.suggestion_id)} / 评估ID：${escapeHtml(item.evaluation_id)}</div>
+          <div class="subtle">负责人：${escapeHtml(item.owner || "unassigned")} / 工单：${escapeHtml(buildTicketSummary(item))}</div>
+          <div class="subtle">动作建议：${escapeHtml(item.recommended_action)}</div>
+          <div class="inline-form">
+            <button class="secondary" type="button" data-open-backlog-evaluation="${escapeHtml(item.evaluation_id)}">打开评估</button>
+            ${item.ticket_id ? `<button class="secondary" type="button" data-open-backlog-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
+            <button class="secondary" type="button" data-open-backlog-audit="${escapeHtml(item.suggestion_id)}" data-open-backlog-ticket-audit="${escapeHtml(item.ticket_id || "")}">打开审计</button>
+          </div>
+        </div>
+      `).join("");
+
+      el.executionBacklogList.querySelectorAll("[data-open-backlog-evaluation]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const evaluationId = node.getAttribute("data-open-backlog-evaluation") || "";
+          if (!evaluationId) return;
+          state.evaluationId = evaluationId;
+          el.evaluationIdInput.value = evaluationId;
+          await loadEvaluationDetail();
+        });
+      });
+      el.executionBacklogList.querySelectorAll("[data-open-backlog-ticket]").forEach(node => {
+        node.addEventListener("click", () => {
+          const ticketId = node.getAttribute("data-open-backlog-ticket") || "";
+          if (!ticketId) return;
+          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+        });
+      });
+      el.executionBacklogList.querySelectorAll("[data-open-backlog-audit]").forEach(node => {
+        node.addEventListener("click", () => {
+          const suggestionId = node.getAttribute("data-open-backlog-audit") || "";
+          const ticketId = node.getAttribute("data-open-backlog-ticket-audit") || "";
+          openAudit(ticketId, suggestionId);
+        });
+      });
+    }
+
     function renderAnalyticsList() {
       if (!state.analytics.length) {
         el.analyticsList.innerHTML = '<div class="empty">暂无分析结果。</div>';
@@ -635,6 +721,7 @@
           resetSuggestionView();
           await loadEvaluationList();
           await loadSuggestionOverview();
+          await loadExecutionBacklog();
           await loadSuggestions();
           await loadTrend();
           renderAnalyticsList();
@@ -1036,6 +1123,16 @@
       renderSuggestionOverview();
     }
 
+    async function loadExecutionBacklog() {
+      const query = new URLSearchParams();
+      if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
+      if (el.suggestionPriorityFilter.value) query.set("priority", el.suggestionPriorityFilter.value);
+      state.executionBacklog = await fetchJson(`/api/evaluations/suggestions/execution-backlog?${query.toString()}`);
+      renderExecutionBacklogOverview();
+      renderExecutionBacklogList();
+    }
+
     async function loadSuggestions(options = null) {
       if (options) {
         applySuggestionView(options);
@@ -1094,6 +1191,7 @@
       await loadTrend();
       await loadEvaluationList();
       await loadSuggestionOverview();
+      await loadExecutionBacklog();
       await loadSuggestions();
       if (state.evaluationId) {
         await loadEvaluationDetail();
@@ -1118,6 +1216,7 @@
     el.loadSuggestionsBtn.addEventListener("click", async () => {
       resetSuggestionView();
       await loadSuggestionOverview();
+      await loadExecutionBacklog();
       await loadSuggestions();
     });
     [el.agentFilterInput, el.resultFilterInput, el.minScoreInput, el.suggestionOwnerFilter].forEach(node => {

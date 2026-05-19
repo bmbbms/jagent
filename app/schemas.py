@@ -677,6 +677,8 @@ class AgentEvaluationDetailResponse(BaseModel):
 
 class AgentOptimizationSuggestionResponse(BaseModel):
     suggestion_id: int
+    evaluation_id: str
+    agent_id: str
     optimization_type: str
     target_ref: Optional[str] = None
     current_value_summary: str = ""
@@ -718,6 +720,42 @@ class AgentOptimizationSuggestionOverviewResponse(BaseModel):
     backlog_count: int = 0
     high_priority_backlog_count: int = 0
     completion_rate: float = 0.0
+
+
+class AgentOptimizationExecutionBacklogItemResponse(BaseModel):
+    suggestion_id: int
+    evaluation_id: str
+    task_id: Optional[str] = None
+    agent_id: str
+    optimization_type: str
+    priority: str
+    status: str
+    owner: Optional[str] = None
+    ticket_id: Optional[str] = None
+    ticket_status: Optional[str] = None
+    execution_stage: str = ""
+    attention_level: str = "normal"
+    overdue: bool = False
+    aging_days: int = 0
+    current_value_summary: str = ""
+    suggested_change: str = ""
+    recommended_action: str = ""
+    create_time: str = ""
+    update_time: str = ""
+    closed_at: Optional[str] = None
+
+
+class AgentOptimizationExecutionBacklogResponse(BaseModel):
+    total: int = 0
+    untriaged_count: int = 0
+    ticket_pending_count: int = 0
+    processing_count: int = 0
+    completed_count: int = 0
+    overdue_count: int = 0
+    high_priority_backlog_count: int = 0
+    automation_ready_count: int = 0
+    closed_loop_count: int = 0
+    items: List[AgentOptimizationExecutionBacklogItemResponse] = Field(default_factory=list)
 
 
 class AgentEvaluationSummaryResponse(BaseModel):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,6 +22,8 @@ from app.schemas import (
     AgentEvaluationTrendResponse,
     AgentObservationLogResponse,
     AgentOptimizationSuggestionOverviewResponse,
+    AgentOptimizationExecutionBacklogItemResponse,
+    AgentOptimizationExecutionBacklogResponse,
     AgentOptimizationSuggestionResponse,
     AgentOptimizationSuggestionTicketRequest,
     AgentOptimizationSuggestionUpdateRequest,
@@ -679,6 +681,109 @@ class EvaluationService:
             completion_rate=completion_rate,
         )
 
+    def build_execution_backlog(
+        self,
+        *,
+        agent_id: str | None = None,
+        owner: str | None = None,
+        priority: str | None = None,
+        backlog_only: bool = False,
+    ) -> AgentOptimizationExecutionBacklogResponse:
+        items = self.list_optimization_suggestions(
+            agent_id=agent_id,
+            owner=owner,
+            priority=priority,
+        )
+        backlog_items: list[AgentOptimizationExecutionBacklogItemResponse] = []
+        now = datetime.utcnow()
+        overdue_threshold = now - timedelta(days=3)
+
+        with self._session_factory() as session:
+            for suggestion in items:
+                evaluation = self._repository.get_evaluation(session, suggestion.evaluation_id)
+                update_time = self._parse_iso_datetime(suggestion.update_time)
+                create_time = self._parse_iso_datetime(suggestion.create_time)
+                reference_time = update_time or create_time or now
+                overdue = (
+                    suggestion.status != "completed"
+                    and reference_time <= overdue_threshold
+                )
+                aging_days = max(0, int((now - reference_time).total_seconds() // 86400))
+                execution_stage = self._resolve_execution_stage(suggestion)
+                attention_level = self._resolve_execution_attention(
+                    suggestion=suggestion,
+                    execution_stage=execution_stage,
+                    overdue=overdue,
+                )
+                recommended_action = self._build_execution_recommended_action(
+                    suggestion=suggestion,
+                    execution_stage=execution_stage,
+                    overdue=overdue,
+                )
+                backlog_items.append(
+                    AgentOptimizationExecutionBacklogItemResponse(
+                        suggestion_id=suggestion.suggestion_id,
+                        evaluation_id=suggestion.evaluation_id,
+                        task_id=evaluation.task_id if evaluation is not None else None,
+                        agent_id=suggestion.agent_id,
+                        optimization_type=suggestion.optimization_type,
+                        priority=suggestion.priority,
+                        status=suggestion.status,
+                        owner=suggestion.owner,
+                        ticket_id=suggestion.ticket_id,
+                        ticket_status=suggestion.ticket_status,
+                        execution_stage=execution_stage,
+                        attention_level=attention_level,
+                        overdue=overdue,
+                        aging_days=aging_days,
+                        current_value_summary=suggestion.current_value_summary,
+                        suggested_change=suggestion.suggested_change,
+                        recommended_action=recommended_action,
+                        create_time=suggestion.create_time,
+                        update_time=suggestion.update_time,
+                        closed_at=suggestion.closed_at,
+                    )
+                )
+
+        if backlog_only:
+            backlog_items = [item for item in backlog_items if item.status != "completed"]
+
+        backlog_items = sorted(
+            backlog_items,
+            key=lambda item: (
+                0 if item.attention_level == "high" else 1,
+                0 if item.priority == "high" else 1 if item.priority == "medium" else 2,
+                0 if item.overdue else 1,
+                -item.aging_days,
+                item.suggestion_id,
+            ),
+        )
+
+        total = len(backlog_items)
+        return AgentOptimizationExecutionBacklogResponse(
+            total=total,
+            untriaged_count=sum(1 for item in backlog_items if item.execution_stage == "untriaged"),
+            ticket_pending_count=sum(
+                1 for item in backlog_items if item.execution_stage == "ticket_pending"
+            ),
+            processing_count=sum(1 for item in backlog_items if item.execution_stage == "processing"),
+            completed_count=sum(1 for item in backlog_items if item.execution_stage == "completed"),
+            overdue_count=sum(1 for item in backlog_items if item.overdue),
+            high_priority_backlog_count=sum(
+                1
+                for item in backlog_items
+                if item.priority == "high" and item.status != "completed"
+            ),
+            automation_ready_count=sum(
+                1
+                for item in backlog_items
+                if item.execution_stage in {"untriaged", "ticket_pending"}
+                and item.priority in {"high", "medium"}
+            ),
+            closed_loop_count=sum(1 for item in backlog_items if item.ticket_id and item.status == "completed"),
+            items=backlog_items,
+        )
+
     def update_optimization_suggestion(
         self,
         suggestion_id: int,
@@ -1083,6 +1188,8 @@ class EvaluationService:
     def _to_suggestion(item) -> AgentOptimizationSuggestionResponse:
         return AgentOptimizationSuggestionResponse(
             suggestion_id=item.id,
+            evaluation_id=item.evaluation_id,
+            agent_id=item.agent_id,
             optimization_type=item.optimization_type,
             target_ref=item.target_ref,
             current_value_summary=item.current_value_summary or "",
@@ -1098,3 +1205,52 @@ class EvaluationService:
             create_time=item.create_time.isoformat() if item.create_time else "",
             update_time=item.update_time.isoformat() if item.update_time else "",
         )
+
+    @staticmethod
+    def _parse_iso_datetime(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _resolve_execution_stage(suggestion: AgentOptimizationSuggestionResponse) -> str:
+        if suggestion.status == "completed":
+            return "completed"
+        if not suggestion.ticket_id:
+            return "untriaged" if suggestion.status == "new" else "ticket_pending"
+        if suggestion.ticket_status in {"resolved", "closed"}:
+            return "completed"
+        return "processing"
+
+    @staticmethod
+    def _resolve_execution_attention(
+        *,
+        suggestion: AgentOptimizationSuggestionResponse,
+        execution_stage: str,
+        overdue: bool,
+    ) -> str:
+        if overdue:
+            return "high"
+        if suggestion.priority == "high" and execution_stage != "completed":
+            return "high"
+        return "normal"
+
+    @staticmethod
+    def _build_execution_recommended_action(
+        *,
+        suggestion: AgentOptimizationSuggestionResponse,
+        execution_stage: str,
+        overdue: bool,
+    ) -> str:
+        if execution_stage == "untriaged":
+            return "优先分配 owner 并评估是否需要立即转工单。"
+        if execution_stage == "ticket_pending":
+            return "建议补全执行负责人并转为治理工单，进入实际优化实施。"
+        if overdue:
+            return "当前建议已超时未闭环，建议升级优先级并触发治理复盘。"
+        if execution_stage == "processing":
+            return "持续跟踪工单处理进度，确认变更已在运行链路生效。"
+        return "建议回收优化结果并沉淀为标准配置或执行模板。"

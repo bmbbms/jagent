@@ -839,6 +839,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="agentFilterInput"' in response.text
     assert 'id="resultFilterInput"' in response.text
     assert 'id="suggestionList"' in response.text
+    assert 'id="executionBacklogOverview"' in response.text
+    assert 'id="executionBacklogList"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
@@ -847,6 +849,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="rootCauseAnalyticsList"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
+    assert response.text.count("function renderExecutionBacklogOverview()") == 1
+    assert response.text.count("async function loadExecutionBacklog()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
@@ -902,6 +906,8 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
     response = client.get("/ui/service-tickets")
     assert response.status_code == 200
     assert 'id="ticketOverview"' in response.text
+    assert 'id="executionBacklogOverview"' in response.text
+    assert 'id="executionBacklogList"' in response.text
     assert 'id="ticketList"' in response.text
     assert 'id="ticketDetail"' in response.text
     assert 'id="ticketIdInput"' in response.text
@@ -914,6 +920,7 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
     assert 'id="evaluationPageBtn"' in response.text
     assert 'openTaskBtn' in response.text or '/ui/tasks?task_id=' in response.text
     assert 'openAuditBtn' in response.text or '/ui/audit?task_id=' in response.text
+    assert response.text.count("async function loadExecutionBacklog()") == 1
 
 
 def test_service_ticket_overview_api(client: TestClient) -> None:
@@ -1186,6 +1193,30 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert "high_priority_backlog_count" in overview
     assert "completion_rate" in overview
 
+    execution_backlog_response = client.get(
+        "/api/evaluations/suggestions/execution-backlog",
+        params={"agent_id": agent_id},
+    )
+    assert execution_backlog_response.status_code == 200
+    execution_backlog = execution_backlog_response.json()
+    assert "total" in execution_backlog
+    assert "untriaged_count" in execution_backlog
+    assert "ticket_pending_count" in execution_backlog
+    assert "processing_count" in execution_backlog
+    assert "completed_count" in execution_backlog
+    assert "overdue_count" in execution_backlog
+    assert "automation_ready_count" in execution_backlog
+    assert "closed_loop_count" in execution_backlog
+    assert "items" in execution_backlog
+    assert execution_backlog["items"]
+    first_backlog_item = execution_backlog["items"][0]
+    assert "suggestion_id" in first_backlog_item
+    assert "evaluation_id" in first_backlog_item
+    assert "agent_id" in first_backlog_item
+    assert "execution_stage" in first_backlog_item
+    assert "attention_level" in first_backlog_item
+    assert "recommended_action" in first_backlog_item
+
     update_response = client.put(
         f"/api/evaluations/suggestions/{first['suggestion_id']}",
         json={
@@ -1342,6 +1373,18 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert final_overview["ticket_bound_count"] >= 1
     assert final_overview["completed_ticket_count"] >= 1
     assert final_overview["completion_rate"] >= 0
+
+    final_execution_backlog_response = client.get(
+        "/api/evaluations/suggestions/execution-backlog",
+        params={"agent_id": agent_id},
+    )
+    assert final_execution_backlog_response.status_code == 200
+    final_execution_backlog = final_execution_backlog_response.json()
+    assert final_execution_backlog["closed_loop_count"] >= 1
+    assert any(
+        item["suggestion_id"] == first["suggestion_id"] and item["execution_stage"] == "completed"
+        for item in final_execution_backlog["items"]
+    )
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
