@@ -352,6 +352,7 @@ class EvaluationService:
                     description="\n".join(description_lines),
                     status="submitted",
                     requested_by=request.requested_by,
+                    owner=request.owner or request.requested_by,
                     source="evaluation",
                     payload={
                         "suggestion_id": suggestion.id,

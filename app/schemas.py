@@ -565,6 +565,33 @@ class AgentEvaluationAnalyticsOverviewResponse(BaseModel):
     average_tool_usage_score: float = 0.0
 
 
+class ServiceTicketResponse(BaseModel):
+    ticket_id: str
+    merchant_id: Optional[str] = None
+    biz_domain: str
+    category: str
+    priority: str
+    title: str
+    description: str = ""
+    status: str
+    requested_by: str
+    owner: Optional[str] = None
+    source: str
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    create_time: str = ""
+    update_time: str = ""
+    closed_at: Optional[str] = None
+    linked_suggestion_id: Optional[int] = None
+    linked_evaluation_id: Optional[str] = None
+    linked_agent_id: Optional[str] = None
+
+
+class ServiceTicketUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+
+
 class HomeResponse(BaseModel):
     app_name: str
     version: str

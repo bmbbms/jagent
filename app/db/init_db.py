@@ -37,6 +37,7 @@ def init_db(engine: Engine) -> None:
             Base.metadata.create_all(bind=engine, tables=missing_tables)
         _upgrade_external_capability_registry_columns(engine)
         _upgrade_agent_optimization_suggestion_columns(engine)
+        _upgrade_service_ticket_columns(engine)
 
         _init_done = True
 
@@ -120,6 +121,37 @@ def _upgrade_agent_optimization_suggestion_columns(engine: Engine) -> None:
         ),
         "closed_at": (
             "ALTER TABLE t_agent_optimization_suggestion "
+            "ADD COLUMN closed_at DATETIME NULL"
+        ),
+    }
+
+    with engine.begin() as connection:
+        for column_name, ddl in required_sql.items():
+            if column_name in existing_columns:
+                continue
+            try:
+                connection.execute(text(ddl))
+            except OperationalError as exc:
+                if "duplicate column name" not in str(exc).lower():
+                    raise
+
+
+def _upgrade_service_ticket_columns(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "t_service_ticket" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("t_service_ticket")
+    }
+    required_sql = {
+        "owner": (
+            "ALTER TABLE t_service_ticket "
+            "ADD COLUMN owner VARCHAR(64) NULL"
+        ),
+        "closed_at": (
+            "ALTER TABLE t_service_ticket "
             "ADD COLUMN closed_at DATETIME NULL"
         ),
     }

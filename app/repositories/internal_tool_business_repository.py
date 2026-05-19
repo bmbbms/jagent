@@ -70,6 +70,7 @@ class InternalToolBusinessRepository:
             description=description,
             status="submitted",
             requested_by=requested_by,
+            owner=requested_by,
             source="internal_tool",
             payload=payload or {},
         )

@@ -237,6 +237,7 @@
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <button id="approvalPageBtn" class="secondary">审批中心</button>
+        <button id="ticketPageBtn" class="secondary">工单中心</button>
         <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
         <input id="agentFilterInput" placeholder="按 agent_id 过滤" />
         <input id="resultFilterInput" placeholder="按结果标签过滤" />
@@ -323,6 +324,7 @@
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
       approvalPageBtn: document.getElementById("approvalPageBtn"),
+      ticketPageBtn: document.getElementById("ticketPageBtn"),
       evaluationIdInput: document.getElementById("evaluationIdInput"),
       agentFilterInput: document.getElementById("agentFilterInput"),
       resultFilterInput: document.getElementById("resultFilterInput"),
@@ -556,6 +558,11 @@
             <div class="subtle">来源：${escapeHtml(item.source_type || "-")} / ${escapeHtml(item.source_ref || "-")}</div>
             <div class="subtle">工单：${escapeHtml(buildTicketSummary(item))}</div>
             <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
+            ${item.ticket_id ? `
+              <div>
+                <button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>
+              </div>
+            ` : ""}
           </div>
         `).join("")
         : '<div class="empty">暂无优化建议。</div>';
@@ -617,6 +624,7 @@
               data-create-ticket="${escapeHtml(item.suggestion_id)}"
               ${item.ticket_id ? "disabled" : ""}
             >${item.ticket_id ? "已转工单" : "转为工单"}</button>
+            ${item.ticket_id ? `<button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
           </div>
         </div>
       `).join("");
@@ -675,6 +683,14 @@
           state.selectedSuggestionId = node.getAttribute("data-suggestion-card") || "";
           syncQuery();
           renderSuggestionList();
+        });
+      });
+      el.suggestionList.querySelectorAll("[data-open-ticket]").forEach(node => {
+        node.addEventListener("click", event => {
+          event.stopPropagation();
+          const ticketId = node.getAttribute("data-open-ticket") || "";
+          if (!ticketId) return;
+          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
         });
       });
     }
@@ -788,6 +804,9 @@
     });
     el.approvalPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/approvals";
+    });
+    el.ticketPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/service-tickets";
     });
     el.loadBtn.addEventListener("click", loadEvaluationDetail);
     el.refreshBtn.addEventListener("click", bootstrap);

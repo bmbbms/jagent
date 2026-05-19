@@ -543,8 +543,10 @@ class ServiceTicketModel(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="submitted", index=True)
     requested_by: Mapped[str] = mapped_column(String(64), default="system", index=True)
+    owner: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     source: Mapped[str] = mapped_column(String(32), default="internal_tool")
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     update_time: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

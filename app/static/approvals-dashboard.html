@@ -199,6 +199,7 @@
         <button id="workflowPageBtn" class="secondary">Workflow Center</button>
         <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <button id="evaluationPageBtn" class="secondary">评估中心</button>
+        <button id="ticketPageBtn" class="secondary">工单中心</button>
         <button id="auditPageBtn" class="secondary">审计中心</button>
         <input id="approvalIdInput" placeholder="输入 approval_id 直接打开" />
         <select id="statusFilter">
@@ -258,6 +259,7 @@
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
+      ticketPageBtn: document.getElementById("ticketPageBtn"),
       auditPageBtn: document.getElementById("auditPageBtn"),
       approvalIdInput: document.getElementById("approvalIdInput"),
       statusFilter: document.getElementById("statusFilter"),
@@ -535,6 +537,9 @@
     });
     el.evaluationPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/evaluations";
+    });
+    el.ticketPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/service-tickets";
     });
     el.auditPageBtn.addEventListener("click", () => {
       const approvalId = state.approvalId || "";

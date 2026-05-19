@@ -18,6 +18,7 @@ from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.repositories.external_capability_repository import ExternalCapabilityRepository
 from app.repositories.observation_repository import ObservationRepository
+from app.repositories.service_ticket_repository import ServiceTicketRepository
 from app.repositories.task_repository import TaskRepository
 from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.runtimes.agentscope import AgentScopeAgentRuntime
@@ -38,6 +39,7 @@ from app.services.internal_tool_provider import InternalToolProvider, LocalDbInt
 from app.services.knowledge_service import KnowledgeService
 from app.services.mcp_service import MCPService
 from app.services.observation_service import ObservationService
+from app.services.service_ticket_service import ServiceTicketService
 from app.services.skill_registry import SkillRegistry
 from app.services.task_service import TaskService
 from app.services.tool_execution_service import ToolExecutionService
@@ -242,6 +244,14 @@ def get_observation_service() -> ObservationService:
     return ObservationService(
         session_factory=get_session_factory(),
         repository=ObservationRepository(),
+    )
+
+
+@lru_cache
+def get_service_ticket_service() -> ServiceTicketService:
+    return ServiceTicketService(
+        session_factory=get_session_factory(),
+        repository=ServiceTicketRepository(),
     )
 
 

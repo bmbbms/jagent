@@ -337,6 +337,7 @@
         <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
         <button id="skillCenterBtn" class="secondary">Skill 中心</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
+        <button id="ticketCenterBtn" class="secondary">工单中心</button>
         <button id="approvalCenterBtn" class="secondary">审批中心</button>
         <button id="auditCenterBtn" class="secondary">审计中心</button>
         <input id="taskIdInput" placeholder="输入 task_id，例如 task_xxx" />
@@ -545,6 +546,7 @@
       workflowCenterBtn: document.getElementById("workflowCenterBtn"),
       skillCenterBtn: document.getElementById("skillCenterBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
+      ticketCenterBtn: document.getElementById("ticketCenterBtn"),
       approvalCenterBtn: document.getElementById("approvalCenterBtn"),
       auditCenterBtn: document.getElementById("auditCenterBtn"),
       statusFilter: document.getElementById("statusFilter"),
@@ -1369,6 +1371,14 @@
       const target = evaluationId
         ? `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}`
         : "/ui/evaluations";
+      window.location.href = target;
+    });
+    el.ticketCenterBtn.addEventListener("click", () => {
+      const suggestion = state.task?.evaluation?.suggestions?.find(item => item.ticket_id) || null;
+      const ticketId = suggestion?.ticket_id || "";
+      const target = ticketId
+        ? `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`
+        : "/ui/service-tickets";
       window.location.href = target;
     });
     el.approvalCenterBtn.addEventListener("click", () => {

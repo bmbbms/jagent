@@ -515,6 +515,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="workflowCenterBtn"' in response.text
     assert 'id="skillCenterBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
+    assert 'id="ticketCenterBtn"' in response.text
     assert 'id="approvalCenterBtn"' in response.text
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
@@ -580,6 +581,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="evaluationDetail"' in response.text
     assert 'id="evaluationIdInput"' in response.text
     assert 'id="approvalPageBtn"' in response.text
+    assert 'id="ticketPageBtn"' in response.text
     assert 'id="analyticsList"' in response.text
     assert 'id="agentFilterInput"' in response.text
     assert 'id="resultFilterInput"' in response.text
@@ -601,9 +603,24 @@ def test_approvals_ui_page(client: TestClient) -> None:
     assert 'id="workflowFilterInput"' in response.text
     assert 'id="workflowPageBtn"' in response.text
     assert 'id="capabilityPageBtn"' in response.text
+    assert 'id="ticketPageBtn"' in response.text
     assert 'id="auditPageBtn"' in response.text
     assert 'id="openWorkflowBtn"' in response.text or "openWorkflowBtn" in response.text
     assert 'id="openCapabilityBtn"' in response.text or "openCapabilityBtn" in response.text
+
+
+def test_service_tickets_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/service-tickets")
+    assert response.status_code == 200
+    assert 'id="ticketList"' in response.text
+    assert 'id="ticketDetail"' in response.text
+    assert 'id="ticketIdInput"' in response.text
+    assert 'id="statusFilter"' in response.text
+    assert 'id="sourceFilter"' in response.text
+    assert 'id="priorityFilter"' in response.text
+    assert 'id="ownerFilterInput"' in response.text
+    assert 'id="requestedByFilterInput"' in response.text
+    assert 'id="evaluationPageBtn"' in response.text
 
 
 def test_audit_ui_page(client: TestClient) -> None:
@@ -796,6 +813,39 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     status_overview = status_overview_response.json()
     assert status_overview["total"] >= 1
     assert status_overview["in_progress_count"] == status_overview["total"]
+
+    ticket_list_response = client.get(
+        "/api/service-tickets",
+        params={"source": "evaluation", "requested_by": "agent-ops"},
+    )
+    assert ticket_list_response.status_code == 200
+    tickets = ticket_list_response.json()
+    assert tickets
+    ticket = next(item for item in tickets if item["ticket_id"] == ticket_bound["ticket_id"])
+    assert ticket["linked_suggestion_id"] == first["suggestion_id"]
+    assert ticket["linked_evaluation_id"] is not None
+    assert ticket["owner"] == "agent-ops"
+
+    ticket_detail_response = client.get(f"/api/service-tickets/{ticket_bound['ticket_id']}")
+    assert ticket_detail_response.status_code == 200
+    ticket_detail = ticket_detail_response.json()
+    assert ticket_detail["ticket_id"] == ticket_bound["ticket_id"]
+    assert ticket_detail["source"] == "evaluation"
+
+    ticket_update_response = client.put(
+        f"/api/service-tickets/{ticket_bound['ticket_id']}",
+        json={
+            "status": "resolved",
+            "owner": "agent-optimizer",
+            "priority": "medium",
+        },
+    )
+    assert ticket_update_response.status_code == 200
+    updated_ticket = ticket_update_response.json()
+    assert updated_ticket["status"] == "resolved"
+    assert updated_ticket["owner"] == "agent-optimizer"
+    assert updated_ticket["priority"] == "medium"
+    assert updated_ticket["closed_at"] is not None
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

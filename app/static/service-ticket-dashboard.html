@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>优化工单中心</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #241b15;
+      --muted: #726657;
+      --accent: #a15428;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --danger: #b64133;
+      --radius: 18px;
+      --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+    .page {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar button,
+    .toolbar input,
+    .toolbar select {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+    }
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+    .list,
+    .detail-list {
+      display: grid;
+      gap: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+    }
+    .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
+    .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
+    .danger { background: rgba(182, 65, 51, 0.12); color: var(--danger); }
+    .hero {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .label {
+      color: var(--muted);
+      flex: 0 0 140px;
+    }
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+    .inline-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .inline-form input,
+    .inline-form select,
+    .inline-form button {
+      min-height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      font: inherit;
+      background: var(--panel);
+      color: var(--text);
+    }
+    .inline-form button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre.payload {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #fbf6ef;
+      border-radius: 14px;
+      padding: 12px;
+      margin: 0;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>优化工单中心</h1>
+        <p>集中查看由评估中心和内部工具生成的优化工单，支持按状态、来源、负责人和优先级过滤，并联动评估中心与任务面板跟踪整改闭环。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="evaluationPageBtn" class="secondary">评估中心</button>
+        <button id="approvalPageBtn" class="secondary">审批中心</button>
+        <input id="ticketIdInput" placeholder="输入 ticket_id 直接打开" />
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+          <option value="submitted">submitted</option>
+          <option value="in_progress">in_progress</option>
+          <option value="resolved">resolved</option>
+          <option value="closed">closed</option>
+        </select>
+        <select id="sourceFilter">
+          <option value="">全部来源</option>
+          <option value="evaluation">evaluation</option>
+          <option value="internal_tool">internal_tool</option>
+        </select>
+        <select id="priorityFilter">
+          <option value="">全部优先级</option>
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+        </select>
+        <input id="ownerFilterInput" placeholder="按 owner 过滤" />
+        <input id="requestedByFilterInput" placeholder="按 requested_by 过滤" />
+        <button id="loadBtn">加载工单</button>
+        <button id="refreshBtn" class="secondary">刷新列表</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>工单列表</h2>
+        <div id="ticketListMeta" class="subtle">正在加载工单列表...</div>
+        <div id="ticketList" class="list" style="margin-top: 12px;">
+          <div class="empty">正在加载工单列表...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>工单详情</h2>
+        <div id="ticketDetail">
+          <div class="empty">请选择左侧工单查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      ticketId: "",
+      tickets: [],
+      currentTicket: null,
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      evaluationPageBtn: document.getElementById("evaluationPageBtn"),
+      approvalPageBtn: document.getElementById("approvalPageBtn"),
+      ticketIdInput: document.getElementById("ticketIdInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      sourceFilter: document.getElementById("sourceFilter"),
+      priorityFilter: document.getElementById("priorityFilter"),
+      ownerFilterInput: document.getElementById("ownerFilterInput"),
+      requestedByFilterInput: document.getElementById("requestedByFilterInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      ticketListMeta: document.getElementById("ticketListMeta"),
+      ticketList: document.getElementById("ticketList"),
+      ticketDetail: document.getElementById("ticketDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function toneByStatus(status) {
+      if (status === "resolved" || status === "closed") return "success";
+      if (status === "in_progress") return "warning";
+      return "";
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(body?.detail || `HTTP ${response.status}`);
+      }
+      return body;
+    }
+
+    function syncQuery() {
+      const url = new URL(window.location.href);
+      const pairs = {
+        ticket_id: state.ticketId,
+        status: el.statusFilter.value,
+        source: el.sourceFilter.value,
+        priority: el.priorityFilter.value,
+        owner: el.ownerFilterInput.value.trim(),
+        requested_by: el.requestedByFilterInput.value.trim(),
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
+      window.history.replaceState({}, "", url);
+    }
+
+    function buildTicketListQuery() {
+      const query = new URLSearchParams();
+      if (el.statusFilter.value) query.set("status", el.statusFilter.value);
+      if (el.sourceFilter.value) query.set("source", el.sourceFilter.value);
+      if (el.priorityFilter.value) query.set("priority", el.priorityFilter.value);
+      if (el.ownerFilterInput.value.trim()) query.set("owner", el.ownerFilterInput.value.trim());
+      if (el.requestedByFilterInput.value.trim()) query.set("requested_by", el.requestedByFilterInput.value.trim());
+      return query;
+    }
+
+    function renderTicketList() {
+      el.ticketListMeta.textContent = `当前共 ${state.tickets.length} 条工单记录`;
+      if (!state.tickets.length) {
+        el.ticketList.innerHTML = '<div class="empty">当前筛选条件下没有工单记录。</div>';
+        return;
+      }
+      el.ticketList.innerHTML = state.tickets.map(item => `
+        <div class="card ${item.ticket_id === state.ticketId ? "active" : ""}" data-ticket-id="${escapeHtml(item.ticket_id)}">
+          <div class="title">${escapeHtml(item.title)}</div>
+          <div>
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.priority)}</span>
+            <span class="tag">${escapeHtml(item.source)}</span>
+          </div>
+          <div class="subtle">工单号：${escapeHtml(item.ticket_id)}</div>
+          <div class="subtle">负责人：${escapeHtml(item.owner || "unassigned")}</div>
+          <div class="subtle">申请人：${escapeHtml(item.requested_by)}</div>
+          <div class="subtle">建议 ID：${escapeHtml(item.linked_suggestion_id || "-")}</div>
+        </div>
+      `).join("");
+
+      el.ticketList.querySelectorAll("[data-ticket-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const ticketId = node.getAttribute("data-ticket-id") || "";
+          state.ticketId = ticketId;
+          el.ticketIdInput.value = ticketId;
+          await loadTicketDetail();
+        });
+      });
+    }
+
+    function renderTicketDetail(item) {
+      if (!item) {
+        el.ticketDetail.innerHTML = '<div class="empty">请选择左侧工单查看详情。</div>';
+        return;
+      }
+      const payloadText = JSON.stringify(item.payload || {}, null, 2);
+      el.ticketDetail.innerHTML = `
+        <div class="hero">
+          <div class="title">${escapeHtml(item.title)}</div>
+          <div style="margin-top: 8px;">
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.priority)}</span>
+            <span class="tag">${escapeHtml(item.source)}</span>
+          </div>
+          <div class="subtle" style="margin-top: 8px;">工单号：${escapeHtml(item.ticket_id)}</div>
+        </div>
+        <div class="detail-list">
+          <div class="detail-row"><div class="label">业务域</div><div class="value">${escapeHtml(item.biz_domain)}</div></div>
+          <div class="detail-row"><div class="label">分类</div><div class="value">${escapeHtml(item.category)}</div></div>
+          <div class="detail-row"><div class="label">负责人</div><div class="value">${escapeHtml(item.owner || "-")}</div></div>
+          <div class="detail-row"><div class="label">申请人</div><div class="value">${escapeHtml(item.requested_by)}</div></div>
+          <div class="detail-row"><div class="label">关联建议</div><div class="value">${escapeHtml(item.linked_suggestion_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">关联评估</div><div class="value">${escapeHtml(item.linked_evaluation_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">关联 Agent</div><div class="value">${escapeHtml(item.linked_agent_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">关闭时间</div><div class="value">${escapeHtml(formatDate(item.closed_at))}</div></div>
+          <div class="detail-row"><div class="label">创建时间</div><div class="value">${escapeHtml(formatDate(item.create_time))}</div></div>
+          <div class="detail-row"><div class="label">更新时间</div><div class="value">${escapeHtml(formatDate(item.update_time))}</div></div>
+          <div class="detail-row"><div class="label">描述</div><div class="value">${escapeHtml(item.description || "-")}</div></div>
+        </div>
+        <div class="inline-form">
+          <input id="ownerInput" placeholder="owner" value="${escapeHtml(item.owner || "")}" />
+          <select id="statusInput">
+            <option value="submitted" ${item.status === "submitted" ? "selected" : ""}>submitted</option>
+            <option value="in_progress" ${item.status === "in_progress" ? "selected" : ""}>in_progress</option>
+            <option value="resolved" ${item.status === "resolved" ? "selected" : ""}>resolved</option>
+            <option value="closed" ${item.status === "closed" ? "selected" : ""}>closed</option>
+          </select>
+          <select id="priorityInput">
+            <option value="high" ${item.priority === "high" ? "selected" : ""}>high</option>
+            <option value="medium" ${item.priority === "medium" ? "selected" : ""}>medium</option>
+            <option value="low" ${item.priority === "low" ? "selected" : ""}>low</option>
+          </select>
+          <button id="saveTicketBtn">保存工单</button>
+          ${item.linked_evaluation_id ? '<button id="openEvaluationBtn" class="secondary">打开评估</button>' : ""}
+          ${item.linked_suggestion_id ? '<button id="openSuggestionBtn" class="secondary">打开建议</button>' : ""}
+        </div>
+        <h2 style="margin-top: 18px;">工单载荷</h2>
+        <pre class="subtle payload">${escapeHtml(payloadText)}</pre>
+      `;
+
+      const saveTicketBtn = document.getElementById("saveTicketBtn");
+      const openEvaluationBtn = document.getElementById("openEvaluationBtn");
+      const openSuggestionBtn = document.getElementById("openSuggestionBtn");
+
+      if (saveTicketBtn) {
+        saveTicketBtn.addEventListener("click", async () => {
+          await fetchJson(`/api/service-tickets/${encodeURIComponent(item.ticket_id)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              owner: document.getElementById("ownerInput")?.value.trim() || null,
+              status: document.getElementById("statusInput")?.value || null,
+              priority: document.getElementById("priorityInput")?.value || null,
+            }),
+          });
+          await loadTicketList();
+          await loadTicketDetail();
+        });
+      }
+      if (openEvaluationBtn && item.linked_evaluation_id) {
+        openEvaluationBtn.addEventListener("click", () => {
+          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(item.linked_evaluation_id)}`;
+        });
+      }
+      if (openSuggestionBtn && item.linked_evaluation_id && item.linked_suggestion_id) {
+        openSuggestionBtn.addEventListener("click", () => {
+          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(item.linked_evaluation_id)}&suggestion_id=${encodeURIComponent(item.linked_suggestion_id)}`;
+        });
+      }
+    }
+
+    async function loadTicketList() {
+      const query = buildTicketListQuery();
+      state.tickets = await fetchJson(`/api/service-tickets?${query.toString()}`);
+      renderTicketList();
+      syncQuery();
+      if (!state.ticketId && state.tickets[0]?.ticket_id) {
+        state.ticketId = state.tickets[0].ticket_id;
+        el.ticketIdInput.value = state.ticketId;
+      }
+    }
+
+    async function loadTicketDetail() {
+      const ticketId = el.ticketIdInput.value.trim() || state.ticketId;
+      if (!ticketId) return;
+      state.ticketId = ticketId;
+      state.currentTicket = await fetchJson(`/api/service-tickets/${encodeURIComponent(ticketId)}`);
+      renderTicketList();
+      renderTicketDetail(state.currentTicket);
+      syncQuery();
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      state.ticketId = query.get("ticket_id") || "";
+      el.ticketIdInput.value = state.ticketId;
+      el.statusFilter.value = query.get("status") || "";
+      el.sourceFilter.value = query.get("source") || "";
+      el.priorityFilter.value = query.get("priority") || "";
+      el.ownerFilterInput.value = query.get("owner") || "";
+      el.requestedByFilterInput.value = query.get("requested_by") || "";
+      await loadTicketList();
+      if (state.ticketId) {
+        await loadTicketDetail();
+      } else if (state.tickets[0]?.ticket_id) {
+        state.ticketId = state.tickets[0].ticket_id;
+        el.ticketIdInput.value = state.ticketId;
+        await loadTicketDetail();
+      }
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.evaluationPageBtn.addEventListener("click", () => {
+      const evaluationId = state.currentTicket?.linked_evaluation_id || "";
+      const target = evaluationId
+        ? `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}`
+        : "/ui/evaluations";
+      window.location.href = target;
+    });
+    el.approvalPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/approvals";
+    });
+    el.loadBtn.addEventListener("click", async () => {
+      if (el.ticketIdInput.value.trim() || state.ticketId) {
+        await loadTicketDetail();
+        return;
+      }
+      await bootstrap();
+    });
+    el.refreshBtn.addEventListener("click", bootstrap);
+    [el.statusFilter, el.sourceFilter, el.priorityFilter].forEach(node => {
+      node.addEventListener("change", bootstrap);
+    });
+    [el.ownerFilterInput, el.requestedByFilterInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await bootstrap();
+      });
+    });
+    el.ticketIdInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadTicketDetail();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

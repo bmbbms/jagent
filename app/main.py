@@ -13,6 +13,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.home import router as home_router
 from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.skills import router as skills_router
+from app.api.routes.service_tickets import router as service_tickets_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.ui import router as ui_router
 from app.api.routes.workflows import router as workflows_router
@@ -54,6 +55,7 @@ app.include_router(skills_router, prefix=settings.api_prefix)
 app.include_router(workflows_router, prefix=settings.api_prefix)
 app.include_router(approvals_router, prefix=settings.api_prefix)
 app.include_router(knowledge_router, prefix=settings.api_prefix)
+app.include_router(service_tickets_router, prefix=settings.api_prefix)
 app.include_router(tasks_router, prefix=settings.api_prefix)
 app.include_router(audit_router, prefix=settings.api_prefix)
 app.include_router(ui_router)
