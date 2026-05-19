@@ -6,7 +6,6 @@ Create Date: 2026-05-19 12:30:00
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 
 revision = "0004_add_external_capability_registry_table"
@@ -15,43 +14,83 @@ branch_labels = None
 depends_on = None
 
 
+def _is_already_exists_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return (
+        "already exists" in message
+        or "duplicate key name" in message
+        or "(1050," in message
+        or "(1061," in message
+    )
+
+
+def _run_step(step_name: str, operation) -> None:
+    print(f"[alembic 0004] {step_name}", flush=True)
+    try:
+        operation()
+    except Exception as exc:
+        if _is_already_exists_error(exc):
+            print(
+                f"[alembic 0004] skipped existing object during {step_name}: {exc!r}",
+                flush=True,
+            )
+            return
+        print(f"[alembic 0004] FAILED {step_name}: {exc!r}", flush=True)
+        raise
+
+
 def upgrade() -> None:
-    op.create_table(
-        "t_external_capability_registry",
-        sa.Column("capability_id", sa.String(length=64), primary_key=True),
-        sa.Column("capability_name", sa.String(length=128), nullable=False),
-        sa.Column("biz_domain", sa.String(length=64), nullable=False),
-        sa.Column("description", sa.String(length=1024), nullable=False),
-        sa.Column("priority", sa.Integer(), nullable=False),
-        sa.Column("triggers", sa.JSON(), nullable=True),
-        sa.Column("skills", sa.JSON(), nullable=True),
-        sa.Column("version", sa.String(length=32), nullable=False),
-        sa.Column("risk_level", sa.String(length=16), nullable=False),
-        sa.Column("requires_approval", sa.Boolean(), nullable=False),
-        sa.Column("tags", sa.JSON(), nullable=True),
-        sa.Column("transport", sa.String(length=32), nullable=False),
-        sa.Column("endpoint", sa.String(length=512), nullable=True),
-        sa.Column("service_name", sa.String(length=128), nullable=True),
-        sa.Column("service_host", sa.String(length=128), nullable=True),
-        sa.Column("service_port", sa.Integer(), nullable=True),
-        sa.Column("service_path", sa.String(length=255), nullable=False),
-        sa.Column("extras", sa.JSON(), nullable=True),
-        sa.Column("enabled", sa.Boolean(), nullable=False),
-        sa.Column("create_time", sa.DateTime(), nullable=False),
-        sa.Column("update_time", sa.DateTime(), nullable=False),
+    print("[alembic 0004] starting external capability registry migration", flush=True)
+    _run_step(
+        "create table t_external_capability_registry",
+        lambda: op.execute(
+            """
+            CREATE TABLE IF NOT EXISTS t_external_capability_registry (
+                capability_id VARCHAR(64) NOT NULL,
+                capability_name VARCHAR(128) NOT NULL,
+                biz_domain VARCHAR(64) NOT NULL,
+                description VARCHAR(1024) NOT NULL,
+                priority INTEGER NOT NULL,
+                triggers JSON NULL,
+                skills JSON NULL,
+                version VARCHAR(32) NOT NULL,
+                risk_level VARCHAR(16) NOT NULL,
+                requires_approval BOOL NOT NULL,
+                tags JSON NULL,
+                transport VARCHAR(32) NOT NULL,
+                endpoint VARCHAR(512) NULL,
+                service_name VARCHAR(128) NULL,
+                service_host VARCHAR(128) NULL,
+                service_port INTEGER NULL,
+                service_path VARCHAR(255) NOT NULL,
+                extras JSON NULL,
+                enabled BOOL NOT NULL,
+                create_time DATETIME NOT NULL,
+                update_time DATETIME NOT NULL,
+                PRIMARY KEY (capability_id)
+            )
+            """
+        ),
     )
-    op.create_index(
-        "ix_t_external_capability_registry_biz_domain",
-        "t_external_capability_registry",
-        ["biz_domain"],
-        unique=False,
+    _run_step(
+        "create index ix_t_external_capability_registry_biz_domain",
+        lambda: op.create_index(
+            "ix_t_external_capability_registry_biz_domain",
+            "t_external_capability_registry",
+            ["biz_domain"],
+            unique=False,
+        ),
     )
-    op.create_index(
-        "ix_t_external_capability_registry_create_time",
-        "t_external_capability_registry",
-        ["create_time"],
-        unique=False,
+    _run_step(
+        "create index ix_t_external_capability_registry_create_time",
+        lambda: op.create_index(
+            "ix_t_external_capability_registry_create_time",
+            "t_external_capability_registry",
+            ["create_time"],
+            unique=False,
+        ),
     )
+    print("[alembic 0004] completed external capability registry migration", flush=True)
 
 
 def downgrade() -> None:
