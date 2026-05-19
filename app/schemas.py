@@ -214,6 +214,14 @@ class SkillInfo(BaseModel):
     when_to_use: List[str] = Field(default_factory=list)
 
 
+class SkillDetailInfo(SkillInfo):
+    required_inputs: List[str] = Field(default_factory=list)
+    steps: List[str] = Field(default_factory=list)
+    output_fields: List[str] = Field(default_factory=list)
+    allowed_tools: List[str] = Field(default_factory=list)
+    human_escalation: List[str] = Field(default_factory=list)
+
+
 class WorkflowStepResponse(BaseModel):
     step_code: str
     name: str

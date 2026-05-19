@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from app.schemas import BizDomain, SkillInfo
+from app.schemas import BizDomain, SkillDetailInfo, SkillInfo
 
 
 DOMAIN_ALIASES = {
@@ -35,6 +35,21 @@ class SkillRuntimeSpec:
             path=self.path,
             purpose=self.purpose,
             when_to_use=list(self.when_to_use),
+        )
+
+    def to_skill_detail_info(self) -> SkillDetailInfo:
+        return SkillDetailInfo(
+            skill_id=self.skill_id,
+            biz_domain=self.biz_domain,
+            name=self.name,
+            path=self.path,
+            purpose=self.purpose,
+            when_to_use=list(self.when_to_use),
+            required_inputs=list(self.required_inputs),
+            steps=list(self.steps),
+            output_fields=list(self.output_fields),
+            allowed_tools=list(self.allowed_tools),
+            human_escalation=list(self.human_escalation),
         )
 
 
@@ -107,6 +122,12 @@ class SkillRegistry:
         if biz_domain is not None:
             return list(self._skills.get(biz_domain, []))
         return [skill for items in self._skills.values() for skill in items]
+
+    def describe_skill(self, skill_id: str) -> SkillDetailInfo | None:
+        spec = self._runtime_specs.get(skill_id)
+        if spec is None:
+            return None
+        return spec.to_skill_detail_info()
 
 
 def _extract_title(content: str) -> str:

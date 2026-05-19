@@ -57,6 +57,16 @@ def test_skills(client: TestClient) -> None:
     assert "merchant_ops_analysis" in skill_ids
 
 
+def test_skill_detail(client: TestClient) -> None:
+    response = client.get("/api/skills/merchant_qa")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["skill_id"] == "merchant_qa"
+    assert isinstance(body["required_inputs"], list)
+    assert isinstance(body["steps"], list)
+    assert isinstance(body["allowed_tools"], list)
+
+
 def test_chat_merchant(client: TestClient) -> None:
     response = client.post(
         "/api/chat",

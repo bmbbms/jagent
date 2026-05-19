@@ -396,6 +396,35 @@
         </div>
 
         <div class="section-split">
+          <h2>Required Inputs</h2>
+          ${renderTagList(item.required_inputs || [])}
+        </div>
+
+        <div class="section-split">
+          <h2>Allowed Tools</h2>
+          ${renderTagList(item.allowed_tools || [], "success")}
+        </div>
+
+        <div class="section-split">
+          <h2>Steps</h2>
+          ${(item.steps || []).length ? `<div class="stack">${(item.steps || []).map((step, index) => `
+            <div class="detail-card">
+              <div class="title">${escapeHtml(index + 1)}. ${escapeHtml(step)}</div>
+            </div>
+          `).join("")}</div>` : '<div class="empty">暂无步骤定义。</div>'}
+        </div>
+
+        <div class="section-split">
+          <h2>Output Fields</h2>
+          ${renderTagList(item.output_fields || [])}
+        </div>
+
+        <div class="section-split">
+          <h2>Human Escalation</h2>
+          ${renderTagList(item.human_escalation || [], "warning")}
+        </div>
+
+        <div class="section-split">
           <h2>Bound Agents</h2>
           ${boundCapabilities.length ? `<div class="stack">${boundCapabilities.map(capability => `
             <div class="capability-card">
@@ -435,10 +464,18 @@
       const skillId = el.skillIdInput.value.trim() || state.skillId;
       if (!skillId) return;
       state.skillId = skillId;
-      state.selectedSkill = state.skills.find(item => item.skill_id === skillId) || null;
-      renderSkillList();
-      renderSkillDetail();
-      updateQuery();
+      fetchJson(`/api/skills/${encodeURIComponent(skillId)}`)
+        .then(detail => {
+          state.selectedSkill = detail;
+          renderSkillList();
+          renderSkillDetail();
+          updateQuery();
+        })
+        .catch(() => {
+          state.selectedSkill = null;
+          renderSkillList();
+          renderSkillDetail();
+        });
     }
 
     async function bootstrap() {
