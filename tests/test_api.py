@@ -774,6 +774,7 @@ def test_approvals_ui_page(client: TestClient) -> None:
 def test_service_tickets_ui_page(client: TestClient) -> None:
     response = client.get("/ui/service-tickets")
     assert response.status_code == 200
+    assert 'id="ticketOverview"' in response.text
     assert 'id="ticketList"' in response.text
     assert 'id="ticketDetail"' in response.text
     assert 'id="ticketIdInput"' in response.text
@@ -786,6 +787,24 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
     assert 'id="evaluationPageBtn"' in response.text
     assert 'openTaskBtn' in response.text or '/ui/tasks?task_id=' in response.text
     assert 'openAuditBtn' in response.text or '/ui/audit?task_id=' in response.text
+
+
+def test_service_ticket_overview_api(client: TestClient) -> None:
+    response = client.get("/api/service-tickets/overview")
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "submitted_count" in body
+    assert "in_progress_count" in body
+    assert "resolved_count" in body
+    assert "closed_count" in body
+    assert "backlog_count" in body
+    assert "high_priority_count" in body
+    assert "unassigned_count" in body
+    assert "stale_open_count" in body
+    assert "evaluation_source_count" in body
+    assert "internal_tool_source_count" in body
+    assert "completion_rate" in body
 
 
 def test_audit_ui_page(client: TestClient) -> None:

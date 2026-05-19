@@ -20,17 +20,20 @@
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
+
     .page {
       max-width: 1450px;
       margin: 0 auto;
       padding: 24px;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -39,22 +42,26 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
+
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
+
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
-      max-width: 860px;
+      max-width: 900px;
     }
+
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
+
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -66,6 +73,7 @@
       color: var(--text);
       font: inherit;
     }
+
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -73,15 +81,19 @@
       cursor: pointer;
       font-weight: 700;
     }
-    .toolbar button.secondary {
+
+    .toolbar button.secondary,
+    button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
+
     .layout {
       display: grid;
       grid-template-columns: 430px minmax(0, 1fr);
       gap: 20px;
     }
+
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -89,15 +101,25 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
+
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
+
+    .overview-grid,
     .list,
     .detail-list {
       display: grid;
       gap: 10px;
     }
+
+    .overview-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .overview-card,
     .card {
       background: var(--panel);
       border: 1px solid #eadcca;
@@ -105,23 +127,38 @@
       padding: 14px;
       display: grid;
       gap: 10px;
+    }
+
+    .overview-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .card {
       cursor: pointer;
     }
+
     .card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
     }
+
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
+
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
+
     .tag {
       display: inline-flex;
       align-items: center;
@@ -132,9 +169,11 @@
       background: #f2e4d5;
       color: #6d563f;
     }
+
     .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
     .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
     .danger { background: rgba(182, 65, 51, 0.12); color: var(--danger); }
+
     .hero {
       padding: 14px 16px;
       border-radius: 16px;
@@ -142,6 +181,7 @@
       border: 1px solid #eadcca;
       margin-bottom: 14px;
     }
+
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -150,19 +190,23 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
+
     .detail-row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
+
     .label {
       color: var(--muted);
       flex: 0 0 140px;
     }
+
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
+
     .inline-form {
       display: flex;
       gap: 8px;
@@ -170,6 +214,7 @@
       align-items: center;
       margin-top: 16px;
     }
+
     .inline-form input,
     .inline-form select,
     .inline-form button {
@@ -181,6 +226,7 @@
       background: var(--panel);
       color: var(--text);
     }
+
     .inline-form button {
       background: var(--accent);
       border: 0;
@@ -188,6 +234,7 @@
       cursor: pointer;
       font-weight: 700;
     }
+
     pre.payload {
       white-space: pre-wrap;
       word-break: break-word;
@@ -196,8 +243,10 @@
       padding: 12px;
       margin: 0;
     }
+
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
+      .overview-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -206,7 +255,7 @@
     <div class="header">
       <div>
         <h1>优化工单中心</h1>
-        <p>集中查看由评估中心和内部工具生成的优化工单，支持按状态、来源、负责人和优先级过滤，并联动评估中心与任务面板跟踪整改闭环。</p>
+        <p>集中查看由评估中心和内部工具生成的优化工单，支持按状态、来源、负责人、优先级和任务过滤，并通过治理总览快速识别积压、高优和闭环风险。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -233,10 +282,18 @@
         </select>
         <input id="ownerFilterInput" placeholder="按 owner 过滤" />
         <input id="requestedByFilterInput" placeholder="按 requested_by 过滤" />
+        <input id="taskFilterInput" placeholder="按 task_id 过滤" />
         <button id="loadBtn">加载工单</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
       </div>
     </div>
+
+    <section class="panel" style="margin-bottom: 20px;">
+      <h2>工单治理总览</h2>
+      <div id="ticketOverview" class="overview-grid">
+        <div class="empty">正在加载工单治理总览...</div>
+      </div>
+    </section>
 
     <div class="layout">
       <section class="panel">
@@ -261,6 +318,7 @@
       ticketId: "",
       tickets: [],
       currentTicket: null,
+      overview: null,
     };
 
     const el = {
@@ -273,8 +331,10 @@
       priorityFilter: document.getElementById("priorityFilter"),
       ownerFilterInput: document.getElementById("ownerFilterInput"),
       requestedByFilterInput: document.getElementById("requestedByFilterInput"),
+      taskFilterInput: document.getElementById("taskFilterInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
+      ticketOverview: document.getElementById("ticketOverview"),
       ticketListMeta: document.getElementById("ticketListMeta"),
       ticketList: document.getElementById("ticketList"),
       ticketDetail: document.getElementById("ticketDetail"),
@@ -319,6 +379,7 @@
         priority: el.priorityFilter.value,
         owner: el.ownerFilterInput.value.trim(),
         requested_by: el.requestedByFilterInput.value.trim(),
+        task_id: el.taskFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -337,7 +398,33 @@
       if (el.priorityFilter.value) query.set("priority", el.priorityFilter.value);
       if (el.ownerFilterInput.value.trim()) query.set("owner", el.ownerFilterInput.value.trim());
       if (el.requestedByFilterInput.value.trim()) query.set("requested_by", el.requestedByFilterInput.value.trim());
+      if (el.taskFilterInput.value.trim()) query.set("task_id", el.taskFilterInput.value.trim());
       return query;
+    }
+
+    function renderOverview() {
+      if (!state.overview) {
+        el.ticketOverview.innerHTML = '<div class="empty">暂无工单治理总览。</div>';
+        return;
+      }
+      const cards = [
+        ["工单总数", state.overview.total],
+        ["处理中", state.overview.in_progress_count],
+        ["待处理", state.overview.submitted_count],
+        ["积压中", state.overview.backlog_count],
+        ["高优先级", state.overview.high_priority_count],
+        ["未分配", state.overview.unassigned_count],
+        ["超时未闭环", state.overview.stale_open_count],
+        ["评估来源", state.overview.evaluation_source_count],
+        ["内部工具来源", state.overview.internal_tool_source_count],
+        ["闭环率", `${state.overview.completion_rate}%`],
+      ];
+      el.ticketOverview.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
     }
 
     function renderTicketList() {
@@ -395,108 +482,6 @@
           <div class="detail-row"><div class="label">关联建议</div><div class="value">${escapeHtml(item.linked_suggestion_id || "-")}</div></div>
           <div class="detail-row"><div class="label">关联评估</div><div class="value">${escapeHtml(item.linked_evaluation_id || "-")}</div></div>
           <div class="detail-row"><div class="label">关联 Agent</div><div class="value">${escapeHtml(item.linked_agent_id || "-")}</div></div>
-          <div class="detail-row"><div class="label">关闭时间</div><div class="value">${escapeHtml(formatDate(item.closed_at))}</div></div>
-          <div class="detail-row"><div class="label">创建时间</div><div class="value">${escapeHtml(formatDate(item.create_time))}</div></div>
-          <div class="detail-row"><div class="label">更新时间</div><div class="value">${escapeHtml(formatDate(item.update_time))}</div></div>
-          <div class="detail-row"><div class="label">描述</div><div class="value">${escapeHtml(item.description || "-")}</div></div>
-        </div>
-        <div class="inline-form">
-          <input id="ownerInput" placeholder="owner" value="${escapeHtml(item.owner || "")}" />
-          <select id="statusInput">
-            <option value="submitted" ${item.status === "submitted" ? "selected" : ""}>submitted</option>
-            <option value="in_progress" ${item.status === "in_progress" ? "selected" : ""}>in_progress</option>
-            <option value="resolved" ${item.status === "resolved" ? "selected" : ""}>resolved</option>
-            <option value="closed" ${item.status === "closed" ? "selected" : ""}>closed</option>
-          </select>
-          <select id="priorityInput">
-            <option value="high" ${item.priority === "high" ? "selected" : ""}>high</option>
-            <option value="medium" ${item.priority === "medium" ? "selected" : ""}>medium</option>
-            <option value="low" ${item.priority === "low" ? "selected" : ""}>low</option>
-          </select>
-          <button id="saveTicketBtn">保存工单</button>
-          ${item.linked_evaluation_id ? '<button id="openEvaluationBtn" class="secondary">打开评估</button>' : ""}
-          ${item.linked_suggestion_id ? '<button id="openSuggestionBtn" class="secondary">打开建议</button>' : ""}
-        </div>
-        <h2 style="margin-top: 18px;">工单载荷</h2>
-        <pre class="subtle payload">${escapeHtml(payloadText)}</pre>
-      `;
-
-      const saveTicketBtn = document.getElementById("saveTicketBtn");
-      const openEvaluationBtn = document.getElementById("openEvaluationBtn");
-      const openSuggestionBtn = document.getElementById("openSuggestionBtn");
-
-      if (saveTicketBtn) {
-        saveTicketBtn.addEventListener("click", async () => {
-          await fetchJson(`/api/service-tickets/${encodeURIComponent(item.ticket_id)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              owner: document.getElementById("ownerInput")?.value.trim() || null,
-              status: document.getElementById("statusInput")?.value || null,
-              priority: document.getElementById("priorityInput")?.value || null,
-            }),
-          });
-          await loadTicketList();
-          await loadTicketDetail();
-        });
-      }
-      if (openEvaluationBtn && item.linked_evaluation_id) {
-        openEvaluationBtn.addEventListener("click", () => {
-          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(item.linked_evaluation_id)}`;
-        });
-      }
-      if (openSuggestionBtn && item.linked_evaluation_id && item.linked_suggestion_id) {
-        openSuggestionBtn.addEventListener("click", () => {
-          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(item.linked_evaluation_id)}&suggestion_id=${encodeURIComponent(item.linked_suggestion_id)}`;
-        });
-      }
-    }
-
-    async function loadTicketList() {
-      const query = buildTicketListQuery();
-      state.tickets = await fetchJson(`/api/service-tickets?${query.toString()}`);
-      renderTicketList();
-      syncQuery();
-      if (!state.ticketId && state.tickets[0]?.ticket_id) {
-        state.ticketId = state.tickets[0].ticket_id;
-        el.ticketIdInput.value = state.ticketId;
-      }
-    }
-
-    async function loadTicketDetail() {
-      const ticketId = el.ticketIdInput.value.trim() || state.ticketId;
-      if (!ticketId) return;
-      state.ticketId = ticketId;
-      state.currentTicket = await fetchJson(`/api/service-tickets/${encodeURIComponent(ticketId)}`);
-      renderTicketList();
-      renderTicketDetail(state.currentTicket);
-      syncQuery();
-    }
-
-    function renderTicketDetail(item) {
-      if (!item) {
-        el.ticketDetail.innerHTML = '<div class="empty">请选择左侧工单查看详情。</div>';
-        return;
-      }
-      const payloadText = JSON.stringify(item.payload || {}, null, 2);
-      el.ticketDetail.innerHTML = `
-        <div class="hero">
-          <div class="title">${escapeHtml(item.title)}</div>
-          <div style="margin-top: 8px;">
-            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
-            <span class="tag">${escapeHtml(item.priority)}</span>
-            <span class="tag">${escapeHtml(item.source)}</span>
-          </div>
-          <div class="subtle" style="margin-top: 8px;">工单号: ${escapeHtml(item.ticket_id)}</div>
-        </div>
-        <div class="detail-list">
-          <div class="detail-row"><div class="label">业务域</div><div class="value">${escapeHtml(item.biz_domain)}</div></div>
-          <div class="detail-row"><div class="label">分类</div><div class="value">${escapeHtml(item.category)}</div></div>
-          <div class="detail-row"><div class="label">负责人</div><div class="value">${escapeHtml(item.owner || "-")}</div></div>
-          <div class="detail-row"><div class="label">申请人</div><div class="value">${escapeHtml(item.requested_by)}</div></div>
-          <div class="detail-row"><div class="label">关联建议</div><div class="value">${escapeHtml(item.linked_suggestion_id || "-")}</div></div>
-          <div class="detail-row"><div class="label">关联评估</div><div class="value">${escapeHtml(item.linked_evaluation_id || "-")}</div></div>
-          <div class="detail-row"><div class="label">关联 Agent</div><div class="value">${escapeHtml(item.linked_agent_id || "-")}</div></div>
           <div class="detail-row"><div class="label">关联任务</div><div class="value">${escapeHtml(item.linked_task_id || "-")}</div></div>
           <div class="detail-row"><div class="label">关闭时间</div><div class="value">${escapeHtml(formatDate(item.closed_at))}</div></div>
           <div class="detail-row"><div class="label">创建时间</div><div class="value">${escapeHtml(formatDate(item.create_time))}</div></div>
@@ -520,6 +505,7 @@
           ${item.linked_evaluation_id ? '<button id="openEvaluationBtn" class="secondary">打开评估</button>' : ""}
           ${item.linked_suggestion_id ? '<button id="openSuggestionBtn" class="secondary">打开建议</button>' : ""}
           ${item.linked_task_id ? '<button id="openTaskBtn" class="secondary">打开任务</button>' : ""}
+          ${item.linked_task_id ? '<button id="openAuditBtn" class="secondary">打开审计</button>' : ""}
         </div>
         <h2 style="margin-top: 18px;">工单载荷</h2>
         <pre class="subtle payload">${escapeHtml(payloadText)}</pre>
@@ -529,6 +515,7 @@
       const openEvaluationBtn = document.getElementById("openEvaluationBtn");
       const openSuggestionBtn = document.getElementById("openSuggestionBtn");
       const openTaskBtn = document.getElementById("openTaskBtn");
+      const openAuditBtn = document.getElementById("openAuditBtn");
 
       if (saveTicketBtn) {
         saveTicketBtn.addEventListener("click", async () => {
@@ -541,6 +528,7 @@
               priority: document.getElementById("priorityInput")?.value || null,
             }),
           });
+          await loadOverview();
           await loadTicketList();
           await loadTicketDetail();
         });
@@ -560,6 +548,37 @@
           window.location.href = `/ui/tasks?task_id=${encodeURIComponent(item.linked_task_id)}`;
         });
       }
+      if (openAuditBtn && item.linked_task_id) {
+        openAuditBtn.addEventListener("click", () => {
+          window.location.href = `/ui/audit?task_id=${encodeURIComponent(item.linked_task_id)}`;
+        });
+      }
+    }
+
+    async function loadOverview() {
+      state.overview = await fetchJson("/api/service-tickets/overview");
+      renderOverview();
+    }
+
+    async function loadTicketList() {
+      const query = buildTicketListQuery();
+      state.tickets = await fetchJson(`/api/service-tickets?${query.toString()}`);
+      renderTicketList();
+      syncQuery();
+      if (!state.ticketId && state.tickets[0]?.ticket_id) {
+        state.ticketId = state.tickets[0].ticket_id;
+        el.ticketIdInput.value = state.ticketId;
+      }
+    }
+
+    async function loadTicketDetail() {
+      const ticketId = el.ticketIdInput.value.trim() || state.ticketId;
+      if (!ticketId) return;
+      state.ticketId = ticketId;
+      state.currentTicket = await fetchJson(`/api/service-tickets/${encodeURIComponent(ticketId)}`);
+      renderTicketList();
+      renderTicketDetail(state.currentTicket);
+      syncQuery();
     }
 
     async function bootstrap() {
@@ -571,6 +590,8 @@
       el.priorityFilter.value = query.get("priority") || "";
       el.ownerFilterInput.value = query.get("owner") || "";
       el.requestedByFilterInput.value = query.get("requested_by") || "";
+      el.taskFilterInput.value = query.get("task_id") || "";
+      await loadOverview();
       await loadTicketList();
       if (state.ticketId) {
         await loadTicketDetail();
@@ -580,59 +601,6 @@
         await loadTicketDetail();
       }
     }
-
-    const taskFilterInput = document.createElement("input");
-    taskFilterInput.id = "taskFilterInput";
-    taskFilterInput.placeholder = "按 task_id 过滤";
-    el.requestedByFilterInput.insertAdjacentElement("afterend", taskFilterInput);
-
-    const originalBuildTicketListQuery = buildTicketListQuery;
-    buildTicketListQuery = function buildTicketListQueryWithTask() {
-      const query = originalBuildTicketListQuery();
-      if (taskFilterInput.value.trim()) query.set("task_id", taskFilterInput.value.trim());
-      return query;
-    };
-
-    const originalSyncQuery = syncQuery;
-    syncQuery = function syncQueryWithTask() {
-      originalSyncQuery();
-      const url = new URL(window.location.href);
-      const taskId = taskFilterInput.value.trim();
-      if (taskId) {
-        url.searchParams.set("task_id", taskId);
-      } else {
-        url.searchParams.delete("task_id");
-      }
-      window.history.replaceState({}, "", url);
-    };
-
-    const originalRenderTicketDetail = renderTicketDetail;
-    renderTicketDetail = function renderTicketDetailWithAudit(item) {
-      originalRenderTicketDetail(item);
-      if (!item || !item.linked_task_id) {
-        return;
-      }
-      const form = el.ticketDetail.querySelector(".inline-form");
-      if (!form || document.getElementById("openAuditBtn")) {
-        return;
-      }
-      const auditBtn = document.createElement("button");
-      auditBtn.id = "openAuditBtn";
-      auditBtn.type = "button";
-      auditBtn.className = "secondary";
-      auditBtn.textContent = "打开审计";
-      auditBtn.addEventListener("click", () => {
-        window.location.href = `/ui/audit?task_id=${encodeURIComponent(item.linked_task_id)}`;
-      });
-      form.appendChild(auditBtn);
-    };
-
-    const originalBootstrap = bootstrap;
-    bootstrap = async function bootstrapWithTaskFilter() {
-      const query = new URLSearchParams(window.location.search);
-      taskFilterInput.value = query.get("task_id") || "";
-      await originalBootstrap();
-    };
 
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
@@ -658,13 +626,10 @@
     [el.statusFilter, el.sourceFilter, el.priorityFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
     });
-    [el.ownerFilterInput, el.requestedByFilterInput].forEach(node => {
+    [el.ownerFilterInput, el.requestedByFilterInput, el.taskFilterInput].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await bootstrap();
       });
-    });
-    taskFilterInput.addEventListener("keydown", async event => {
-      if (event.key === "Enter") await bootstrap();
     });
     el.ticketIdInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadTicketDetail();

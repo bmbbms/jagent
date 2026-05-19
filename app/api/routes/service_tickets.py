@@ -1,11 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_audit_service, get_service_ticket_service
-from app.schemas import ServiceTicketResponse, ServiceTicketUpdateRequest
+from app.schemas import (
+    ServiceTicketOverviewResponse,
+    ServiceTicketResponse,
+    ServiceTicketUpdateRequest,
+)
 from app.services.audit_service import AuditService
 from app.services.service_ticket_service import ServiceTicketService
 
 router = APIRouter(prefix="/service-tickets", tags=["service-tickets"])
+
+
+@router.get("/overview", response_model=ServiceTicketOverviewResponse)
+def get_service_ticket_overview(
+    service_ticket_service: ServiceTicketService = Depends(get_service_ticket_service),
+) -> ServiceTicketOverviewResponse:
+    return service_ticket_service.build_overview()
 
 
 @router.get("", response_model=list[ServiceTicketResponse])

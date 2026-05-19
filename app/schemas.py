@@ -734,6 +734,21 @@ class ServiceTicketResponse(BaseModel):
     linked_task_id: Optional[str] = None
 
 
+class ServiceTicketOverviewResponse(BaseModel):
+    total: int = 0
+    submitted_count: int = 0
+    in_progress_count: int = 0
+    resolved_count: int = 0
+    closed_count: int = 0
+    backlog_count: int = 0
+    high_priority_count: int = 0
+    unassigned_count: int = 0
+    stale_open_count: int = 0
+    evaluation_source_count: int = 0
+    internal_tool_source_count: int = 0
+    completion_rate: float = 0.0
+
+
 class ServiceTicketUpdateRequest(BaseModel):
     status: Optional[str] = None
     owner: Optional[str] = None

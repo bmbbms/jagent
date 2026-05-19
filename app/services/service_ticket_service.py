@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.repositories.service_ticket_repository import ServiceTicketRepository
 from app.schemas import (
+    ServiceTicketOverviewResponse,
     ServiceTicketResponse,
     ServiceTicketUpdateRequest,
 )
@@ -51,6 +54,41 @@ class ServiceTicketService:
             if item is None:
                 return None
             return self._to_response(item)
+
+    def build_overview(self) -> ServiceTicketOverviewResponse:
+        items = self.list_tickets()
+        total = len(items)
+        backlog_count = sum(1 for item in items if item.status not in {"resolved", "closed"})
+        stale_threshold = datetime.utcnow() - timedelta(days=3)
+        stale_open_count = sum(
+            1
+            for item in items
+            if item.status not in {"resolved", "closed"}
+            and item.update_time
+            and datetime.fromisoformat(item.update_time) <= stale_threshold
+        )
+        completion_rate = round(
+            (
+                sum(1 for item in items if item.status in {"resolved", "closed"})
+                / total
+            )
+            * 100,
+            2,
+        ) if total else 0.0
+        return ServiceTicketOverviewResponse(
+            total=total,
+            submitted_count=sum(1 for item in items if item.status == "submitted"),
+            in_progress_count=sum(1 for item in items if item.status == "in_progress"),
+            resolved_count=sum(1 for item in items if item.status == "resolved"),
+            closed_count=sum(1 for item in items if item.status == "closed"),
+            backlog_count=backlog_count,
+            high_priority_count=sum(1 for item in items if item.priority == "high"),
+            unassigned_count=sum(1 for item in items if not item.owner),
+            stale_open_count=stale_open_count,
+            evaluation_source_count=sum(1 for item in items if item.source == "evaluation"),
+            internal_tool_source_count=sum(1 for item in items if item.source == "internal_tool"),
+            completion_rate=completion_rate,
+        )
 
     def get_ticket_audit_context(self, ticket_id: str) -> dict[str, str | int | None] | None:
         with self._session_factory() as session:
