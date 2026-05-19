@@ -25,13 +25,11 @@
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
-
     .page {
       max-width: 1480px;
       margin: 0 auto;
       padding: 24px;
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -40,26 +38,22 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
-
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
-
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
       max-width: 860px;
     }
-
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
-
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -71,7 +65,6 @@
       color: var(--text);
       font: inherit;
     }
-
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -79,18 +72,15 @@
       cursor: pointer;
       font-weight: 700;
     }
-
     .toolbar button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
-
     .layout {
       display: grid;
       grid-template-columns: 430px minmax(0, 1fr);
       gap: 20px;
     }
-
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -98,18 +88,16 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
-
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
-
     .list,
-    .stack {
+    .stack,
+    .detail-grid {
       display: grid;
       gap: 10px;
     }
-
     .capability-card,
     .detail-card {
       background: var(--panel);
@@ -119,29 +107,24 @@
       display: grid;
       gap: 10px;
     }
-
     .capability-card {
       cursor: pointer;
     }
-
     .capability-card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
     }
-
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
-
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
-
     .tag {
       display: inline-flex;
       align-items: center;
@@ -154,24 +137,20 @@
       margin-right: 6px;
       margin-bottom: 6px;
     }
-
     .tag.success {
       background: rgba(31, 122, 77, 0.12);
       color: var(--success);
     }
-
     .tag.warning {
       background: rgba(168, 116, 29, 0.14);
       color: var(--warning);
     }
-
     .hero {
       padding: 16px;
       border-radius: 16px;
       background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
       border: 1px solid #eadcca;
     }
-
     .hero strong {
       display: block;
       margin-top: 8px;
@@ -179,12 +158,6 @@
       color: var(--accent);
       line-height: 1;
     }
-
-    .detail-grid {
-      display: grid;
-      gap: 10px;
-    }
-
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -193,35 +166,29 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
-
     .detail-row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
-
     .label {
       color: var(--muted);
-      flex: 0 0 140px;
+      flex: 0 0 150px;
     }
-
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
-
     .section-split {
       margin-top: 20px;
       padding-top: 18px;
       border-top: 1px solid #eadcca;
     }
-
     .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
-
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -232,7 +199,7 @@
     <div class="header">
       <div>
         <h1>Capability Center</h1>
-        <p>集中查看主 Agent 当前可路由的全部业务能力，包括本地能力与外部注册能力，便于核对 triggers、skills、优先级和来源，支撑“通过 Agent 注册业务能力”的整体设计。</p>
+        <p>集中查看主 Agent 当前可路由的全部业务能力，包括本地能力与外部注册能力，并支持按来源、风险、审批要求和传输方式做运营筛选。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -253,6 +220,23 @@
           <option value="manual_remote">manual_remote</option>
           <option value="generic_add">generic_add</option>
           <option value="nacos">nacos</option>
+        </select>
+        <select id="riskFilter">
+          <option value="">全部 risk</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
+        <select id="approvalFilter">
+          <option value="">全部 approval</option>
+          <option value="true">requires_approval=true</option>
+          <option value="false">requires_approval=false</option>
+        </select>
+        <select id="transportFilter">
+          <option value="">全部 transport</option>
+          <option value="inproc">inproc</option>
+          <option value="http">http</option>
+          <option value="a2a">a2a</option>
         </select>
         <input id="capabilityIdInput" placeholder="输入 capability_id 直接打开" />
         <button id="loadBtn">加载能力</button>
@@ -293,6 +277,9 @@
       skillPageBtn: document.getElementById("skillPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
       sourceFilter: document.getElementById("sourceFilter"),
+      riskFilter: document.getElementById("riskFilter"),
+      approvalFilter: document.getElementById("approvalFilter"),
+      transportFilter: document.getElementById("transportFilter"),
       capabilityIdInput: document.getElementById("capabilityIdInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -320,21 +307,21 @@
 
     function updateQuery() {
       const url = new URL(window.location.href);
-      if (state.capabilityId) {
-        url.searchParams.set("capability_id", state.capabilityId);
-      } else {
-        url.searchParams.delete("capability_id");
-      }
-      if (el.domainFilter.value) {
-        url.searchParams.set("biz_domain", el.domainFilter.value);
-      } else {
-        url.searchParams.delete("biz_domain");
-      }
-      if (el.sourceFilter.value) {
-        url.searchParams.set("source", el.sourceFilter.value);
-      } else {
-        url.searchParams.delete("source");
-      }
+      const pairs = {
+        capability_id: state.capabilityId,
+        biz_domain: el.domainFilter.value,
+        source: el.sourceFilter.value,
+        risk_level: el.riskFilter.value,
+        requires_approval: el.approvalFilter.value,
+        transport: el.transportFilter.value,
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
       window.history.replaceState({}, "", url);
     }
 
@@ -357,19 +344,14 @@
       return getExternalMetadata(capabilityId) ? "external" : "local";
     }
 
-    function getVisibleCapabilities() {
-      return state.capabilities;
-    }
-
     function renderCapabilityList() {
-      const items = getVisibleCapabilities();
-      el.capabilityListMeta.textContent = `当前共 ${items.length} 个 Capability`;
-      if (!items.length) {
+      el.capabilityListMeta.textContent = `当前共 ${state.capabilities.length} 个 Capability`;
+      if (!state.capabilities.length) {
         el.capabilityList.innerHTML = '<div class="empty">当前筛选条件下没有 Capability。</div>';
         return;
       }
 
-      el.capabilityList.innerHTML = items.map(item => `
+      el.capabilityList.innerHTML = state.capabilities.map(item => `
         <div class="capability-card ${item.capability_id === state.capabilityId ? "active" : ""}" data-capability-id="${escapeHtml(item.capability_id)}">
           <div class="title">${escapeHtml(item.capability_name)}</div>
           <div>
@@ -378,7 +360,7 @@
             <span class="tag ${getCapabilitySource(item.capability_id) === "local" ? "success" : "warning"}">${escapeHtml(getCapabilitySource(item.capability_id))}</span>
           </div>
           <div class="subtle">${escapeHtml(item.description || "暂无描述")}</div>
-          <div class="subtle">priority ${escapeHtml(item.priority)} / triggers ${escapeHtml((item.triggers || []).length)} / skills ${escapeHtml((item.skills || []).length)}</div>
+          <div class="subtle">priority ${escapeHtml(item.priority)} / risk ${escapeHtml(item.risk_level || "-")} / transport ${escapeHtml(item.transport || "-")}</div>
         </div>
       `).join("");
 
@@ -417,7 +399,8 @@
             <div class="detail-row"><div class="label">优先级</div><div class="value">${escapeHtml(item.priority)}</div></div>
             <div class="detail-row"><div class="label">版本</div><div class="value">${escapeHtml(item.version || "-")}</div></div>
             <div class="detail-row"><div class="label">风险等级</div><div class="value">${escapeHtml(item.risk_level || "-")}</div></div>
-            <div class="detail-row"><div class="label">审批要求</div><div class="value">${escapeHtml(item.requires_approval ? "true" : "false")}</div></div>
+            <div class="detail-row"><div class="label">需要审批</div><div class="value">${escapeHtml(item.requires_approval ? "true" : "false")}</div></div>
+            <div class="detail-row"><div class="label">Transport</div><div class="value">${escapeHtml(item.transport || "-")}</div></div>
             <div class="detail-row"><div class="label">Skill 数</div><div class="value">${escapeHtml((item.skills || []).length)}</div></div>
             <div class="detail-row"><div class="label">Trigger 数</div><div class="value">${escapeHtml((item.triggers || []).length)}</div></div>
           </div>
@@ -443,7 +426,6 @@
           ${(external || item.transport !== "inproc") ? `
             <div class="detail-card">
               <div class="detail-grid">
-                <div class="detail-row"><div class="label">Transport</div><div class="value">${escapeHtml(item.transport || "-")}</div></div>
                 <div class="detail-row"><div class="label">Endpoint</div><div class="value">${escapeHtml(item.endpoint || "-")}</div></div>
                 <div class="detail-row"><div class="label">Service Path</div><div class="value">${escapeHtml(item.service_path || "-")}</div></div>
                 <div class="detail-row"><div class="label">Service Name</div><div class="value">${escapeHtml(item.service_name || "-")}</div></div>
@@ -456,9 +438,11 @@
 
         <div class="section-split">
           <h2>Extras</h2>
-          ${Object.keys(item.extras || {}).length ? `<div class="detail-card"><div class="detail-grid">${Object.entries(item.extras || {}).map(([key, value]) => `
-            <div class="detail-row"><div class="label">${escapeHtml(key)}</div><div class="value">${escapeHtml(value)}</div></div>
-          `).join("")}</div></div>` : '<div class="empty">暂无 extras 元数据。</div>'}
+          ${Object.keys(item.extras || {}).length
+            ? `<div class="detail-card"><div class="detail-grid">${Object.entries(item.extras || {}).map(([key, value]) => `
+              <div class="detail-row"><div class="label">${escapeHtml(key)}</div><div class="value">${escapeHtml(value)}</div></div>
+            `).join("")}</div></div>`
+            : '<div class="empty">暂无 extras 元数据。</div>'}
         </div>
 
         <div class="section-split">
@@ -474,6 +458,7 @@
       const openTaskPageBtn = document.getElementById("openTaskPageBtn");
       const openExternalAgentBtn = document.getElementById("openExternalAgentBtn");
       const openSkillPageBtn = document.getElementById("openSkillPageBtn");
+
       if (openTaskPageBtn) {
         openTaskPageBtn.addEventListener("click", () => {
           window.location.href = `/ui/tasks?selected_agent_id=${encodeURIComponent(item.capability_id)}`;
@@ -495,6 +480,10 @@
       const query = new URLSearchParams();
       if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
       if (el.sourceFilter.value) query.set("source", el.sourceFilter.value);
+      if (el.riskFilter.value) query.set("risk_level", el.riskFilter.value);
+      if (el.approvalFilter.value) query.set("requires_approval", el.approvalFilter.value);
+      if (el.transportFilter.value) query.set("transport", el.transportFilter.value);
+
       const [capabilities, externalAgents] = await Promise.all([
         fetchJson(`/api/capabilities?${query.toString()}`),
         fetchJson("/api/external-agents"),
@@ -504,9 +493,8 @@
       renderCapabilityList();
       updateQuery();
 
-      const visibleItems = getVisibleCapabilities();
-      if (!state.capabilityId && visibleItems[0]?.capability_id) {
-        state.capabilityId = visibleItems[0].capability_id;
+      if (!state.capabilityId && state.capabilities[0]?.capability_id) {
+        state.capabilityId = state.capabilities[0].capability_id;
         el.capabilityIdInput.value = state.capabilityId;
       }
     }
@@ -535,12 +523,14 @@
       el.capabilityIdInput.value = state.capabilityId;
       el.domainFilter.value = query.get("biz_domain") || "";
       el.sourceFilter.value = query.get("source") || "";
+      el.riskFilter.value = query.get("risk_level") || "";
+      el.approvalFilter.value = query.get("requires_approval") || "";
+      el.transportFilter.value = query.get("transport") || "";
       await loadCapabilities();
-      const visibleItems = getVisibleCapabilities();
       if (state.capabilityId) {
         loadCapabilityDetail();
-      } else if (visibleItems[0]?.capability_id) {
-        state.capabilityId = visibleItems[0].capability_id;
+      } else if (state.capabilities[0]?.capability_id) {
+        state.capabilityId = state.capabilities[0].capability_id;
         el.capabilityIdInput.value = state.capabilityId;
         loadCapabilityDetail();
       }
@@ -558,8 +548,9 @@
     el.skillPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/skills";
     });
-    el.domainFilter.addEventListener("change", bootstrap);
-    el.sourceFilter.addEventListener("change", bootstrap);
+    [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter].forEach(node => {
+      node.addEventListener("change", bootstrap);
+    });
     el.loadBtn.addEventListener("click", loadCapabilityDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
     el.capabilityIdInput.addEventListener("keydown", event => {

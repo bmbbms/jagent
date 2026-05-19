@@ -11,6 +11,9 @@ router = APIRouter(prefix="/capabilities", tags=["capabilities"])
 def list_capabilities(
     biz_domain: BizDomain | None = Query(default=None),
     source: str | None = Query(default=None),
+    risk_level: str | None = Query(default=None),
+    requires_approval: bool | None = Query(default=None),
+    transport: str | None = Query(default=None),
     registry: CapabilityResolver = Depends(get_capability_registry),
 ) -> list[CapabilityInfo]:
     items = registry.describe_capabilities(biz_domain)
@@ -19,6 +22,12 @@ def list_capabilities(
             items = [item for item in items if item.source != "local"]
         else:
             items = [item for item in items if item.source == source]
+    if risk_level:
+        items = [item for item in items if item.risk_level == risk_level]
+    if requires_approval is not None:
+        items = [item for item in items if item.requires_approval == requires_approval]
+    if transport:
+        items = [item for item in items if item.transport == transport]
     return [
         CapabilityInfo(
             capability_id=item.capability_id,

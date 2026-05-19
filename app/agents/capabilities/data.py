@@ -12,10 +12,13 @@ class DirectSalesDataAgent(CapabilityAgent):
         capability_id="data_support.direct_sales_data",
         name="Direct Sales Data Agent",
         biz_domain=BizDomain.data_support,
-        description="面向直销数据查询与分析的能力",
+        description="面向直销数据查询与分析的能力。",
         triggers=["销售", "直销", "指标", "数据", "业绩"],
         skills=["direct_sales_data_assistant"],
         priority=10,
+        risk_level="medium",
+        requires_approval=False,
+        tags=["data_support", "direct_sales_data", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
@@ -40,10 +43,13 @@ class ComplianceReportAgent(CapabilityAgent):
         capability_id="data_support.compliance_report",
         name="Compliance Report Agent",
         biz_domain=BizDomain.data_support,
-        description="面向固定合规报表生成与口径解释的能力",
+        description="面向固定合规报表生成与口径解释的能力。",
         triggers=["报表", "监管", "合规", "导出"],
         skills=["compliance_report_generation"],
         priority=20,
+        risk_level="medium",
+        requires_approval=False,
+        tags=["data_support", "compliance_report", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:

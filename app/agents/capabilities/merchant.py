@@ -12,10 +12,13 @@ class MerchantQaAgent(CapabilityAgent):
         capability_id="merchant.qa",
         name="Merchant QA Agent",
         biz_domain=BizDomain.merchant,
-        description="面向商户常见问题的知识问答能力",
+        description="面向商户常见问题的知识问答能力。",
         triggers=["规则", "流程", "怎么", "faq", "问答", "咨询"],
         skills=["merchant_qa"],
         priority=10,
+        risk_level="low",
+        requires_approval=False,
+        tags=["merchant", "qa", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
@@ -40,10 +43,13 @@ class MerchantIssueHandlingAgent(CapabilityAgent):
         capability_id="merchant.issue_handling",
         name="Merchant Issue Handling Agent",
         biz_domain=BizDomain.merchant,
-        description="面向商户问题分类与处理建议的能力",
+        description="面向商户问题分类与处理建议的能力。",
         triggers=["问题", "异常", "失败", "工单", "差错", "冻结", "处理"],
         skills=["merchant_issue_handling"],
         priority=20,
+        risk_level="medium",
+        requires_approval=False,
+        tags=["merchant", "issue", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
@@ -68,10 +74,13 @@ class MerchantOpsAnalysisAgent(CapabilityAgent):
         capability_id="merchant.ops_analysis",
         name="Merchant Ops Analysis Agent",
         biz_domain=BizDomain.merchant,
-        description="面向商户经营分析和交易表现解读的能力",
+        description="面向商户经营分析和交易表现解读的能力。",
         triggers=["经营", "分析", "交易", "增长", "gmv", "退款"],
         skills=["merchant_ops_analysis"],
         priority=30,
+        risk_level="medium",
+        requires_approval=False,
+        tags=["merchant", "analysis", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:

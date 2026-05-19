@@ -50,6 +50,21 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
     assert external_response.status_code == 200
     assert isinstance(external_response.json(), list)
 
+    filtered_response = client.get(
+        "/api/capabilities",
+        params={
+            "risk_level": "high",
+            "requires_approval": True,
+            "transport": "inproc",
+        },
+    )
+    assert filtered_response.status_code == 200
+    filtered_body = filtered_response.json()
+    assert filtered_body
+    assert all(item["risk_level"] == "high" for item in filtered_body)
+    assert all(item["requires_approval"] is True for item in filtered_body)
+    assert all(item["transport"] == "inproc" for item in filtered_body)
+
 
 def test_capability_detail(client: TestClient) -> None:
     response = client.get("/api/capabilities/merchant.qa")
@@ -523,6 +538,9 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="capabilityDetail"' in response.text
     assert 'id="domainFilter"' in response.text
     assert 'id="sourceFilter"' in response.text
+    assert 'id="riskFilter"' in response.text
+    assert 'id="approvalFilter"' in response.text
+    assert 'id="transportFilter"' in response.text
     assert 'id="capabilityIdInput"' in response.text
 
 

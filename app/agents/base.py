@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 from app.schemas import BizDomain, ChatRequest, ChatResponse
 
@@ -16,6 +16,17 @@ class CapabilityDefinition:
     triggers: List[str] = field(default_factory=list)
     skills: List[str] = field(default_factory=list)
     priority: int = 100
+    version: str = "v1"
+    risk_level: str = "low"
+    requires_approval: bool = False
+    tags: List[str] = field(default_factory=list)
+    transport: str = "inproc"
+    endpoint: Optional[str] = None
+    service_name: Optional[str] = None
+    service_host: Optional[str] = None
+    service_port: Optional[int] = None
+    service_path: str = "/api/chat"
+    extras: Dict[str, str] = field(default_factory=dict)
 
     def matches(self, request: ChatRequest) -> bool:
         if request.biz_domain != self.biz_domain:

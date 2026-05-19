@@ -12,10 +12,13 @@ class QuotaReviewAgent(CapabilityAgent):
         capability_id="operations.quota_review",
         name="Quota Review Agent",
         biz_domain=BizDomain.operations,
-        description="面向调额审核辅助的能力",
+        description="面向调额审核辅助的能力。",
         triggers=["调额", "额度", "提额", "限额", "quota review"],
         skills=["quota_review"],
         priority=10,
+        risk_level="high",
+        requires_approval=True,
+        tags=["operations", "quota_review", "approval", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
@@ -24,7 +27,7 @@ class QuotaReviewAgent(CapabilityAgent):
             capability_id=self.definition.capability_id,
             capability_name=self.definition.name,
             summary="已命中调额审核能力，需要收集资料、校验规则并进入审批流程。",
-            next_action="调用商户、交易、风险类工具后生成结构化建议，并提交审批。",
+            next_action="调用商户、交易、风控类工具后生成结构化建议，并提交审批。",
             selected_skills=["quota_review"],
             selected_tools=available_tools(BizDomain.operations),
             references=["K004: 调额审核规则"],
@@ -40,10 +43,13 @@ class OnboardingReviewAgent(CapabilityAgent):
         capability_id="operations.onboarding_review",
         name="Onboarding Review Agent",
         biz_domain=BizDomain.operations,
-        description="面向商户进件审核辅助的能力",
+        description="面向商户进件审核辅助的能力。",
         triggers=["进件", "准入", "开户", "入网"],
         skills=["merchant_onboarding_review"],
         priority=20,
+        risk_level="high",
+        requires_approval=True,
+        tags=["operations", "onboarding_review", "approval", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
@@ -68,10 +74,13 @@ class MerchantChangeReviewAgent(CapabilityAgent):
         capability_id="operations.merchant_change_review",
         name="Merchant Change Review Agent",
         biz_domain=BizDomain.operations,
-        description="面向商户变更审核辅助的能力",
+        description="面向商户变更审核辅助的能力。",
         triggers=["变更", "修改", "更新资料"],
         skills=["merchant_change_review"],
         priority=30,
+        risk_level="high",
+        requires_approval=True,
+        tags=["operations", "merchant_change_review", "approval", "phase1"],
     )
 
     def run(self, request: ChatRequest) -> ChatResponse:
