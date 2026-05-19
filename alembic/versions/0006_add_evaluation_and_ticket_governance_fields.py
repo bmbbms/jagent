@@ -6,8 +6,10 @@ Create Date: 2026-05-19 23:20:00
 """
 
 from alembic import op
+from alembic import context
 import sqlalchemy as sa
 from sqlalchemy import inspect
+from sqlalchemy.exc import NoInspectionAvailable
 
 
 revision = "0006_add_evaluation_and_ticket_governance_fields"
@@ -17,14 +19,28 @@ depends_on = None
 
 
 def _column_exists(table_name: str, column_name: str) -> bool:
+    if context.is_offline_mode():
+        return False
     bind = op.get_bind()
-    inspector = inspect(bind)
+    try:
+        inspector = inspect(bind)
+    except NoInspectionAvailable:
+        return False
+    if table_name not in inspector.get_table_names():
+        return False
     return any(item["name"] == column_name for item in inspector.get_columns(table_name))
 
 
 def _index_exists(table_name: str, index_name: str) -> bool:
+    if context.is_offline_mode():
+        return False
     bind = op.get_bind()
-    inspector = inspect(bind)
+    try:
+        inspector = inspect(bind)
+    except NoInspectionAvailable:
+        return False
+    if table_name not in inspector.get_table_names():
+        return False
     return any(item["name"] == index_name for item in inspector.get_indexes(table_name))
 
 

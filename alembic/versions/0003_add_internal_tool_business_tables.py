@@ -6,8 +6,10 @@ Create Date: 2026-05-18 16:20:00
 """
 
 from alembic import op
+from alembic import context
 import sqlalchemy as sa
 from sqlalchemy import inspect
+from sqlalchemy.exc import NoInspectionAvailable
 
 
 revision = "0003_add_internal_tool_business_tables"
@@ -19,14 +21,26 @@ AUTO_ID_TYPE = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
 def _table_exists(table_name: str) -> bool:
+    if context.is_offline_mode():
+        return False
     bind = op.get_bind()
-    inspector = inspect(bind)
+    try:
+        inspector = inspect(bind)
+    except NoInspectionAvailable:
+        return False
     return table_name in inspector.get_table_names()
 
 
 def _index_exists(table_name: str, index_name: str) -> bool:
+    if context.is_offline_mode():
+        return False
     bind = op.get_bind()
-    inspector = inspect(bind)
+    try:
+        inspector = inspect(bind)
+    except NoInspectionAvailable:
+        return False
+    if table_name not in inspector.get_table_names():
+        return False
     return any(item["name"] == index_name for item in inspector.get_indexes(table_name))
 
 
