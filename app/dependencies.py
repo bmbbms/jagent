@@ -252,6 +252,7 @@ def get_service_ticket_service() -> ServiceTicketService:
     return ServiceTicketService(
         session_factory=get_session_factory(),
         repository=ServiceTicketRepository(),
+        evaluation_repository=EvaluationRepository(),
     )
 
 

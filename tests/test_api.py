@@ -847,6 +847,20 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert updated_ticket["priority"] == "medium"
     assert updated_ticket["closed_at"] is not None
 
+    synced_suggestion_response = client.get(
+        "/api/evaluations/suggestions",
+        params={"agent_id": agent_id, "owner": "agent-optimizer"},
+    )
+    assert synced_suggestion_response.status_code == 200
+    synced_suggestions = synced_suggestion_response.json()
+    synced = next(item for item in synced_suggestions if item["suggestion_id"] == first["suggestion_id"])
+    assert synced["ticket_id"] == ticket_bound["ticket_id"]
+    assert synced["ticket_status"] == "resolved"
+    assert synced["status"] == "completed"
+    assert synced["priority"] == "medium"
+    assert synced["owner"] == "agent-optimizer"
+    assert synced["closed_at"] is not None
+
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     list_response = client.get("/api/workflows", params={"biz_domain": "operations"})

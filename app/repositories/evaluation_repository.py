@@ -224,6 +224,40 @@ class EvaluationRepository:
         session.flush()
         return item
 
+    def sync_suggestion_with_ticket(
+        self,
+        session: Session,
+        *,
+        ticket_id: str,
+        ticket_status: str,
+        owner: str | None = None,
+        priority: str | None = None,
+        closed_at: datetime | None = None,
+    ) -> AgentOptimizationSuggestionModel | None:
+        item = (
+            session.query(AgentOptimizationSuggestionModel)
+            .filter(AgentOptimizationSuggestionModel.ticket_id == ticket_id)
+            .one_or_none()
+        )
+        if item is None:
+            return None
+
+        item.ticket_status = ticket_status
+        if ticket_status in {"resolved", "closed"}:
+            item.status = "completed"
+            item.closed_at = closed_at or datetime.utcnow()
+        elif ticket_status == "in_progress":
+            item.status = "in_progress"
+        elif ticket_status == "submitted" and item.status == "new":
+            item.status = "in_progress"
+
+        if owner is not None:
+            item.owner = owner
+        if priority is not None:
+            item.priority = priority
+        session.flush()
+        return item
+
     @staticmethod
     def _new_id(prefix: str) -> str:
         return f"{prefix}_{uuid4().hex[:24]}"

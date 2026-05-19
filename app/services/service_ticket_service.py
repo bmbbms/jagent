@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.repositories.evaluation_repository import EvaluationRepository
 from app.repositories.service_ticket_repository import ServiceTicketRepository
 from app.schemas import (
     ServiceTicketResponse,
@@ -14,9 +15,11 @@ class ServiceTicketService:
         self,
         session_factory: sessionmaker[Session],
         repository: ServiceTicketRepository,
+        evaluation_repository: EvaluationRepository | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._repository = repository
+        self._evaluation_repository = evaluation_repository or EvaluationRepository()
 
     def list_tickets(
         self,
@@ -62,6 +65,14 @@ class ServiceTicketService:
             )
             if item is None:
                 return None
+            self._evaluation_repository.sync_suggestion_with_ticket(
+                session,
+                ticket_id=item.ticket_id,
+                ticket_status=item.status,
+                owner=item.owner,
+                priority=item.priority,
+                closed_at=item.closed_at,
+            )
             session.commit()
             session.refresh(item)
             return self._to_response(item)
