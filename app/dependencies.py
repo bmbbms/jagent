@@ -12,7 +12,6 @@ from app.registry.composite_registry import CompositeCapabilityRegistry
 from app.registry.local_registry import LocalCapabilityRegistry
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.registry.nacos_registry import NacosCapabilityRegistry
-from app.repositories.approval_repository import ApprovalRepository
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
@@ -24,7 +23,6 @@ from app.repositories.tool_execution_repository import ToolExecutionRepository
 from app.runtimes.agentscope import AgentScopeAgentRuntime
 from app.runtimes.base import AgentRuntime
 from app.runtimes.local import LocalAgentRuntime
-from app.services.approval_service import ApprovalService
 from app.services.audit_service import AuditService
 from app.services.chat_service import ChatService
 from app.services.evaluation_service import EvaluationService
@@ -120,16 +118,6 @@ def get_agent_runtime() -> AgentRuntime:
             observation_service=get_observation_service(),
         )
     return LocalAgentRuntime()
-
-
-@lru_cache
-def get_approval_service() -> ApprovalService:
-    service = ApprovalService(
-        session_factory=get_session_factory(),
-        repository=ApprovalRepository(),
-    )
-    service.seed_if_needed()
-    return service
 
 
 @lru_cache

@@ -17,7 +17,6 @@ from app.schemas import (
     AgentObservationLogResponse,
     AgentTaskOutputOverviewResponse,
     AgentTaskSummaryResponse,
-    ApprovalStatus,
     ChatRequest,
     ChatResponse,
     DataAccessLogResponse,
@@ -99,7 +98,6 @@ class TaskService:
         event_status: str = "success",
         agent_id: str | None = None,
         artifact_id: str | None = None,
-        approval_id: str | None = None,
         tool_call_id: str | None = None,
         visible_to_user: bool = True,
         event_payload: dict | None = None,
@@ -130,7 +128,6 @@ class TaskService:
                 event_status=event_status,
                 agent_id=agent_id,
                 artifact_id=artifact_id,
-                approval_id=approval_id,
                 tool_call_id=tool_call_id,
                 visible_to_user=visible_to_user,
                 event_payload=event_payload,
@@ -142,7 +139,6 @@ class TaskService:
         *,
         task_id: str,
         response: ChatResponse,
-        approval_id: str | None = None,
     ) -> str | None:
         with self._session_factory() as session:
             task = self._repository.get_task(session, task_id)
@@ -204,73 +200,13 @@ class TaskService:
             artifact_id=artifact.artifact_id,
             event_payload={"artifact_type": artifact.artifact_type},
         )
-
-        if approval_id:
-            self._mark_task_waiting_approval(
-                task_id=task_id,
-                approval_id=approval_id,
-                final_output_summary=response.summary,
-            )
-            self.emit_runtime_event(
-                task_id=task_id,
-                event_type="approval_requested",
-                title="任务等待审批",
-                content=f"审批单号：{approval_id}",
-                event_status="waiting",
-                agent_id=response.capability_id,
-                approval_id=approval_id,
-                event_payload={"approval_id": approval_id},
-                current_stage="approval",
-                task_status="waiting_approval",
-            )
-        else:
-            self._complete_task(
-                task_id=task_id,
-                final_output_summary=response.summary,
-                status="success",
-            )
+        self._complete_task(
+            task_id=task_id,
+            final_output_summary=response.summary,
+            status="success",
+        )
 
         return contact_id
-
-    def resolve_approval_task(
-        self,
-        *,
-        approval_id: str,
-        approval_status: ApprovalStatus,
-        reviewer_id: str,
-        comment: str,
-    ) -> str | None:
-        with session_scope(self._session_factory) as session:
-            tasks = self._repository.list_tasks(session, limit=200)
-            target = next((item for item in tasks if item.approval_id == approval_id), None)
-            if target is None:
-                return None
-
-            event_count = len(self._repository.list_events(session, target.task_id))
-            self._repository.append_event(
-                session,
-                task_id=target.task_id,
-                contact_id=target.contact_id,
-                event_type="approval_finished",
-                event_seq=event_count + 1,
-                title="审批已完成",
-                content=approval_status.value,
-                agent_id=target.selected_agent_id,
-                approval_id=approval_id,
-                event_payload={
-                    "reviewer_id": reviewer_id,
-                    "comment": comment,
-                    "status": approval_status.value,
-                },
-            )
-
-            self._repository.complete_task(
-                session,
-                task=target,
-                final_output_summary=target.final_output_summary or "",
-                status="success" if approval_status == ApprovalStatus.approved else "failed",
-            )
-            return target.task_id
 
     def list_tasks(
         self,
@@ -280,7 +216,6 @@ class TaskService:
         selected_agent_id: str | None = None,
         risk_level: str | None = None,
         current_stage: str | None = None,
-        approval_id: str | None = None,
         start_time_from: datetime | None = None,
         start_time_to: datetime | None = None,
         page: int = 1,
@@ -299,7 +234,6 @@ class TaskService:
                 selected_agent_id=selected_agent_id,
                 risk_level=risk_level,
                 current_stage=current_stage,
-                approval_id=approval_id,
                 start_time_from=start_time_from,
                 start_time_to=start_time_to,
             )
@@ -312,7 +246,6 @@ class TaskService:
                     selected_agent_id=selected_agent_id,
                     risk_level=risk_level,
                     current_stage=current_stage,
-                    approval_id=approval_id,
                     start_time_from=start_time_from,
                     start_time_to=start_time_to,
                     offset=offset,
@@ -416,7 +349,6 @@ class TaskService:
         selected_agent_id: str | None = None,
         risk_level: str | None = None,
         current_stage: str | None = None,
-        approval_id: str | None = None,
         start_time_from: datetime | None = None,
         start_time_to: datetime | None = None,
         limit: int = 50,
@@ -427,7 +359,6 @@ class TaskService:
             selected_agent_id=selected_agent_id,
             risk_level=risk_level,
             current_stage=current_stage,
-            approval_id=approval_id,
             start_time_from=start_time_from,
             start_time_to=start_time_to,
             page=1,
@@ -445,7 +376,6 @@ class TaskService:
         risk_flag_counts: dict[str, int] = {}
         active_agent_counts: dict[str, int] = {}
         completed_task_count = 0
-        waiting_approval_task_count = 0
         failed_task_count = 0
         fallback_task_count = 0
         mcp_error_task_count = 0
@@ -457,8 +387,6 @@ class TaskService:
             summary = item.runtime_governance
             if item.status == "success":
                 completed_task_count += 1
-            elif item.status == "waiting_approval":
-                waiting_approval_task_count += 1
             elif item.status == "failed":
                 failed_task_count += 1
 
@@ -483,7 +411,6 @@ class TaskService:
         return TaskRuntimeGovernanceOverviewResponse(
             task_count=len(valid_details),
             completed_task_count=completed_task_count,
-            waiting_approval_task_count=waiting_approval_task_count,
             failed_task_count=failed_task_count,
             fallback_task_count=fallback_task_count,
             mcp_error_task_count=mcp_error_task_count,
@@ -534,24 +461,6 @@ class TaskService:
                 artifact_summary=content[:200],
                 content_snapshot=content,
                 is_final=True,
-            )
-
-    def _mark_task_waiting_approval(
-        self,
-        *,
-        task_id: str,
-        approval_id: str,
-        final_output_summary: str,
-    ) -> None:
-        with session_scope(self._session_factory) as session:
-            task = self._repository.get_task(session, task_id)
-            if task is None:
-                return
-            self._repository.mark_waiting_approval(
-                session,
-                task=task,
-                approval_id=approval_id,
-                final_output_summary=final_output_summary,
             )
 
     def _complete_task(
@@ -796,8 +705,6 @@ class TaskService:
             "external_agent_call_started": "external_agent_call",
             "external_agent_call_finished": "external_agent_call",
             "external_agent_call_failed": "external_agent_call",
-            "approval_requested": "approval_requested",
-            "approval_finished": "approval_finished",
             "final_response": "final_response",
         }
 
@@ -926,7 +833,6 @@ class TaskService:
             if event.event_type not in {
                 "external_agent_call_finished",
                 "workflow_step_registered",
-                "approval_requested",
             }:
                 continue
             deliverables.append(
@@ -967,8 +873,6 @@ class TaskService:
             task_title=task.task_title or "",
             task_goal=task.task_goal or "",
             risk_level=task.risk_level,
-            approval_required=task.approval_required,
-            approval_id=task.approval_id,
             trace_id=task.trace_id,
             start_time=task.start_time.isoformat(),
             end_time=task.end_time.isoformat() if task.end_time else None,

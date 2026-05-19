@@ -505,8 +505,6 @@ class AgentTaskSummaryResponse(BaseModel):
     task_title: str = ""
     task_goal: str = ""
     risk_level: str = "low"
-    approval_required: bool = False
-    approval_id: Optional[str] = None
     trace_id: str
     start_time: str
     end_time: Optional[str] = None
@@ -677,7 +675,6 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
 class TaskRuntimeGovernanceOverviewResponse(BaseModel):
     task_count: int = 0
     completed_task_count: int = 0
-    waiting_approval_task_count: int = 0
     failed_task_count: int = 0
     fallback_task_count: int = 0
     mcp_error_task_count: int = 0

@@ -204,7 +204,6 @@
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
-        <button id="approvalPageBtn" class="secondary">审批中心</button>
         <button id="evaluationPageBtn" class="secondary">评估中心</button>
         <select id="domainFilter">
           <option value="">全部业务域</option>
@@ -254,7 +253,6 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
-      approvalPageBtn: document.getElementById("approvalPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
       requiredToolInput: document.getElementById("requiredToolInput"),
@@ -470,9 +468,6 @@
 
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
-    });
-    el.approvalPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/approvals";
     });
     el.evaluationPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/evaluations";

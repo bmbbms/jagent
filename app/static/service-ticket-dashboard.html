@@ -260,7 +260,6 @@
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <button id="evaluationPageBtn" class="secondary">评估中心</button>
-        <button id="approvalPageBtn" class="secondary">审批中心</button>
         <input id="ticketIdInput" placeholder="输入 ticket_id 直接打开" />
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -332,7 +331,6 @@
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
-      approvalPageBtn: document.getElementById("approvalPageBtn"),
       ticketIdInput: document.getElementById("ticketIdInput"),
       statusFilter: document.getElementById("statusFilter"),
       sourceFilter: document.getElementById("sourceFilter"),
@@ -705,9 +703,6 @@
         ? `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}`
         : "/ui/evaluations";
       window.location.href = target;
-    });
-    el.approvalPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/approvals";
     });
     el.loadBtn.addEventListener("click", async () => {
       if (el.ticketIdInput.value.trim() || state.ticketId) {

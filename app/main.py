@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.audit import router as audit_router
-from app.api.routes.approvals import router as approvals_router
 from app.api.routes.capabilities import router as capabilities_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.evaluations import router as evaluations_router
@@ -20,7 +19,6 @@ from app.api.routes.ui import router as ui_router
 from app.api.routes.workflows import router as workflows_router
 from app.config import get_settings
 from app.dependencies import (
-    get_approval_service,
     get_capability_registry,
     get_engine,
     get_external_capability_persistence_service,
@@ -33,7 +31,6 @@ async def lifespan(_: FastAPI):
     get_engine()
     get_capability_registry()
     get_external_capability_persistence_service().restore_into_registry()
-    get_approval_service()
     yield
 
 
@@ -55,7 +52,6 @@ app.include_router(external_agents_router, prefix=settings.api_prefix)
 app.include_router(mcp_router, prefix=settings.api_prefix)
 app.include_router(skills_router, prefix=settings.api_prefix)
 app.include_router(workflows_router, prefix=settings.api_prefix)
-app.include_router(approvals_router, prefix=settings.api_prefix)
 app.include_router(knowledge_router, prefix=settings.api_prefix)
 app.include_router(service_tickets_router, prefix=settings.api_prefix)
 app.include_router(tasks_router, prefix=settings.api_prefix)

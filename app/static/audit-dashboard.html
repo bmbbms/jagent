@@ -298,7 +298,6 @@
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
-        <button id="approvalPageBtn" class="secondary">审批中心</button>
         <button id="workflowPageBtn" class="secondary">Workflow Center</button>
         <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <input id="actionFilterInput" placeholder="按 action 过滤" />
@@ -307,7 +306,6 @@
         <input id="eventTypeFilterInput" placeholder="按 event_type 过滤" />
         <input id="outcomeFilterInput" placeholder="按 outcome 过滤" />
         <input id="taskFilterInput" placeholder="按 task_id 过滤" />
-        <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
         <input id="capabilityFilterInput" placeholder="按 capability_id 过滤" />
         <input id="workflowFilterInput" placeholder="按 workflow 过滤" />
         <input id="ticketFilterInput" placeholder="按 ticket_id 过滤" />
@@ -362,7 +360,6 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
-      approvalPageBtn: document.getElementById("approvalPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       actionFilterInput: document.getElementById("actionFilterInput"),
@@ -371,7 +368,6 @@
       eventTypeFilterInput: document.getElementById("eventTypeFilterInput"),
       outcomeFilterInput: document.getElementById("outcomeFilterInput"),
       taskFilterInput: document.getElementById("taskFilterInput"),
-      approvalFilterInput: document.getElementById("approvalFilterInput"),
       capabilityFilterInput: document.getElementById("capabilityFilterInput"),
       workflowFilterInput: document.getElementById("workflowFilterInput"),
       ticketFilterInput: document.getElementById("ticketFilterInput"),
@@ -418,7 +414,6 @@
         event_type: el.eventTypeFilterInput.value.trim(),
         outcome: el.outcomeFilterInput.value.trim(),
         task_id: el.taskFilterInput.value.trim(),
-        approval_id: el.approvalFilterInput.value.trim(),
         capability_id: el.capabilityFilterInput.value.trim(),
         workflow: el.workflowFilterInput.value.trim(),
         ticket_id: el.ticketFilterInput.value.trim(),
@@ -446,7 +441,6 @@
       el.eventTypeFilterInput.value = query.get("event_type") || "";
       el.outcomeFilterInput.value = query.get("outcome") || "";
       el.taskFilterInput.value = query.get("task_id") || "";
-      el.approvalFilterInput.value = query.get("approval_id") || "";
       el.capabilityFilterInput.value = query.get("capability_id") || "";
       el.workflowFilterInput.value = query.get("workflow") || "";
       el.ticketFilterInput.value = query.get("ticket_id") || "";
@@ -538,7 +532,6 @@
             <div class="subtle">source / event_type：${escapeHtml(item.source || "-")} / ${escapeHtml(item.event_type || "-")}</div>
             <div class="subtle">outcome：${escapeHtml(item.outcome ?? "-")} / 时间：${escapeHtml(item.created_at)}</div>
             <div class="subtle">task_id：${escapeHtml(payload.task_id || item.task_id || "-")}</div>
-            <div class="subtle">approval_id：${escapeHtml(payload.approval_id || item.approval_id || "-")}</div>
           </div>
         `;
       }).join("");
@@ -556,9 +549,6 @@
       const buttons = [];
       if (payload.task_id) {
         buttons.push(`<button class="primary" type="button" data-open-task="${escapeHtml(payload.task_id)}">打开任务</button>`);
-      }
-      if (payload.approval_id) {
-        buttons.push(`<button type="button" data-open-approval="${escapeHtml(payload.approval_id)}">打开审批</button>`);
       }
       if (payload.workflow) {
         buttons.push(`<button type="button" data-open-workflow="${escapeHtml(payload.workflow)}">打开 Workflow</button>`);
@@ -587,7 +577,6 @@
 
       const payload = {
         task_id: item.task_id || item.payload?.task_id || "",
-        approval_id: item.approval_id || item.payload?.approval_id || "",
         capability_id: item.capability_id || item.payload?.capability_id || "",
         workflow: item.workflow || item.payload?.workflow || "",
         ticket_id: item.ticket_id || item.payload?.ticket_id || "",
@@ -597,7 +586,6 @@
 
       const tags = [
         payload.task_id ? ["task", payload.task_id] : null,
-        payload.approval_id ? ["approval", payload.approval_id] : null,
         payload.capability_id ? ["capability", payload.capability_id] : null,
         payload.workflow ? ["workflow", payload.workflow] : null,
         payload.ticket_id ? ["ticket", payload.ticket_id] : null,
@@ -620,7 +608,6 @@
           <div class="detail-row"><div class="label">event_type</div><div class="value">${escapeHtml(item.event_type || "-")}</div></div>
           <div class="detail-row"><div class="label">outcome</div><div class="value">${escapeHtml(item.outcome ?? "-")}</div></div>
           <div class="detail-row"><div class="label">task_id</div><div class="value">${escapeHtml(payload.task_id || "-")}</div></div>
-          <div class="detail-row"><div class="label">approval_id</div><div class="value">${escapeHtml(payload.approval_id || "-")}</div></div>
           <div class="detail-row"><div class="label">capability_id</div><div class="value">${escapeHtml(payload.capability_id || "-")}</div></div>
           <div class="detail-row"><div class="label">workflow</div><div class="value">${escapeHtml(payload.workflow || "-")}</div></div>
           <div class="detail-row"><div class="label">ticket_id</div><div class="value">${escapeHtml(payload.ticket_id || "-")}</div></div>
@@ -637,7 +624,6 @@
 
     function bindDetailButtons() {
       const openTaskBtn = el.auditDetail.querySelector("[data-open-task]");
-      const openApprovalBtn = el.auditDetail.querySelector("[data-open-approval]");
       const openWorkflowBtn = el.auditDetail.querySelector("[data-open-workflow]");
       const openCapabilityBtn = el.auditDetail.querySelector("[data-open-capability]");
       const openTicketBtn = el.auditDetail.querySelector("[data-open-ticket]");
@@ -648,12 +634,6 @@
         openTaskBtn.addEventListener("click", () => {
           const taskId = openTaskBtn.getAttribute("data-open-task") || "";
           window.location.href = `/ui/tasks?task_id=${encodeURIComponent(taskId)}`;
-        });
-      }
-      if (openApprovalBtn) {
-        openApprovalBtn.addEventListener("click", () => {
-          const approvalId = openApprovalBtn.getAttribute("data-open-approval") || "";
-          window.location.href = `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`;
         });
       }
       if (openWorkflowBtn) {
@@ -692,7 +672,6 @@
     function applyContextFilter(contextType, contextId) {
       const mapping = {
         task: el.taskFilterInput,
-        approval: el.approvalFilterInput,
         capability: el.capabilityFilterInput,
         workflow: el.workflowFilterInput,
         ticket: el.ticketFilterInput,
@@ -732,13 +711,6 @@
       window.location.href = taskId ? `/ui/tasks?task_id=${encodeURIComponent(taskId)}` : "/ui/tasks";
     }
 
-    function openApprovalPage() {
-      const approvalId = el.approvalFilterInput.value.trim() || currentPayload().approval_id || "";
-      window.location.href = approvalId
-        ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`
-        : "/ui/approvals";
-    }
-
     function openWorkflowPage() {
       const workflowCode = el.workflowFilterInput.value.trim() || currentPayload().workflow || "";
       window.location.href = workflowCode
@@ -754,7 +726,6 @@
     }
 
     el.taskPageBtn.addEventListener("click", openTaskPage);
-    el.approvalPageBtn.addEventListener("click", openApprovalPage);
     el.workflowPageBtn.addEventListener("click", openWorkflowPage);
     el.capabilityPageBtn.addEventListener("click", openCapabilityPage);
     el.loadBtn.addEventListener("click", loadAudit);
@@ -766,7 +737,6 @@
       el.eventTypeFilterInput,
       el.outcomeFilterInput,
       el.taskFilterInput,
-      el.approvalFilterInput,
       el.capabilityFilterInput,
       el.workflowFilterInput,
       el.ticketFilterInput,

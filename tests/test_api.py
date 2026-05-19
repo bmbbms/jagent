@@ -224,29 +224,26 @@ def test_chat_merchant(client: TestClient) -> None:
     body = response.json()
     assert body["domain"] == "merchant"
     assert body["capability_id"] == "merchant.qa"
-    assert body["approval_id"] is None
     assert body["routing_trace"]["selected_capability_id"] == "merchant.qa"
     assert "merchant.qa" in body["routing_trace"]["matched_capability_ids"]
     assert "merchant_qa" in body["routing_trace"]["declared_skills"]
     assert "Runtime=agentscope" in body["routing_trace"]["reason"]
 
 
-def test_chat_operations_creates_approval(client: TestClient) -> None:
+def test_chat_operations_disables_approval_flow(client: TestClient) -> None:
     response = client.post(
         "/api/chat",
         json={
             "user_id": "u-002",
             "biz_domain": "operations",
-            "message": "请协助做调额审核",
+            "message": "quota review",
         },
     )
     assert response.status_code == 200
     body = response.json()
     assert body["capability_id"] == "operations.quota_review"
-    assert body["requires_approval"] is True
-    assert body["approval_id"] is not None
+    assert body["requires_approval"] is False
     assert body["routing_trace"]["selected_capability_id"] == "operations.quota_review"
-
 
 def test_knowledge_search(client: TestClient) -> None:
     response = client.get(
@@ -259,76 +256,6 @@ def test_knowledge_search(client: TestClient) -> None:
     assert body["hits"]
 
 
-def test_create_and_decide_approval(client: TestClient) -> None:
-    create_response = client.post(
-        "/api/approvals",
-        json={
-            "title": "手工创建审批",
-            "biz_domain": "operations",
-            "requested_by": "u-003",
-            "risk_level": "high",
-            "capability_id": "operations.quota_review",
-            "workflow": "quota_review",
-            "payload": {"demo": True},
-        },
-    )
-    assert create_response.status_code == 200
-    approval_id = create_response.json()["approval_id"]
-
-    decide_response = client.post(
-        f"/api/approvals/{approval_id}/decision",
-        json={
-            "reviewer_id": "reviewer-1",
-            "decision": "approve",
-            "comment": "通过",
-        },
-    )
-    assert decide_response.status_code == 200
-    assert decide_response.json()["status"] == "approved"
-
-
-def test_approval_list_filters_and_detail_api(client: TestClient) -> None:
-    create_response = client.post(
-        "/api/approvals",
-        json={
-            "title": "过滤审批测试",
-            "biz_domain": "operations",
-            "requested_by": "u-approval-filter",
-            "risk_level": "high",
-            "capability_id": "operations.quota_review",
-            "workflow": "quota_review",
-            "payload": {"task_id": "task-approval-filter"},
-        },
-    )
-    assert create_response.status_code == 200
-    approval = create_response.json()
-
-    list_response = client.get(
-        "/api/approvals",
-        params={
-            "status": "pending",
-            "biz_domain": "operations",
-            "requested_by": "u-approval-filter",
-            "risk_level": "high",
-            "capability_id": "operations.quota_review",
-            "workflow": "quota_review",
-        },
-    )
-    assert list_response.status_code == 200
-    approvals = list_response.json()
-    assert any(item["approval_id"] == approval["approval_id"] for item in approvals)
-    assert all(item["risk_level"] == "high" for item in approvals)
-    assert all(item["capability_id"] == "operations.quota_review" for item in approvals)
-    assert all(item["workflow"] == "quota_review" for item in approvals)
-
-    detail_response = client.get(f"/api/approvals/{approval['approval_id']}")
-    assert detail_response.status_code == 200
-    detail = detail_response.json()
-    assert detail["approval_id"] == approval["approval_id"]
-    assert detail["task_id"] == "task-approval-filter"
-    assert detail["status"] == "pending"
-
-
 def test_audit_events(client: TestClient) -> None:
     response = client.get("/api/audit")
     assert response.status_code == 200
@@ -336,29 +263,27 @@ def test_audit_events(client: TestClient) -> None:
 
 
 def test_audit_events_support_filters(client: TestClient) -> None:
-    client.post(
-        "/api/approvals",
+    chat_response = client.post(
+        "/api/chat",
         json={
-            "title": "审计过滤测试",
+            "user_id": "u-audit-filter",
             "biz_domain": "operations",
-            "requested_by": "u-audit-filter",
-            "risk_level": "high",
-            "capability_id": "operations.quota_review",
-            "workflow": "quota_review",
-            "payload": {"task_id": "task-audit-filter"},
+            "message": "quota review",
         },
     )
+    assert chat_response.status_code == 200
+
     response = client.get(
         "/api/audit",
         params={
-            "action": "approval.create",
+            "action": "chat.request",
             "actor_id": "u-audit-filter",
         },
     )
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
-    assert any(item["action"] == "approval.create" for item in body)
+    assert any(item["action"] == "chat.request" for item in body)
     assert all(item["actor_id"] == "u-audit-filter" for item in body)
 
     governance_response = client.get(
@@ -380,18 +305,17 @@ def test_audit_events_support_filters(client: TestClient) -> None:
     extended_response = client.get(
         "/api/audit",
         params={
-            "source": "approval",
-            "event_type": "approval",
-            "outcome": 1,
+            "source": "platform",
+            "event_type": "audit",
+            "outcome": 0,
         },
     )
     assert extended_response.status_code == 200
     extended_body = extended_response.json()
     assert extended_body
-    assert all(item["source"] == "approval" for item in extended_body)
-    assert all(item["event_type"] == "approval" for item in extended_body)
-    assert all(item["outcome"] == 1 for item in extended_body)
-
+    assert all(item["source"] == "platform" for item in extended_body)
+    assert all(item["event_type"] == "audit" for item in extended_body)
+    assert all(item["outcome"] == 0 for item in extended_body)
 
 def test_audit_overview_api(client: TestClient) -> None:
     response = client.get("/api/audit/overview")
@@ -408,9 +332,20 @@ def test_audit_overview_api(client: TestClient) -> None:
 
 
 def test_audit_linked_context_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-audit-linked",
+            "biz_domain": "operations",
+            "message": "quota review",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
     response = client.get(
         "/api/audit/linked-context",
-        params={"task_id": "task-audit-filter"},
+        params={"task_id": task_id},
     )
     assert response.status_code == 200
     body = response.json()
@@ -421,7 +356,7 @@ def test_audit_linked_context_api(client: TestClient) -> None:
     task_contexts = [
         item
         for item in body["items"]
-        if item["context_type"] == "task" and item["context_id"] == "task-audit-filter"
+        if item["context_type"] == "task" and item["context_id"] == task_id
     ]
     assert task_contexts
     first = task_contexts[0]
@@ -430,7 +365,6 @@ def test_audit_linked_context_api(client: TestClient) -> None:
     assert "latest_action" in first
     assert "latest_actor_id" in first
     assert "latest_created_at" in first
-
 
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
@@ -599,7 +533,7 @@ def test_task_list_supports_filters(client: TestClient) -> None:
     response = client.get(
         "/api/tasks",
         params={
-            "status": "waiting_approval",
+            "status": "success",
             "biz_domain": "operations",
         },
     )
@@ -609,19 +543,18 @@ def test_task_list_supports_filters(client: TestClient) -> None:
     assert body["page"] == 1
     assert body["page_size"] == 50
     for item in body["items"]:
-        assert item["status"] == "waiting_approval"
+        assert item["status"] == "success"
         assert item["biz_domain"] == "operations"
-
 
 def test_task_list_supports_extended_filters(client: TestClient) -> None:
     response = client.get(
         "/api/tasks",
         params={
-            "status": "waiting_approval",
+            "status": "success",
             "biz_domain": "operations",
             "selected_agent_id": "operations.quota_review",
             "risk_level": "low",
-            "current_stage": "approval",
+            "current_stage": "completed",
             "start_date_from": "2026-01-01",
             "start_date_to": "2026-12-31",
             "page_size": 20,
@@ -639,12 +572,11 @@ def test_task_list_supports_extended_filters(client: TestClient) -> None:
     assert body["sort_order"] == "desc"
     assert len(body["items"]) <= 20
     for item in body["items"]:
-        assert item["status"] == "waiting_approval"
+        assert item["status"] == "success"
         assert item["biz_domain"] == "operations"
         assert item["selected_agent_id"] == "operations.quota_review"
         assert item["risk_level"] == "low"
-        assert item["current_stage"] == "approval"
-
+        assert item["current_stage"] == "completed"
 
 def test_task_list_supports_pagination_and_legacy_limit(client: TestClient) -> None:
     response = client.get(
@@ -703,14 +635,12 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="skillCenterBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
     assert 'id="ticketCenterBtn"' in response.text
-    assert 'id="approvalCenterBtn"' in response.text
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="outputOverview"' in response.text
     assert 'id="runtimeGovernanceOverview"' in response.text
     assert 'id="riskFilter"' in response.text
     assert 'id="stageFilter"' in response.text
-    assert 'id="approvalFilterInput"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="workflowSnapshot"' in response.text
     assert 'id="skillSnapshot"' in response.text
@@ -718,7 +648,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="observations"' in response.text
     assert 'id="runtimeSessions"' in response.text
     assert 'id="runtimeGovernance"' in response.text
-    assert "MCP 调用" in response.text
+    assert "MCP" in response.text
     assert "MCP Provider" in response.text
     assert 'id="pageSizeFilter"' in response.text
     assert 'id="sortByFilter"' in response.text
@@ -726,7 +656,6 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="nextPageBtn"' in response.text
     assert 'data-open-suggestion=' in response.text or 'openEvaluationCenterBtn' in response.text
     assert 'data-open-ticket=' in response.text or 'ticketCenterBtn' in response.text
-
 
 def test_external_agent_manager_ui_page(client: TestClient) -> None:
     response = client.get("/ui/external-agents?capability_id=external.stub.agent")
@@ -833,7 +762,6 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="evaluationList"' in response.text
     assert 'id="evaluationDetail"' in response.text
     assert 'id="evaluationIdInput"' in response.text
-    assert 'id="approvalPageBtn"' in response.text
     assert 'id="ticketPageBtn"' in response.text
     assert 'id="analyticsList"' in response.text
     assert 'id="agentFilterInput"' in response.text
@@ -866,7 +794,6 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
-
 def test_evaluation_focus_agents_api(client: TestClient) -> None:
     chat_response = client.post(
         "/api/chat",
@@ -893,25 +820,6 @@ def test_evaluation_focus_agents_api(client: TestClient) -> None:
     assert "completed_ticket_count" in first
     assert "governance_score" in first
     assert "focus_reason" in first
-
-
-def test_approvals_ui_page(client: TestClient) -> None:
-    response = client.get("/ui/approvals")
-    assert response.status_code == 200
-    assert 'id="approvalList"' in response.text
-    assert 'id="approvalDetail"' in response.text
-    assert 'id="approvalIdInput"' in response.text
-    assert 'id="statusFilter"' in response.text
-    assert 'id="riskFilter"' in response.text
-    assert 'id="requestedByFilter"' in response.text
-    assert 'id="capabilityFilterInput"' in response.text
-    assert 'id="workflowFilterInput"' in response.text
-    assert 'id="workflowPageBtn"' in response.text
-    assert 'id="capabilityPageBtn"' in response.text
-    assert 'id="ticketPageBtn"' in response.text
-    assert 'id="auditPageBtn"' in response.text
-    assert 'id="openWorkflowBtn"' in response.text or "openWorkflowBtn" in response.text
-    assert 'id="openCapabilityBtn"' in response.text or "openCapabilityBtn" in response.text
 
 
 def test_service_tickets_ui_page(client: TestClient) -> None:
@@ -959,7 +867,7 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'id="auditOverview"' in response.text
     assert 'id="auditList"' in response.text
     assert 'id="auditDetail"' in response.text
-    assert "linked_context_counts" in response.text or "联动上下文分布" in response.text
+    assert "linkedContextSummary" in response.text or "linkedContextList" in response.text
     assert 'id="actionFilterInput"' in response.text
     assert 'id="actorFilterInput"' in response.text
     assert 'id="sourceFilterInput"' in response.text
@@ -972,11 +880,9 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'evaluationFilterInput' in response.text or 'evaluation_id' in response.text
     assert 'id="workflowPageBtn"' in response.text
     assert 'id="capabilityPageBtn"' in response.text
-    assert 'id="openApprovalBtn"' in response.text or "openApprovalBtn" in response.text
     assert 'id="openCapabilityBtn"' in response.text or "openCapabilityBtn" in response.text
     assert 'openTicketBtn' in response.text or '/ui/service-tickets?ticket_id=' in response.text
     assert 'openSuggestionBtn' in response.text or 'suggestion_id=' in response.text
-
 
 def test_workflows_ui_page(client: TestClient) -> None:
     response = client.get("/ui/workflows")

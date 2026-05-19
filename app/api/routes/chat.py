@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 
 from app.agents.router import RouterAgent
 from app.dependencies import (
-    get_approval_service,
     get_audit_service,
     get_chat_service,
     get_evaluation_service,
@@ -10,8 +9,7 @@ from app.dependencies import (
     get_task_service,
     get_workflow_service,
 )
-from app.schemas import ChatRequest, ChatResponse, CreateApprovalRequest
-from app.services.approval_service import ApprovalService
+from app.schemas import ChatRequest, ChatResponse
 from app.services.audit_service import AuditService
 from app.services.chat_service import ChatService
 from app.services.evaluation_service import EvaluationService
@@ -26,7 +24,6 @@ def chat(
     request: ChatRequest,
     router_agent: RouterAgent = Depends(get_router_agent),
     audit_service: AuditService = Depends(get_audit_service),
-    approval_service: ApprovalService = Depends(get_approval_service),
     chat_service: ChatService = Depends(get_chat_service),
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
     task_service: TaskService = Depends(get_task_service),
@@ -58,27 +55,14 @@ def chat(
         response.audit_tags.append(f"workflow:{response.workflow}")
 
     if response.requires_approval:
-        task = approval_service.create(
-            CreateApprovalRequest(
-                title=f"{response.capability_name} 审批确认",
-                biz_domain=response.domain,
-                requested_by=request.user_id,
-                risk_level="high",
-                capability_id=response.capability_id,
-                workflow=response.workflow,
-                payload={
-                    "task_id": response.task_id,
-                    "message": request.message,
-                    "selected_skills": response.selected_skills,
-                },
-            )
-        )
-        response.approval_id = task.approval_id
+        response.requires_approval = False
+        response.approval_id = None
 
     audit_service.record(
         action="chat.request",
         actor_id=request.user_id,
         payload={
+            "task_id": response.task_id,
             "biz_domain": request.biz_domain.value,
             "message": request.message,
             "capability_id": response.capability_id,
@@ -98,7 +82,6 @@ def chat(
     contact_id = task_service.finalize_chat_task(
         task_id=response.task_id,
         response=response,
-        approval_id=response.approval_id,
     )
     response.evaluation_id = evaluation_service.evaluate_chat_result(
         task_id=response.task_id,

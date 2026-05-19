@@ -329,7 +329,7 @@
     <div class="header">
       <div>
         <h1>Agent 任务实时展示</h1>
-        <p>这个页面面向二期联调与验收，重点展示任务时间线、工具真实产出、数据访问、审批状态和评估结果，让“Agent 实际做了什么”可以被直接看见。</p>
+        <p>这个页面面向二期联调与验收，重点展示任务时间线、工具真实产出、数据访问和评估结果，让“Agent 实际做了什么”可以被直接看见。</p>
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
@@ -338,13 +338,11 @@
         <button id="skillCenterBtn" class="secondary">Skill 中心</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
         <button id="ticketCenterBtn" class="secondary">工单中心</button>
-        <button id="approvalCenterBtn" class="secondary">审批中心</button>
         <button id="auditCenterBtn" class="secondary">审计中心</button>
         <input id="taskIdInput" placeholder="输入 task_id，例如 task_xxx" />
         <select id="statusFilter">
           <option value="">全部状态</option>
           <option value="running">running</option>
-          <option value="waiting_approval">waiting_approval</option>
           <option value="success">success</option>
           <option value="failed">failed</option>
         </select>
@@ -369,7 +367,6 @@
           <option value="completed">completed</option>
           <option value="failed">failed</option>
         </select>
-        <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
         <input id="startDateFrom" type="date" />
         <input id="startDateTo" type="date" />
         <select id="pageSizeFilter">
@@ -542,7 +539,6 @@
         selectedAgentId: "",
         currentStage: "",
         riskLevel: "",
-        approvalId: "",
         startDateFrom: "",
         startDateTo: "",
         page: 1,
@@ -566,14 +562,12 @@
       skillCenterBtn: document.getElementById("skillCenterBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
       ticketCenterBtn: document.getElementById("ticketCenterBtn"),
-      approvalCenterBtn: document.getElementById("approvalCenterBtn"),
       auditCenterBtn: document.getElementById("auditCenterBtn"),
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
       agentFilter: document.getElementById("agentFilter"),
       riskFilter: document.getElementById("riskFilter"),
       stageFilter: document.getElementById("stageFilter"),
-      approvalFilterInput: document.getElementById("approvalFilterInput"),
       startDateFrom: document.getElementById("startDateFrom"),
       startDateTo: document.getElementById("startDateTo"),
       pageSizeFilter: document.getElementById("pageSizeFilter"),
@@ -616,7 +610,7 @@
     function toneByStatus(status) {
       if (["success", "approved", "excellent"].includes(status)) return "success";
       if (["failed", "rejected", "poor"].includes(status)) return "danger";
-      if (["waiting", "waiting_approval", "pending"].includes(status)) return "warning";
+      if (["waiting", "pending"].includes(status)) return "warning";
       return "";
     }
 
@@ -658,7 +652,6 @@
       state.filters.selectedAgentId = el.agentFilter.value.trim();
       state.filters.riskLevel = el.riskFilter.value;
       state.filters.currentStage = el.stageFilter.value;
-      state.filters.approvalId = el.approvalFilterInput.value.trim();
       state.filters.startDateFrom = el.startDateFrom.value;
       state.filters.startDateTo = el.startDateTo.value;
       state.filters.pageSize = el.pageSizeFilter.value || "50";
@@ -672,7 +665,6 @@
       el.agentFilter.value = state.filters.selectedAgentId;
       el.riskFilter.value = state.filters.riskLevel;
       el.stageFilter.value = state.filters.currentStage;
-      el.approvalFilterInput.value = state.filters.approvalId;
       el.startDateFrom.value = state.filters.startDateFrom;
       el.startDateTo.value = state.filters.startDateTo;
       el.pageSizeFilter.value = state.filters.pageSize;
@@ -689,7 +681,6 @@
         selected_agent_id: state.filters.selectedAgentId,
         risk_level: state.filters.riskLevel,
         current_stage: state.filters.currentStage,
-        approval_id: state.filters.approvalId,
         start_date_from: state.filters.startDateFrom,
         start_date_to: state.filters.startDateTo,
         page: String(state.filters.page || 1),
@@ -722,7 +713,6 @@
       state.filters.selectedAgentId = query.get("selected_agent_id") || "";
       state.filters.riskLevel = query.get("risk_level") || "";
       state.filters.currentStage = query.get("current_stage") || "";
-      state.filters.approvalId = query.get("approval_id") || "";
       state.filters.startDateFrom = query.get("start_date_from") || "";
       state.filters.startDateTo = query.get("start_date_to") || "";
       state.filters.page = Number(query.get("page") || "1");
@@ -741,7 +731,6 @@
       if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
       if (state.filters.riskLevel) query.set("risk_level", state.filters.riskLevel);
       if (state.filters.currentStage) query.set("current_stage", state.filters.currentStage);
-      if (state.filters.approvalId) query.set("approval_id", state.filters.approvalId);
       if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
       if (state.filters.startDateTo) query.set("start_date_to", state.filters.startDateTo);
       query.set("page", String(state.filters.page || 1));
@@ -778,7 +767,6 @@
       if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
       if (state.filters.riskLevel) query.set("risk_level", state.filters.riskLevel);
       if (state.filters.currentStage) query.set("current_stage", state.filters.currentStage);
-      if (state.filters.approvalId) query.set("approval_id", state.filters.approvalId);
       if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
       if (state.filters.startDateTo) query.set("start_date_to", state.filters.startDateTo);
       query.set("limit", state.filters.pageSize || "50");
@@ -852,7 +840,6 @@
         ["状态", task.status],
         ["当前阶段", task.current_stage || "-"],
         ["执行 Agent", task.selected_agent_id || "-"],
-        ["审批单号", task.approval_id || "-"],
         ["Trace ID", task.trace_id],
         ["开始时间", formatDate(task.start_time)],
         ["结束时间", formatDate(task.end_time)],
@@ -898,7 +885,7 @@
         .join(", ") || "-";
       const rows = [
         ["任务数", summary.task_count || 0],
-        ["成功 / 待审批 / 失败", `${summary.completed_task_count || 0} / ${summary.waiting_approval_task_count || 0} / ${summary.failed_task_count || 0}`],
+        ["成功 / 失败", `${summary.completed_task_count || 0} / ${summary.failed_task_count || 0}`],
         ["Fallback 风险", summary.fallback_task_count || 0],
         ["MCP 错误风险", summary.mcp_error_task_count || 0],
         ["外部 Agent 错误", summary.external_agent_error_task_count || 0],
@@ -980,7 +967,6 @@
       }
 
       const firstStepPayload = stepEvents[0].event_payload || {};
-      const approvalCheckpoint = (task.events || []).find(item => item.event_type === "workflow_approval_checkpoint");
       return {
         workflow_code: firstStepPayload.workflow_code || "",
         name: firstStepPayload.workflow_name || firstStepPayload.workflow_code || "workflow",
@@ -988,7 +974,6 @@
         purpose: "",
         required_inputs: [],
         required_tools: [],
-        approval_points: approvalCheckpoint?.event_payload?.approval_points || [],
         fallback_rules: [],
         audit_tags: [],
         steps: stepEvents
@@ -1014,16 +999,12 @@
         <div class="detail-item"><div class="label">步骤数</div><div class="value">${escapeHtml(steps.length)}</div></div>
         <div class="detail-item"><div class="label">必填输入</div><div class="value">${renderTagItems(workflow.required_inputs || [])}</div></div>
         <div class="detail-item"><div class="label">工具依赖</div><div class="value">${renderTagItems(workflow.required_tools || [])}</div></div>
-        <div class="detail-item"><div class="label">审批点</div><div class="value">${renderTagItems(workflow.approval_points || [], "warning")}</div></div>
         <div class="detail-item"><div class="label">Fallback</div><div class="value">${renderTagItems(workflow.fallback_rules || [])}</div></div>
         <div class="detail-item"><div class="label">审计标签</div><div class="value">${renderTagItems(workflow.audit_tags || [], "success")}</div></div>
         ${(steps || []).length ? steps.map((step, index) => `
           <div class="list-card">
             <h3>${escapeHtml(index + 1)}. ${escapeHtml(step.name || step.step_code || "step")}</h3>
             <div class="subtle">${escapeHtml(step.step_type || "-")} / ${escapeHtml(step.step_code || "-")}</div>
-            <div>
-              ${step.approval_required ? '<span class="tag warning">approval required</span>' : '<span class="tag success">auto step</span>'}
-            </div>
             <div class="detail-item"><div class="label">说明</div><div class="value">${escapeHtml(step.description || "-")}</div></div>
             <div class="detail-item"><div class="label">工具</div><div class="value">${renderTagItems(step.required_tools || [])}</div></div>
           </div>
@@ -1511,9 +1492,6 @@
         "external_agent_call_failed",
         "workflow_started",
         "workflow_step_registered",
-        "workflow_approval_checkpoint",
-        "approval_requested",
-        "approval_finished",
         "final_response",
         "artifact_generated"
       ].forEach(type => source.addEventListener(type, refreshFromServer));
@@ -1583,13 +1561,6 @@
         : "/ui/service-tickets";
       window.location.href = target;
     });
-    el.approvalCenterBtn.addEventListener("click", () => {
-      const approvalId = state.task?.approval_id || "";
-      const target = approvalId
-        ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`
-        : "/ui/approvals";
-      window.location.href = target;
-    });
     el.auditCenterBtn.addEventListener("click", () => {
       const taskId = state.task?.task_id || "";
       const target = taskId
@@ -1637,13 +1608,6 @@
     [el.statusFilter, el.domainFilter, el.riskFilter, el.stageFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
 
     el.agentFilter.addEventListener("keydown", async event => {
-      if (event.key === "Enter") {
-        state.filters.page = 1;
-        await loadTaskList();
-      }
-    });
-
-    el.approvalFilterInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") {
         state.filters.page = 1;
         await loadTaskList();

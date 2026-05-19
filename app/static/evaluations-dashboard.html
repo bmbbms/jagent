@@ -273,7 +273,6 @@
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
-        <button id="approvalPageBtn" class="secondary">审批中心</button>
         <button id="ticketPageBtn" class="secondary">工单中心</button>
         <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
         <input id="agentFilterInput" placeholder="按 agent_id 过滤" />
@@ -418,7 +417,6 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
-      approvalPageBtn: document.getElementById("approvalPageBtn"),
       ticketPageBtn: document.getElementById("ticketPageBtn"),
       evaluationIdInput: document.getElementById("evaluationIdInput"),
       agentFilterInput: document.getElementById("agentFilterInput"),
@@ -1366,9 +1364,6 @@
 
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
-    });
-    el.approvalPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/approvals";
     });
     el.ticketPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/service-tickets";

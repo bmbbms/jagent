@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.session import session_scope
 from app.repositories.approval_repository import ApprovalRepository

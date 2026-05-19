@@ -28,7 +28,6 @@ def home(
             f"{settings.api_prefix}/mcp/tools",
             f"{settings.api_prefix}/workflows",
             f"{settings.api_prefix}/knowledge/search",
-            f"{settings.api_prefix}/approvals",
             f"{settings.api_prefix}/service-tickets",
             f"{settings.api_prefix}/audit",
         ],
