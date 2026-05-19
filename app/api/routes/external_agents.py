@@ -50,6 +50,7 @@ def register_external_agent(
                 service_port=request.service_port,
                 service_path=request.service_path,
                 extras=request.extras,
+                source="manual_remote",
             )
         )
         persistence_service.save(metadata)
@@ -139,6 +140,7 @@ def update_external_agent(
                 service_port=request.service_port,
                 service_path=request.service_path,
                 extras=request.extras,
+                source="manual_remote",
             ),
         )
         persistence_service.save(metadata)
@@ -192,5 +194,5 @@ def _to_response(metadata: CapabilityMetadata) -> ExternalAgentInfo:
         service_port=metadata.service_port,
         service_path=metadata.service_path,
         extras=metadata.extras,
-        source=metadata.extras.get("source", "manual_remote"),
+        source=metadata.source,
     )

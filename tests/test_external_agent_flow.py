@@ -212,7 +212,10 @@ def test_register_and_route_external_agent(
     capabilities_response = client.get("/api/capabilities")
     assert capabilities_response.status_code == 200
     capabilities = capabilities_response.json()
-    assert any(item["capability_id"] == "external.stub.agent" for item in capabilities)
+    external_capability = next(
+        item for item in capabilities if item["capability_id"] == "external.stub.agent"
+    )
+    assert external_capability["source"] == "manual_remote"
 
     chat_response = client.post(
         "/api/chat",
@@ -317,6 +320,13 @@ def test_discover_and_add_generic_a2a_agent(
     assert added["transport"] == "a2a"
     assert added["source"] == "generic_add"
     assert added["capability_id"].startswith("external.a2a.")
+
+    capabilities_response = client.get("/api/capabilities")
+    assert capabilities_response.status_code == 200
+    discovered_capability = next(
+        item for item in capabilities_response.json() if item["capability_id"] == added["capability_id"]
+    )
+    assert discovered_capability["source"] == "generic_add"
 
     chat_response = client.post(
         "/api/chat",

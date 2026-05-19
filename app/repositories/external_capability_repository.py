@@ -78,4 +78,5 @@ class ExternalCapabilityRepository:
             service_port=item.service_port,
             service_path=item.service_path,
             extras=dict(item.extras or {}),
+            source=str((item.extras or {}).get("source") or "manual_remote"),
         )

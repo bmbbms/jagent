@@ -130,6 +130,7 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
                 "namespace": self.namespace,
                 "group": self.group,
             },
+            source="nacos",
         )
 
     def _metadata_payload(self, metadata: CapabilityMetadata) -> dict[str, str]:
@@ -187,6 +188,7 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             service_port=int(port) if port is not None else metadata.service_port,
             service_path=instance_metadata.get("service_path", metadata.service_path),
             extras={**metadata.extras, **{k: str(v) for k, v in instance_metadata.items()}},
+            source=metadata.source,
         )
         if not resolved.endpoint and not (resolved.service_host and resolved.service_port):
             return None

@@ -78,6 +78,7 @@ class ExternalAgentDiscoveryService:
             endpoint=endpoint,
             service_path=service_path,
             extras=extras,
+            source=extras.get("source", "generic_add"),
         )
 
     def _fetch_agent_card(self, base_url: str) -> Optional[Dict[str, Any]]:
