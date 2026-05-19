@@ -9,10 +9,12 @@ from app.db.session import session_scope
 from app.repositories.task_repository import TaskRepository
 from app.schemas import (
     AgentTaskArtifactResponse,
+    AgentTaskDeliverableResponse,
     AgentTaskDetailResponse,
     AgentTaskEventResponse,
     AgentTaskListResponse,
     AgentObservationLogResponse,
+    AgentTaskOutputOverviewResponse,
     AgentTaskSummaryResponse,
     ApprovalStatus,
     ChatRequest,
@@ -337,6 +339,7 @@ class TaskService:
             data = self._to_summary(task).model_dump()
             data["events"] = [item.model_dump() for item in events]
             data["artifacts"] = [item.model_dump() for item in artifacts]
+            data["output_overview"] = None
             data["tool_calls"] = []
             data["data_access_logs"] = []
             data["structured_tool_results"] = []
@@ -364,6 +367,16 @@ class TaskService:
                         data_access_logs=data_access_items,
                     )
                 ]
+            data["output_overview"] = self.build_output_overview(
+                task_id=task_id,
+                final_output_summary=task.final_output_summary or "",
+                events=events,
+                artifacts=artifacts,
+                structured_tool_results=[
+                    StructuredToolResultResponse(**item)
+                    for item in data["structured_tool_results"]
+                ],
+            ).model_dump()
             data["runtime_sessions"] = [
                 item.model_dump()
                 for item in self._build_runtime_sessions(
@@ -373,6 +386,15 @@ class TaskService:
                 )
             ]
             return AgentTaskDetailResponse(**data)
+
+    def get_task_output_overview(
+        self,
+        task_id: str,
+    ) -> AgentTaskOutputOverviewResponse | None:
+        detail = self.get_task_detail(task_id)
+        if detail is None:
+            return None
+        return detail.output_overview
 
     def list_task_events_after(
         self,
@@ -575,6 +597,110 @@ class TaskService:
                 )
             )
         return runtime_sessions
+
+    @staticmethod
+    def build_output_overview(
+        *,
+        task_id: str,
+        final_output_summary: str,
+        events: list[AgentTaskEventResponse],
+        artifacts: list[AgentTaskArtifactResponse],
+        structured_tool_results: list[StructuredToolResultResponse],
+    ) -> AgentTaskOutputOverviewResponse:
+        deliverables: list[AgentTaskDeliverableResponse] = []
+        next_action = ""
+
+        final_response_event = next(
+            (item for item in reversed(events) if item.event_type == "final_response"),
+            None,
+        )
+        if final_response_event is not None:
+            next_action = str(final_response_event.event_payload.get("next_action") or "")
+            deliverables.append(
+                AgentTaskDeliverableResponse(
+                    deliverable_id=final_response_event.event_id,
+                    deliverable_type="final_response",
+                    title=final_response_event.title or "最终回复",
+                    summary=(final_response_event.content or "")[:200],
+                    content=final_response_event.content or "",
+                    source_type="event",
+                    source_ref=final_response_event.event_id,
+                    agent_id=final_response_event.agent_id,
+                    status=final_response_event.event_status,
+                    metadata=final_response_event.event_payload,
+                    create_time=final_response_event.start_time,
+                )
+            )
+
+        for artifact in artifacts:
+            deliverables.append(
+                AgentTaskDeliverableResponse(
+                    deliverable_id=artifact.artifact_id,
+                    deliverable_type=f"artifact:{artifact.artifact_type}",
+                    title=artifact.artifact_name,
+                    summary=artifact.artifact_summary,
+                    content=artifact.content_snapshot,
+                    source_type="artifact",
+                    source_ref=artifact.artifact_id,
+                    status="success",
+                    metadata={"is_final": artifact.is_final},
+                    create_time=artifact.create_time,
+                )
+            )
+
+        for result in structured_tool_results:
+            deliverables.append(
+                AgentTaskDeliverableResponse(
+                    deliverable_id=result.tool_call_id,
+                    deliverable_type=f"tool_result:{result.tool_type}",
+                    title=result.tool_name,
+                    summary=result.output_summary,
+                    content=result.output_summary,
+                    source_type="tool_call",
+                    source_ref=result.tool_call_id,
+                    agent_id=result.agent_id,
+                    status=result.status,
+                    metadata={
+                        "tool_id": result.tool_id,
+                        "provider": result.provider,
+                        "result": result.result,
+                        "request_query": result.request_query,
+                    },
+                    create_time=result.event_time,
+                )
+            )
+
+        for event in events:
+            if event.event_type not in {
+                "external_agent_call_finished",
+                "workflow_step_registered",
+                "approval_requested",
+            }:
+                continue
+            deliverables.append(
+                AgentTaskDeliverableResponse(
+                    deliverable_id=event.event_id,
+                    deliverable_type=event.event_type,
+                    title=event.title or event.event_type,
+                    summary=(event.content or "")[:200],
+                    content=event.content or "",
+                    source_type="event",
+                    source_ref=event.event_id,
+                    agent_id=event.agent_id,
+                    status=event.event_status,
+                    references=list(event.event_payload.get("references") or []),
+                    metadata=event.event_payload,
+                    create_time=event.start_time,
+                )
+            )
+
+        return AgentTaskOutputOverviewResponse(
+            task_id=task_id,
+            total_deliverables=len(deliverables),
+            final_output=final_output_summary,
+            next_action=next_action,
+            deliverables=deliverables,
+        )
 
     @staticmethod
     def _to_summary(task) -> AgentTaskSummaryResponse:

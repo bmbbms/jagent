@@ -306,6 +306,29 @@ class AgentTaskArtifactResponse(BaseModel):
     create_time: str
 
 
+class AgentTaskDeliverableResponse(BaseModel):
+    deliverable_id: str
+    deliverable_type: str
+    title: str
+    summary: str = ""
+    content: str = ""
+    source_type: str = ""
+    source_ref: Optional[str] = None
+    agent_id: Optional[str] = None
+    status: str = "success"
+    references: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    create_time: Optional[str] = None
+
+
+class AgentTaskOutputOverviewResponse(BaseModel):
+    task_id: str
+    total_deliverables: int = 0
+    final_output: str = ""
+    next_action: str = ""
+    deliverables: List[AgentTaskDeliverableResponse] = Field(default_factory=list)
+
+
 class AgentTaskSummaryResponse(BaseModel):
     task_id: str
     contact_id: str
@@ -339,6 +362,7 @@ class AgentTaskListResponse(BaseModel):
 class AgentTaskDetailResponse(AgentTaskSummaryResponse):
     events: List[AgentTaskEventResponse] = Field(default_factory=list)
     artifacts: List[AgentTaskArtifactResponse] = Field(default_factory=list)
+    output_overview: Optional["AgentTaskOutputOverviewResponse"] = None
     tool_calls: List["ToolCallLogResponse"] = Field(default_factory=list)
     data_access_logs: List["DataAccessLogResponse"] = Field(default_factory=list)
     structured_tool_results: List["StructuredToolResultResponse"] = Field(default_factory=list)

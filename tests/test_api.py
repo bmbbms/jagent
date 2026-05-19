@@ -304,15 +304,19 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert "tool_calls" in body
     assert "data_access_logs" in body
     assert "structured_tool_results" in body
+    assert "output_overview" in body
     assert "observations" in body
     assert "runtime_sessions" in body
     assert "evaluation" in body
     assert isinstance(body["tool_calls"], list)
     assert isinstance(body["data_access_logs"], list)
     assert isinstance(body["structured_tool_results"], list)
+    assert isinstance(body["output_overview"], dict)
     assert isinstance(body["observations"], list)
     assert isinstance(body["runtime_sessions"], list)
     assert body["structured_tool_results"]
+    assert body["output_overview"]["total_deliverables"] >= 1
+    assert body["output_overview"]["deliverables"]
     assert body["observations"]
     assert body["runtime_sessions"]
     first_tool_result = body["structured_tool_results"][0]
@@ -341,6 +345,30 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
         if item.get("runtime_session_id")
     }
     assert data_access_runtime_session_ids.issubset(tool_runtime_session_ids)
+
+
+def test_task_output_overview_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-task-output-overview",
+            "biz_domain": "operations",
+            "message": "璇峰崗鍔╁仛璋冮瀹℃牳",
+            "metadata": {"requested_agent_id": "operations.quota_review"},
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    overview_response = client.get(f"/api/tasks/{task_id}/output-overview")
+    assert overview_response.status_code == 200
+    body = overview_response.json()
+    assert body["task_id"] == task_id
+    assert body["total_deliverables"] >= 1
+    assert isinstance(body["deliverables"], list)
+    assert body["deliverables"]
+    deliverable_types = {item["deliverable_type"] for item in body["deliverables"]}
+    assert "final_response" in deliverable_types
 
 
 def test_task_tool_call_and_data_access_apis(client: TestClient) -> None:
@@ -490,6 +518,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="approvalCenterBtn"' in response.text
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
+    assert 'id="outputOverview"' in response.text
     assert 'id="riskFilter"' in response.text
     assert 'id="stageFilter"' in response.text
     assert 'id="approvalFilterInput"' in response.text

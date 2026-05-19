@@ -17,6 +17,7 @@ from app.schemas import (
     AgentObservationLogResponse,
     AgentTaskDetailResponse,
     AgentTaskListResponse,
+    AgentTaskOutputOverviewResponse,
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
     ToolCallLogResponse,
@@ -103,6 +104,17 @@ def get_task_evaluation(
     if evaluation is None:
         raise HTTPException(status_code=404, detail="evaluation not found")
     return evaluation
+
+
+@router.get("/{task_id}/output-overview", response_model=AgentTaskOutputOverviewResponse)
+def get_task_output_overview(
+    task_id: str,
+    task_service: TaskService = Depends(get_task_service),
+) -> AgentTaskOutputOverviewResponse:
+    overview = task_service.get_task_output_overview(task_id)
+    if overview is None:
+        raise HTTPException(status_code=404, detail="task not found")
+    return overview
 
 
 @router.get("/{task_id}/tool-calls", response_model=list[ToolCallLogResponse])
