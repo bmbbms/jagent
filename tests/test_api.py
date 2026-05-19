@@ -567,7 +567,9 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="listRiskFilter"' in response.text
     assert 'id="listApprovalFilter"' in response.text
     assert 'id="listTransportFilter"' in response.text
+    assert 'id="listHealthFilter"' in response.text
     assert 'id="listCapabilityFilter"' in response.text
+    assert 'id="healthOverview"' in response.text
     assert 'id="agentUrlInput"' in response.text
     assert 'id="capabilityNameInput"' in response.text
     assert 'id="discoverBtn"' in response.text
@@ -585,6 +587,7 @@ def test_external_agent_list_supports_governance_filters(client: TestClient) -> 
             "risk_level": "low",
             "requires_approval": False,
             "transport": "http",
+            "health_status": "unknown",
         },
     )
     assert response.status_code == 200
@@ -594,6 +597,17 @@ def test_external_agent_list_supports_governance_filters(client: TestClient) -> 
         assert all(item["risk_level"] == "low" for item in body)
         assert all(item["requires_approval"] is False for item in body)
         assert all(item["transport"] == "http" for item in body)
+        assert all(item["health_status"] == "unknown" for item in body)
+
+
+def test_external_agent_health_overview_api(client: TestClient) -> None:
+    response = client.get("/api/external-agents/health-overview")
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "healthy_count" in body
+    assert "unhealthy_count" in body
+    assert "unknown_count" in body
 
 
 def test_evaluations_ui_page(client: TestClient) -> None:

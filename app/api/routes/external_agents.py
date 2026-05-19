@@ -11,6 +11,7 @@ from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.schemas import (
     ExternalAgentAddRequest,
     ExternalAgentHealthResponse,
+    ExternalAgentHealthOverviewResponse,
     ExternalAgentInfo,
     ExternalAgentRegisterRequest,
     ExternalAgentUpdateRequest,
@@ -113,6 +114,7 @@ def list_external_agents(
     risk_level: str | None = Query(default=None),
     requires_approval: bool | None = Query(default=None),
     transport: str | None = Query(default=None),
+    health_status: str | None = Query(default=None),
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
@@ -138,7 +140,30 @@ def list_external_agents(
         items = [item for item in items if item.requires_approval == requires_approval]
     if transport:
         items = [item for item in items if item.transport == transport]
+    if health_status:
+        items = [item for item in items if item.health_status == health_status]
     return items
+
+
+@router.get("/health-overview", response_model=ExternalAgentHealthOverviewResponse)
+def get_external_agent_health_overview(
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
+) -> ExternalAgentHealthOverviewResponse:
+    items = persistence_service.list_items()
+    total = len(items)
+    healthy_count = sum(1 for item in items if (item.health_status or "unknown") == "healthy")
+    unhealthy_count = sum(
+        1 for item in items if (item.health_status or "unknown") == "unhealthy"
+    )
+    unknown_count = total - healthy_count - unhealthy_count
+    return ExternalAgentHealthOverviewResponse(
+        total=total,
+        healthy_count=healthy_count,
+        unhealthy_count=unhealthy_count,
+        unknown_count=unknown_count,
+    )
 
 
 @router.put("/{capability_id}", response_model=ExternalAgentInfo)

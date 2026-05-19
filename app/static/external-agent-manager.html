@@ -322,8 +322,15 @@
             <option value="a2a">a2a</option>
             <option value="http">http</option>
           </select>
+          <select id="listHealthFilter">
+            <option value="">全部健康状态</option>
+            <option value="healthy">healthy</option>
+            <option value="unhealthy">unhealthy</option>
+            <option value="unknown">unknown</option>
+          </select>
           <input id="listCapabilityFilter" placeholder="按 capability_id 过滤" />
         </div>
+        <div id="healthOverview" class="subtle" style="margin-bottom: 12px;">正在加载健康概览...</div>
         <div id="listMeta" class="subtle">正在加载...</div>
         <div id="agentList" class="cards">
           <div class="empty">正在加载外部 Agent 列表...</div>
@@ -378,7 +385,9 @@
       listRiskFilter: document.getElementById("listRiskFilter"),
       listApprovalFilter: document.getElementById("listApprovalFilter"),
       listTransportFilter: document.getElementById("listTransportFilter"),
+      listHealthFilter: document.getElementById("listHealthFilter"),
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
+      healthOverview: document.getElementById("healthOverview"),
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
@@ -618,6 +627,7 @@
         if (el.listRiskFilter.value) query.set("risk_level", el.listRiskFilter.value);
         if (el.listApprovalFilter.value) query.set("requires_approval", el.listApprovalFilter.value);
         if (el.listTransportFilter.value) query.set("transport", el.listTransportFilter.value);
+        if (el.listHealthFilter.value) query.set("health_status", el.listHealthFilter.value);
         if (el.listCapabilityFilter.value.trim()) query.set("capability_id", el.listCapabilityFilter.value.trim());
         const items = await requestJson(`/api/external-agents?${query.toString()}`);
         renderAgentList(items);
@@ -633,6 +643,15 @@
       } catch (error) {
         el.listMeta.textContent = "加载失败";
         el.agentList.innerHTML = `<div class="empty">加载外部 Agent 列表失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function loadHealthOverview() {
+      try {
+        const overview = await requestJson("/api/external-agents/health-overview");
+        el.healthOverview.textContent = `健康概览：总数 ${overview.total} / healthy ${overview.healthy_count} / unhealthy ${overview.unhealthy_count} / unknown ${overview.unknown_count}`;
+      } catch (error) {
+        el.healthOverview.textContent = `健康概览加载失败：${error.message}`;
       }
     }
 
@@ -750,7 +769,7 @@
     });
     el.verifyBtn.addEventListener("click", verifyAgent);
     el.healthCheckBtn.addEventListener("click", healthCheckAgent);
-    [el.listDomainFilter, el.listSourceFilter, el.listRiskFilter, el.listApprovalFilter, el.listTransportFilter].forEach(node => {
+    [el.listDomainFilter, el.listSourceFilter, el.listRiskFilter, el.listApprovalFilter, el.listTransportFilter, el.listHealthFilter].forEach(node => {
       node.addEventListener("change", loadAgentList);
     });
     el.listCapabilityFilter.addEventListener("keydown", async event => {
@@ -758,6 +777,7 @@
     });
 
     resetForm();
+    loadHealthOverview();
     loadAgentList();
   </script>
 </body>

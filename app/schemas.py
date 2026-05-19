@@ -234,6 +234,13 @@ class ExternalAgentHealthResponse(BaseModel):
     last_latency_ms: Optional[int] = None
 
 
+class ExternalAgentHealthOverviewResponse(BaseModel):
+    total: int = 0
+    healthy_count: int = 0
+    unhealthy_count: int = 0
+    unknown_count: int = 0
+
+
 class SkillInfo(BaseModel):
     skill_id: str
     biz_domain: BizDomain
