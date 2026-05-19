@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import get_audit_service
 from app.schemas import (
+    AuditContextDrilldownResponse,
     AuditEventResponse,
     AuditExecutionPlanRunsResponse,
     AuditLinkedContextResponse,
@@ -80,6 +81,18 @@ def get_linked_context(
         ticket_id=ticket_id,
         suggestion_id=suggestion_id,
         evaluation_id=evaluation_id,
+    )
+
+
+@router.get("/context/{context_type}/{context_id}", response_model=AuditContextDrilldownResponse)
+def get_context_drilldown(
+    context_type: str,
+    context_id: str,
+    audit_service: AuditService = Depends(get_audit_service),
+) -> AuditContextDrilldownResponse:
+    return audit_service.build_context_drilldown(
+        context_type=context_type,
+        context_id=context_id,
     )
 
 

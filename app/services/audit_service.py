@@ -7,6 +7,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from app.db.session import session_scope
 from app.repositories.audit_repository import AuditRepository
 from app.schemas import (
+    AuditContextDrilldownResponse,
+    AuditContextTargetResponse,
     AuditEventResponse,
     AuditExecutionPlanRunResponse,
     AuditExecutionPlanRunsResponse,
@@ -244,6 +246,58 @@ class AuditService:
             items=context_items,
         )
 
+    def build_context_drilldown(
+        self,
+        *,
+        context_type: str,
+        context_id: str,
+    ) -> AuditContextDrilldownResponse:
+        valid_context_types = {
+            "task",
+            "approval",
+            "capability",
+            "workflow",
+            "ticket",
+            "suggestion",
+            "evaluation",
+        }
+        if context_type not in valid_context_types:
+            raise ValueError(f"unsupported context_type: {context_type}")
+
+        filters: dict[str, Any] = {}
+        if context_type == "task":
+            filters["task_id"] = context_id
+        elif context_type == "approval":
+            filters["approval_id"] = context_id
+        elif context_type == "capability":
+            filters["capability_id"] = context_id
+        elif context_type == "workflow":
+            filters["workflow"] = context_id
+        elif context_type == "ticket":
+            filters["ticket_id"] = context_id
+        elif context_type == "suggestion":
+            try:
+                filters["suggestion_id"] = int(context_id)
+            except ValueError:
+                filters["suggestion_id"] = -1
+        elif context_type == "evaluation":
+            filters["evaluation_id"] = context_id
+
+        events = self.list_events(**filters)
+        actions = sorted({item.action for item in events})
+        latest = events[0] if events else None
+        return AuditContextDrilldownResponse(
+            context_type=context_type,
+            context_id=context_id,
+            event_count=len(events),
+            actions=actions,
+            latest_action=latest.action if latest else None,
+            latest_actor_id=latest.actor_id if latest else None,
+            latest_created_at=latest.created_at if latest else None,
+            target=self._build_context_target(context_type, context_id),
+            events=events,
+        )
+
     def list_execution_plan_runs(
         self,
         *,
@@ -281,4 +335,41 @@ class AuditService:
             total_processed_count=sum(item.processed_count for item in results),
             total_created_ticket_count=sum(item.created_ticket_count for item in results),
             items=results,
+        )
+
+    @staticmethod
+    def _build_context_target(
+        context_type: str,
+        context_id: str,
+    ) -> AuditContextTargetResponse:
+        target_ui_map = {
+            "task": f"/ui/tasks?task_id={context_id}",
+            "capability": f"/ui/capabilities?capability_id={context_id}",
+            "workflow": f"/ui/workflows?workflow_code={context_id}",
+            "ticket": f"/ui/service-tickets?ticket_id={context_id}",
+            "suggestion": f"/ui/evaluations?suggestion_id={context_id}",
+            "evaluation": f"/ui/evaluations?evaluation_id={context_id}",
+        }
+        target_api_map = {
+            "task": f"/api/tasks/{context_id}",
+            "capability": f"/api/capabilities/{context_id}",
+            "workflow": f"/api/workflows/{context_id}",
+            "ticket": f"/api/service-tickets/{context_id}",
+            "evaluation": f"/api/evaluations/{context_id}",
+        }
+        title_map = {
+            "task": "任务上下文",
+            "approval": "审批上下文",
+            "capability": "能力上下文",
+            "workflow": "流程上下文",
+            "ticket": "工单上下文",
+            "suggestion": "建议上下文",
+            "evaluation": "评估上下文",
+        }
+        return AuditContextTargetResponse(
+            context_type=context_type,
+            context_id=context_id,
+            target_ui=target_ui_map.get(context_type),
+            target_api=target_api_map.get(context_type),
+            title=title_map.get(context_type, context_type),
         )

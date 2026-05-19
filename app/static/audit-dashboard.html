@@ -356,6 +356,7 @@
       events: [],
       selectedIndex: 0,
       linkedContext: null,
+      contextDrilldown: null,
     };
 
     const el = {
@@ -403,6 +404,10 @@
 
     function currentPayload() {
       return currentEvent()?.payload || {};
+    }
+
+    function currentContextPayload() {
+      return state.contextDrilldown?.events?.[0]?.payload || {};
     }
 
     function buildQuery() {
@@ -509,8 +514,7 @@
         node.addEventListener("click", async () => {
           const contextType = node.getAttribute("data-context-type") || "";
           const contextId = node.getAttribute("data-context-id") || "";
-          applyContextFilter(contextType, contextId);
-          await loadAudit();
+          await loadContextDrilldown(contextType, contextId);
         });
       });
     }
@@ -569,6 +573,12 @@
     }
 
     function renderDetail() {
+      const contextDrilldown = state.contextDrilldown;
+      if (contextDrilldown) {
+        renderContextDetail(contextDrilldown);
+        return;
+      }
+
       const item = currentEvent();
       if (!item) {
         el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
@@ -622,6 +632,53 @@
       bindDetailButtons();
     }
 
+    function renderContextDetail(contextDrilldown) {
+      const target = contextDrilldown.target || {};
+      const events = contextDrilldown.events || [];
+      const latestEvent = events[0] || null;
+      const payload = latestEvent?.payload || {};
+      el.auditDetail.innerHTML = `
+        <div class="hero">
+          <div class="title">${escapeHtml(target.title || contextDrilldown.context_type)} / ${escapeHtml(contextDrilldown.context_id)}</div>
+          <div class="subtle" style="margin-top: 8px;">事件数：${escapeHtml(contextDrilldown.event_count)}</div>
+          <div class="subtle">最近事件：${escapeHtml(contextDrilldown.latest_action || "-")} / ${escapeHtml(contextDrilldown.latest_actor_id || "-")}</div>
+          <div class="subtle">最近时间：${escapeHtml(contextDrilldown.latest_created_at || "-")}</div>
+          <div class="chip-row">
+            ${(contextDrilldown.actions || []).map(item => `<span class="chip">${escapeHtml(item)}</span>`).join("") || '<span class="chip success">no-actions</span>'}
+          </div>
+        </div>
+        <div class="detail-list">
+          <div class="detail-row"><div class="label">context_type</div><div class="value">${escapeHtml(contextDrilldown.context_type)}</div></div>
+          <div class="detail-row"><div class="label">context_id</div><div class="value">${escapeHtml(contextDrilldown.context_id)}</div></div>
+          <div class="detail-row"><div class="label">target_ui</div><div class="value">${escapeHtml(target.target_ui || "-")}</div></div>
+          <div class="detail-row"><div class="label">target_api</div><div class="value">${escapeHtml(target.target_api || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_task</div><div class="value">${escapeHtml(payload.task_id || latestEvent?.task_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_capability</div><div class="value">${escapeHtml(payload.capability_id || latestEvent?.capability_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_workflow</div><div class="value">${escapeHtml(payload.workflow || latestEvent?.workflow || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_ticket</div><div class="value">${escapeHtml(payload.ticket_id || latestEvent?.ticket_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_evaluation</div><div class="value">${escapeHtml(payload.evaluation_id || latestEvent?.evaluation_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">latest_suggestion</div><div class="value">${escapeHtml(payload.suggestion_id || latestEvent?.suggestion_id || "-")}</div></div>
+        </div>
+        <div class="button-row">
+          ${target.target_ui ? `<button class="primary" type="button" data-open-context-ui="${escapeHtml(target.target_ui)}">打开业务页面</button>` : ""}
+          ${target.target_api ? `<button type="button" data-open-context-api="${escapeHtml(target.target_api)}">查看 API 目标</button>` : ""}
+          <button type="button" data-apply-context-filter="${escapeHtml(contextDrilldown.context_type)}" data-apply-context-id="${escapeHtml(contextDrilldown.context_id)}">应用为筛选条件</button>
+          <button type="button" data-close-context-drilldown="true">返回事件详情</button>
+        </div>
+        <h2 style="margin-top: 18px;">上下文事件</h2>
+        <div class="list">
+          ${events.map(item => `
+            <div class="card">
+              <div class="title">${escapeHtml(item.action)}</div>
+              <div class="subtle">${escapeHtml(item.actor_id)} / ${escapeHtml(item.source || "-")} / ${escapeHtml(item.event_type || "-")}</div>
+              <div class="subtle">outcome=${escapeHtml(item.outcome ?? "-")} / ${escapeHtml(item.created_at)}</div>
+            </div>
+          `).join("") || '<div class="empty">当前上下文暂无事件。</div>'}
+        </div>
+      `;
+      bindContextDrilldownButtons();
+    }
+
     function bindDetailButtons() {
       const openTaskBtn = el.auditDetail.querySelector("[data-open-task]");
       const openWorkflowBtn = el.auditDetail.querySelector("[data-open-workflow]");
@@ -669,9 +726,49 @@
       }
     }
 
+    function bindContextDrilldownButtons() {
+      const openContextUiBtn = el.auditDetail.querySelector("[data-open-context-ui]");
+      const openContextApiBtn = el.auditDetail.querySelector("[data-open-context-api]");
+      const applyFilterBtn = el.auditDetail.querySelector("[data-apply-context-filter]");
+      const closeBtn = el.auditDetail.querySelector("[data-close-context-drilldown]");
+
+      if (openContextUiBtn) {
+        openContextUiBtn.addEventListener("click", () => {
+          const target = openContextUiBtn.getAttribute("data-open-context-ui") || "";
+          if (target) {
+            window.location.href = target;
+          }
+        });
+      }
+      if (openContextApiBtn) {
+        openContextApiBtn.addEventListener("click", () => {
+          const target = openContextApiBtn.getAttribute("data-open-context-api") || "";
+          if (target) {
+            window.open(target, "_blank", "noopener");
+          }
+        });
+      }
+      if (applyFilterBtn) {
+        applyFilterBtn.addEventListener("click", async () => {
+          const contextType = applyFilterBtn.getAttribute("data-apply-context-filter") || "";
+          const contextId = applyFilterBtn.getAttribute("data-apply-context-id") || "";
+          applyContextFilter(contextType, contextId);
+          state.contextDrilldown = null;
+          await loadAudit();
+        });
+      }
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+          state.contextDrilldown = null;
+          renderDetail();
+        });
+      }
+    }
+
     function applyContextFilter(contextType, contextId) {
       const mapping = {
         task: el.taskFilterInput,
+        approval: null,
         capability: el.capabilityFilterInput,
         workflow: el.workflowFilterInput,
         ticket: el.ticketFilterInput,
@@ -681,6 +778,13 @@
       const input = mapping[contextType];
       if (!input) return;
       input.value = contextId;
+    }
+
+    async function loadContextDrilldown(contextType, contextId) {
+      state.contextDrilldown = await fetchJson(
+        `/api/audit/context/${encodeURIComponent(contextType)}/${encodeURIComponent(contextId)}`
+      );
+      renderDetail();
     }
 
     async function loadAudit() {
@@ -694,6 +798,7 @@
       renderOverview(overview);
       state.events = events;
       state.linkedContext = linkedContext;
+      state.contextDrilldown = null;
       state.selectedIndex = 0;
       renderLinkedContext();
       renderList();

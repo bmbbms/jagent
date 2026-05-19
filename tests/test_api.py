@@ -366,6 +366,32 @@ def test_audit_linked_context_api(client: TestClient) -> None:
     assert "latest_actor_id" in first
     assert "latest_created_at" in first
 
+
+def test_audit_context_drilldown_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-audit-drilldown",
+            "biz_domain": "operations",
+            "message": "quota review",
+        },
+    )
+    assert chat_response.status_code == 200
+    task_id = chat_response.json()["task_id"]
+
+    response = client.get(f"/api/audit/context/task/{task_id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["context_type"] == "task"
+    assert body["context_id"] == task_id
+    assert body["event_count"] >= 1
+    assert "actions" in body
+    assert "events" in body
+    assert body["events"]
+    assert body["target"]["target_ui"] == f"/ui/tasks?task_id={task_id}"
+    assert body["target"]["target_api"] == f"/api/tasks/{task_id}"
+    assert any(item["task_id"] == task_id for item in body["events"])
+
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
         "/api/chat",
