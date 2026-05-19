@@ -330,7 +330,8 @@
           </select>
           <input id="listCapabilityFilter" placeholder="按 capability_id 过滤" />
         </div>
-        <div id="healthOverview" class="subtle" style="margin-bottom: 12px;">正在加载健康概览...</div>
+        <div id="healthOverview" class="subtle" style="margin-bottom: 8px;">正在加载健康概览...</div>
+        <div id="governanceOverview" class="subtle" style="margin-bottom: 12px;">正在加载治理概览...</div>
         <div id="listMeta" class="subtle">正在加载...</div>
         <div id="agentList" class="cards">
           <div class="empty">正在加载外部 Agent 列表...</div>
@@ -388,6 +389,7 @@
       listHealthFilter: document.getElementById("listHealthFilter"),
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
       healthOverview: document.getElementById("healthOverview"),
+      governanceOverview: document.getElementById("governanceOverview"),
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
@@ -648,10 +650,15 @@
 
     async function loadHealthOverview() {
       try {
-        const overview = await requestJson("/api/external-agents/health-overview");
+        const [overview, governance] = await Promise.all([
+          requestJson("/api/external-agents/health-overview"),
+          requestJson("/api/external-agents/governance-overview"),
+        ]);
         el.healthOverview.textContent = `健康概览：总数 ${overview.total} / healthy ${overview.healthy_count} / unhealthy ${overview.unhealthy_count} / unknown ${overview.unknown_count}`;
+        el.governanceOverview.textContent = `治理概览：高风险 ${governance.high_risk_count} / 需审批 ${governance.approval_required_count} / 来源 ${Object.entries(governance.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 协议 ${Object.entries(governance.transport_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 业务域 ${Object.entries(governance.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"}`;
       } catch (error) {
         el.healthOverview.textContent = `健康概览加载失败：${error.message}`;
+        el.governanceOverview.textContent = `治理概览加载失败：${error.message}`;
       }
     }
 

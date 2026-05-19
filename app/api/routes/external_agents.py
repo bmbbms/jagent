@@ -10,6 +10,7 @@ from app.registry.base import CapabilityMetadata
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.schemas import (
     ExternalAgentAddRequest,
+    ExternalAgentGovernanceOverviewResponse,
     ExternalAgentHealthResponse,
     ExternalAgentHealthOverviewResponse,
     ExternalAgentInfo,
@@ -163,6 +164,57 @@ def get_external_agent_health_overview(
         healthy_count=healthy_count,
         unhealthy_count=unhealthy_count,
         unknown_count=unknown_count,
+    )
+
+
+@router.get("/governance-overview", response_model=ExternalAgentGovernanceOverviewResponse)
+def get_external_agent_governance_overview(
+    registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
+) -> ExternalAgentGovernanceOverviewResponse:
+    health_map = {item.capability_id: item for item in persistence_service.list_items()}
+    items = [
+        _to_response(item, health_item=health_map.get(item.capability_id))
+        for item in registry.describe_capabilities()
+    ]
+    source_counts: dict[str, int] = {}
+    transport_counts: dict[str, int] = {}
+    domain_counts: dict[str, int] = {}
+    healthy_count = 0
+    unhealthy_count = 0
+    unknown_count = 0
+    approval_required_count = 0
+    high_risk_count = 0
+
+    for item in items:
+        source_counts[item.source] = source_counts.get(item.source, 0) + 1
+        transport_counts[item.transport] = transport_counts.get(item.transport, 0) + 1
+        domain_key = item.biz_domain.value
+        domain_counts[domain_key] = domain_counts.get(domain_key, 0) + 1
+
+        if item.health_status == "healthy":
+            healthy_count += 1
+        elif item.health_status == "unhealthy":
+            unhealthy_count += 1
+        else:
+            unknown_count += 1
+        if item.requires_approval:
+            approval_required_count += 1
+        if item.risk_level == "high":
+            high_risk_count += 1
+
+    return ExternalAgentGovernanceOverviewResponse(
+        total=len(items),
+        healthy_count=healthy_count,
+        unhealthy_count=unhealthy_count,
+        unknown_count=unknown_count,
+        approval_required_count=approval_required_count,
+        high_risk_count=high_risk_count,
+        source_counts=source_counts,
+        transport_counts=transport_counts,
+        domain_counts=domain_counts,
     )
 
 

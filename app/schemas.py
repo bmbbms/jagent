@@ -258,6 +258,18 @@ class ExternalAgentHealthOverviewResponse(BaseModel):
     unknown_count: int = 0
 
 
+class ExternalAgentGovernanceOverviewResponse(BaseModel):
+    total: int = 0
+    healthy_count: int = 0
+    unhealthy_count: int = 0
+    unknown_count: int = 0
+    approval_required_count: int = 0
+    high_risk_count: int = 0
+    source_counts: Dict[str, int] = Field(default_factory=dict)
+    transport_counts: Dict[str, int] = Field(default_factory=dict)
+    domain_counts: Dict[str, int] = Field(default_factory=dict)
+
+
 class MCPToolInfo(BaseModel):
     tool_id: str
     provider: str
