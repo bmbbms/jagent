@@ -367,6 +367,35 @@ def test_evaluation_analytics_api(client: TestClient) -> None:
     assert "attention_level" in body[0]
 
 
+def test_evaluation_analytics_overview_api(client: TestClient) -> None:
+    response = client.get("/api/evaluations/analytics/overview")
+    assert response.status_code == 200
+    body = response.json()
+    assert "evaluation_count" in body
+    assert "agent_count" in body
+    assert "poor_evaluation_count" in body
+    assert "high_attention_agent_count" in body
+    assert "average_overall_score" in body
+
+
+def test_evaluation_list_supports_extended_filters(client: TestClient) -> None:
+    response = client.get(
+        "/api/evaluations",
+        params={
+            "start_date_from": "2026-01-01",
+            "start_date_to": "2026-12-31",
+            "min_overall_score": 70,
+            "attention_level": "normal",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert body
+    for item in body:
+        assert item["overall_score"] >= 70
+
+
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     list_response = client.get("/api/workflows", params={"biz_domain": "operations"})
     assert list_response.status_code == 200

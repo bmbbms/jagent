@@ -439,6 +439,16 @@ class AgentEvaluationAnalyticsItemResponse(BaseModel):
     attention_level: str = "normal"
 
 
+class AgentEvaluationAnalyticsOverviewResponse(BaseModel):
+    evaluation_count: int = 0
+    agent_count: int = 0
+    poor_evaluation_count: int = 0
+    high_attention_agent_count: int = 0
+    average_overall_score: float = 0.0
+    average_efficiency_score: float = 0.0
+    average_tool_usage_score: float = 0.0
+
+
 class HomeResponse(BaseModel):
     app_name: str
     version: str

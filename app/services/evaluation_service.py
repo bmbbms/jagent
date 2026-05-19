@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
+    AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationDetailResponse,
     AgentEvaluationResponse,
@@ -149,6 +151,47 @@ class EvaluationService:
         with self._session_factory() as session:
             return [self._to_summary(item) for item in self._repository.list_evaluations(session)]
 
+    def filter_evaluations(
+        self,
+        *,
+        agent_id: str | None = None,
+        result_label: str | None = None,
+        min_overall_score: float | None = None,
+        create_time_from: datetime | None = None,
+        create_time_to: datetime | None = None,
+        attention_level: str | None = None,
+    ) -> list[AgentEvaluationSummaryResponse]:
+        items = self.list_evaluations()
+        if agent_id:
+            items = [item for item in items if item.agent_id == agent_id]
+        if result_label:
+            items = [item for item in items if item.result_label == result_label]
+        if min_overall_score is not None:
+            items = [item for item in items if item.overall_score >= min_overall_score]
+        if create_time_from is not None:
+            items = [
+                item
+                for item in items
+                if datetime.fromisoformat(item.create_time) >= create_time_from
+            ]
+        if create_time_to is not None:
+            items = [
+                item
+                for item in items
+                if datetime.fromisoformat(item.create_time) <= create_time_to
+            ]
+        if attention_level:
+            analytics_by_agent = {
+                item.agent_id: item for item in self.summarize_by_agent()
+            }
+            items = [
+                item
+                for item in items
+                if analytics_by_agent.get(item.agent_id, None) is not None
+                and analytics_by_agent[item.agent_id].attention_level == attention_level
+            ]
+        return items
+
     def summarize_by_agent(self) -> list[AgentEvaluationAnalyticsItemResponse]:
         evaluations = self.list_evaluations()
         grouped: dict[str, list[AgentEvaluationSummaryResponse]] = {}
@@ -189,6 +232,33 @@ class EvaluationService:
                 )
             )
         return sorted(result, key=lambda item: item.average_overall_score, reverse=True)
+
+    def build_analytics_overview(self) -> AgentEvaluationAnalyticsOverviewResponse:
+        evaluations = self.list_evaluations()
+        analytics = self.summarize_by_agent()
+        total = len(evaluations)
+        if total == 0:
+            return AgentEvaluationAnalyticsOverviewResponse()
+        return AgentEvaluationAnalyticsOverviewResponse(
+            evaluation_count=total,
+            agent_count=len({item.agent_id for item in evaluations}),
+            poor_evaluation_count=sum(1 for item in evaluations if item.result_label == "poor"),
+            high_attention_agent_count=sum(
+                1 for item in analytics if item.attention_level == "high"
+            ),
+            average_overall_score=round(
+                sum(item.overall_score for item in evaluations) / total,
+                2,
+            ),
+            average_efficiency_score=round(
+                sum(item.efficiency_score for item in evaluations) / total,
+                2,
+            ),
+            average_tool_usage_score=round(
+                sum(item.tool_usage_score for item in evaluations) / total,
+                2,
+            ),
+        )
 
     def get_evaluation(self, evaluation_id: str) -> AgentEvaluationResponse | None:
         with self._session_factory() as session:

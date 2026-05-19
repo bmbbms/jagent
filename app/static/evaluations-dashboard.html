@@ -63,7 +63,8 @@
     }
 
     .toolbar button,
-    .toolbar input {
+    .toolbar input,
+    .toolbar select {
       min-height: 42px;
       border-radius: 999px;
       border: 1px solid var(--line);
@@ -87,7 +88,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 380px minmax(0, 1fr);
+      grid-template-columns: 420px minmax(0, 1fr);
       gap: 20px;
     }
 
@@ -152,9 +153,30 @@
     .danger { background: rgba(181, 63, 53, 0.12); color: var(--danger); }
 
     .stats,
-    .details {
+    .details,
+    .overview-grid {
       display: grid;
       gap: 10px;
+    }
+
+    .overview-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .overview-card {
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .overview-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      color: var(--accent);
+      line-height: 1;
     }
 
     .row {
@@ -198,6 +220,7 @@
 
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
+      .overview-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -213,6 +236,14 @@
         <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
         <input id="agentFilterInput" placeholder="按 agent_id 过滤" />
         <input id="resultFilterInput" placeholder="按结果标签过滤" />
+        <input id="minScoreInput" type="number" min="0" max="100" step="1" placeholder="最低分" />
+        <select id="attentionFilter">
+          <option value="">全部关注级别</option>
+          <option value="high">high</option>
+          <option value="normal">normal</option>
+        </select>
+        <input id="startDateFrom" type="date" />
+        <input id="startDateTo" type="date" />
         <button id="loadBtn">加载评估</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
       </div>
@@ -220,10 +251,16 @@
 
     <div class="layout">
       <section class="panel">
+        <h2>评估总览</h2>
+        <div id="overviewGrid" class="overview-grid">
+          <div class="empty">正在加载评估总览...</div>
+        </div>
+
         <h2>Agent 评估分析</h2>
         <div id="analyticsList" class="list" style="margin-bottom: 18px;">
           <div class="empty">正在加载评估分析...</div>
         </div>
+
         <h2>最近评估</h2>
         <div id="evaluationList" class="list">
           <div class="empty">正在加载评估列表...</div>
@@ -244,6 +281,7 @@
       evaluationId: "",
       evaluations: [],
       analytics: [],
+      overview: null,
       selectedAnalyticsAgentId: "",
     };
 
@@ -252,8 +290,13 @@
       evaluationIdInput: document.getElementById("evaluationIdInput"),
       agentFilterInput: document.getElementById("agentFilterInput"),
       resultFilterInput: document.getElementById("resultFilterInput"),
+      minScoreInput: document.getElementById("minScoreInput"),
+      attentionFilter: document.getElementById("attentionFilter"),
+      startDateFrom: document.getElementById("startDateFrom"),
+      startDateTo: document.getElementById("startDateTo"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
+      overviewGrid: document.getElementById("overviewGrid"),
       analyticsList: document.getElementById("analyticsList"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
@@ -291,22 +334,44 @@
 
     function syncQuery() {
       const url = new URL(window.location.href);
-      if (state.evaluationId) {
-        url.searchParams.set("evaluation_id", state.evaluationId);
-      } else {
-        url.searchParams.delete("evaluation_id");
-      }
-      if (el.agentFilterInput.value.trim()) {
-        url.searchParams.set("agent_id", el.agentFilterInput.value.trim());
-      } else {
-        url.searchParams.delete("agent_id");
-      }
-      if (el.resultFilterInput.value.trim()) {
-        url.searchParams.set("result_label", el.resultFilterInput.value.trim());
-      } else {
-        url.searchParams.delete("result_label");
-      }
+      const pairs = {
+        evaluation_id: state.evaluationId,
+        agent_id: el.agentFilterInput.value.trim(),
+        result_label: el.resultFilterInput.value.trim(),
+        min_overall_score: el.minScoreInput.value.trim(),
+        attention_level: el.attentionFilter.value,
+        start_date_from: el.startDateFrom.value,
+        start_date_to: el.startDateTo.value,
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
       window.history.replaceState({}, "", url);
+    }
+
+    function renderOverview() {
+      if (!state.overview) {
+        el.overviewGrid.innerHTML = '<div class="empty">暂无评估总览。</div>';
+        return;
+      }
+      const cards = [
+        ["评估总数", state.overview.evaluation_count],
+        ["Agent 数量", state.overview.agent_count],
+        ["低分评估数", state.overview.poor_evaluation_count],
+        ["高关注 Agent 数", state.overview.high_attention_agent_count],
+        ["平均总分", state.overview.average_overall_score],
+        ["平均效率分", state.overview.average_efficiency_score],
+      ];
+      el.overviewGrid.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
     }
 
     function renderAnalyticsList() {
@@ -405,10 +470,19 @@
       `;
     }
 
-    async function loadEvaluationList() {
+    function buildEvaluationListQuery() {
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
       if (el.resultFilterInput.value.trim()) query.set("result_label", el.resultFilterInput.value.trim());
+      if (el.minScoreInput.value.trim()) query.set("min_overall_score", el.minScoreInput.value.trim());
+      if (el.attentionFilter.value) query.set("attention_level", el.attentionFilter.value);
+      if (el.startDateFrom.value) query.set("start_date_from", el.startDateFrom.value);
+      if (el.startDateTo.value) query.set("start_date_to", el.startDateTo.value);
+      return query;
+    }
+
+    async function loadEvaluationList() {
+      const query = buildEvaluationListQuery();
       state.evaluations = await fetchJson(`/api/evaluations?${query.toString()}`);
       state.selectedAnalyticsAgentId = el.agentFilterInput.value.trim();
       renderEvaluationList();
@@ -422,6 +496,11 @@
     async function loadAnalytics() {
       state.analytics = await fetchJson("/api/evaluations/analytics/by-agent");
       renderAnalyticsList();
+    }
+
+    async function loadOverview() {
+      state.overview = await fetchJson("/api/evaluations/analytics/overview");
+      renderOverview();
     }
 
     async function loadEvaluationDetail() {
@@ -440,7 +519,12 @@
       state.selectedAnalyticsAgentId = query.get("agent_id") || "";
       el.agentFilterInput.value = query.get("agent_id") || "";
       el.resultFilterInput.value = query.get("result_label") || "";
+      el.minScoreInput.value = query.get("min_overall_score") || "";
+      el.attentionFilter.value = query.get("attention_level") || "";
+      el.startDateFrom.value = query.get("start_date_from") || "";
+      el.startDateTo.value = query.get("start_date_to") || "";
       el.evaluationIdInput.value = state.evaluationId;
+      await loadOverview();
       await loadAnalytics();
       await loadEvaluationList();
       if (state.evaluationId) {
@@ -457,11 +541,13 @@
     });
     el.loadBtn.addEventListener("click", loadEvaluationDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
-    el.agentFilterInput.addEventListener("keydown", async event => {
-      if (event.key === "Enter") await bootstrap();
+    [el.agentFilterInput, el.resultFilterInput, el.minScoreInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await bootstrap();
+      });
     });
-    el.resultFilterInput.addEventListener("keydown", async event => {
-      if (event.key === "Enter") await bootstrap();
+    [el.attentionFilter, el.startDateFrom, el.startDateTo].forEach(node => {
+      node.addEventListener("change", bootstrap);
     });
     el.evaluationIdInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadEvaluationDetail();
