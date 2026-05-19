@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skill Center</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #241b15;
+      --muted: #726657;
+      --accent: #a15428;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --radius: 18px;
+      --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar button,
+    .toolbar input,
+    .toolbar select {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .list,
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .skill-card,
+    .detail-card,
+    .capability-card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .skill-card {
+      cursor: pointer;
+    }
+
+    .skill-card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .tag.success {
+      background: rgba(31, 122, 77, 0.12);
+      color: var(--success);
+    }
+
+    .tag.warning {
+      background: rgba(168, 116, 29, 0.14);
+      color: var(--warning);
+    }
+
+    .hero {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+    }
+
+    .hero strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 30px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      flex: 0 0 140px;
+    }
+
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .section-split {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid #eadcca;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Skill Center</h1>
+        <p>集中查看 AgentScope runtime 下的 skill 能力定义，支持按业务域和 skill_id 过滤，并联动展示哪些 Agent 已声明依赖该 skill，方便我们规划注册式业务能力和后续 skill 扩展。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="agentPageBtn" class="secondary">外部 Agent</button>
+        <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
+        <select id="domainFilter">
+          <option value="">全部业务域</option>
+          <option value="merchant">merchant</option>
+          <option value="operations">operations</option>
+          <option value="data_support">data_support</option>
+          <option value="partner">partner</option>
+        </select>
+        <input id="skillIdInput" placeholder="输入 skill_id 直接打开" />
+        <button id="loadBtn">加载 Skill</button>
+        <button id="refreshBtn" class="secondary">刷新列表</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>Skill 列表</h2>
+        <div id="skillListMeta" class="subtle">正在加载 Skill 列表...</div>
+        <div id="skillList" class="list" style="margin-top: 12px;">
+          <div class="empty">正在加载 Skill 列表...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Skill 详情</h2>
+        <div id="skillDetail">
+          <div class="empty">请选择左侧 Skill 查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      skills: [],
+      capabilities: [],
+      skillId: "",
+      selectedSkill: null,
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      agentPageBtn: document.getElementById("agentPageBtn"),
+      workflowPageBtn: document.getElementById("workflowPageBtn"),
+      domainFilter: document.getElementById("domainFilter"),
+      skillIdInput: document.getElementById("skillIdInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      skillListMeta: document.getElementById("skillListMeta"),
+      skillList: document.getElementById("skillList"),
+      skillDetail: document.getElementById("skillDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(body?.detail || `HTTP ${response.status}`);
+      }
+      return body;
+    }
+
+    function updateQuery() {
+      const url = new URL(window.location.href);
+      if (state.skillId) {
+        url.searchParams.set("skill_id", state.skillId);
+      } else {
+        url.searchParams.delete("skill_id");
+      }
+      if (el.domainFilter.value) {
+        url.searchParams.set("biz_domain", el.domainFilter.value);
+      } else {
+        url.searchParams.delete("biz_domain");
+      }
+      window.history.replaceState({}, "", url);
+    }
+
+    function renderTagList(items, tone = "") {
+      if (!items.length) {
+        return '<div class="empty">暂无</div>';
+      }
+      return `<div class="chips">${items.map(item => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("")}</div>`;
+    }
+
+    function getBoundCapabilities(skillId) {
+      return state.capabilities.filter(item => (item.skills || []).includes(skillId));
+    }
+
+    function renderSkillList() {
+      el.skillListMeta.textContent = `当前共 ${state.skills.length} 个 Skill`;
+      if (!state.skills.length) {
+        el.skillList.innerHTML = '<div class="empty">当前筛选条件下没有 Skill。</div>';
+        return;
+      }
+
+      el.skillList.innerHTML = state.skills.map(item => `
+        <div class="skill-card ${item.skill_id === state.skillId ? "active" : ""}" data-skill-id="${escapeHtml(item.skill_id)}">
+          <div class="title">${escapeHtml(item.name)}</div>
+          <div>
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            <span class="tag">${escapeHtml(item.skill_id)}</span>
+          </div>
+          <div class="subtle">${escapeHtml(item.purpose || "暂无 purpose 描述")}</div>
+          <div class="subtle">关联 Agent ${escapeHtml(getBoundCapabilities(item.skill_id).length)}</div>
+        </div>
+      `).join("");
+
+      el.skillList.querySelectorAll("[data-skill-id]").forEach(node => {
+        node.addEventListener("click", () => {
+          const skillId = node.getAttribute("data-skill-id") || "";
+          state.skillId = skillId;
+          el.skillIdInput.value = skillId;
+          state.selectedSkill = state.skills.find(item => item.skill_id === skillId) || null;
+          renderSkillList();
+          renderSkillDetail();
+          updateQuery();
+        });
+      });
+    }
+
+    function renderSkillDetail() {
+      const item = state.selectedSkill;
+      if (!item) {
+        el.skillDetail.innerHTML = '<div class="empty">请选择左侧 Skill 查看详情。</div>';
+        return;
+      }
+
+      const boundCapabilities = getBoundCapabilities(item.skill_id);
+      el.skillDetail.innerHTML = `
+        <div class="hero">
+          <div class="subtle">${escapeHtml(item.biz_domain)} / ${escapeHtml(item.skill_id)}</div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <div class="subtle" style="margin-top: 10px;">${escapeHtml(item.purpose || "该 skill 当前未填写 purpose 描述。")}</div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-row"><div class="label">Skill ID</div><div class="value">${escapeHtml(item.skill_id)}</div></div>
+            <div class="detail-row"><div class="label">业务域</div><div class="value">${escapeHtml(item.biz_domain)}</div></div>
+            <div class="detail-row"><div class="label">文件路径</div><div class="value">${escapeHtml(item.path)}</div></div>
+            <div class="detail-row"><div class="label">关联 Agent 数</div><div class="value">${escapeHtml(boundCapabilities.length)}</div></div>
+          </div>
+        </div>
+
+        <div class="section-split">
+          <h2>When To Use</h2>
+          ${renderTagList(item.when_to_use || [], "warning")}
+        </div>
+
+        <div class="section-split">
+          <h2>Bound Agents</h2>
+          ${boundCapabilities.length ? `<div class="stack">${boundCapabilities.map(capability => `
+            <div class="capability-card">
+              <div class="title">${escapeHtml(capability.capability_name)}</div>
+              <div>
+                <span class="tag">${escapeHtml(capability.capability_id)}</span>
+                <span class="tag success">${escapeHtml(capability.biz_domain)}</span>
+                <span class="tag">priority:${escapeHtml(capability.priority)}</span>
+              </div>
+              <div class="subtle">${escapeHtml(capability.description || "-")}</div>
+              <div class="subtle">Triggers: ${escapeHtml((capability.triggers || []).join(", ") || "-")}</div>
+            </div>
+          `).join("")}</div>` : '<div class="empty">当前还没有 Agent 声明依赖这个 Skill。</div>'}
+        </div>
+      `;
+    }
+
+    async function loadSkills() {
+      const query = new URLSearchParams();
+      if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      const [skills, capabilities] = await Promise.all([
+        fetchJson(`/api/skills?${query.toString()}`),
+        fetchJson(`/api/capabilities?${query.toString()}`),
+      ]);
+      state.skills = skills;
+      state.capabilities = capabilities;
+      renderSkillList();
+      updateQuery();
+
+      if (!state.skillId && state.skills[0]?.skill_id) {
+        state.skillId = state.skills[0].skill_id;
+        el.skillIdInput.value = state.skillId;
+      }
+    }
+
+    function loadSkillDetail() {
+      const skillId = el.skillIdInput.value.trim() || state.skillId;
+      if (!skillId) return;
+      state.skillId = skillId;
+      state.selectedSkill = state.skills.find(item => item.skill_id === skillId) || null;
+      renderSkillList();
+      renderSkillDetail();
+      updateQuery();
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      state.skillId = query.get("skill_id") || "";
+      el.skillIdInput.value = state.skillId;
+      el.domainFilter.value = query.get("biz_domain") || "";
+      await loadSkills();
+      if (state.skillId) {
+        loadSkillDetail();
+      } else if (state.skills[0]?.skill_id) {
+        state.skillId = state.skills[0].skill_id;
+        el.skillIdInput.value = state.skillId;
+        loadSkillDetail();
+      }
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.agentPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/external-agents";
+    });
+    el.workflowPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/workflows";
+    });
+    el.domainFilter.addEventListener("change", bootstrap);
+    el.loadBtn.addEventListener("click", loadSkillDetail);
+    el.refreshBtn.addEventListener("click", bootstrap);
+    el.skillIdInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") loadSkillDetail();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>
