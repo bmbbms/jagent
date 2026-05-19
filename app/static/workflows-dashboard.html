@@ -219,6 +219,8 @@
           <option value="true">has_approval_points=true</option>
           <option value="false">has_approval_points=false</option>
         </select>
+        <input id="auditTagInput" placeholder="按 audit_tag 过滤" />
+        <input id="fallbackRuleInput" placeholder="按 fallback_rule 过滤" />
         <input id="workflowCodeInput" placeholder="输入 workflow_code 直接打开" />
         <button id="loadBtn">加载 Workflow</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
@@ -257,6 +259,8 @@
       domainFilter: document.getElementById("domainFilter"),
       requiredToolInput: document.getElementById("requiredToolInput"),
       approvalFilter: document.getElementById("approvalFilter"),
+      auditTagInput: document.getElementById("auditTagInput"),
+      fallbackRuleInput: document.getElementById("fallbackRuleInput"),
       workflowCodeInput: document.getElementById("workflowCodeInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -289,6 +293,8 @@
         biz_domain: el.domainFilter.value,
         required_tool: el.requiredToolInput.value.trim(),
         has_approval_points: el.approvalFilter.value,
+        audit_tag: el.auditTagInput.value.trim(),
+        fallback_rule: el.fallbackRuleInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -421,6 +427,8 @@
       if (el.workflowCodeInput.value.trim()) query.set("workflow_code", el.workflowCodeInput.value.trim());
       if (el.requiredToolInput.value.trim()) query.set("required_tool", el.requiredToolInput.value.trim());
       if (el.approvalFilter.value) query.set("has_approval_points", el.approvalFilter.value);
+      if (el.auditTagInput.value.trim()) query.set("audit_tag", el.auditTagInput.value.trim());
+      if (el.fallbackRuleInput.value.trim()) query.set("fallback_rule", el.fallbackRuleInput.value.trim());
       state.workflows = await fetchJson(`/api/workflows?${query.toString()}`);
       renderWorkflowList();
       updateQuery();
@@ -448,6 +456,8 @@
       el.domainFilter.value = query.get("biz_domain") || "";
       el.requiredToolInput.value = query.get("required_tool") || "";
       el.approvalFilter.value = query.get("has_approval_points") || "";
+      el.auditTagInput.value = query.get("audit_tag") || "";
+      el.fallbackRuleInput.value = query.get("fallback_rule") || "";
       await loadWorkflowList();
       if (state.workflowCode) {
         await loadWorkflowDetail();
@@ -474,8 +484,10 @@
     el.workflowCodeInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadWorkflowDetail();
     });
-    el.requiredToolInput.addEventListener("keydown", async event => {
-      if (event.key === "Enter") await bootstrap();
+    [el.requiredToolInput, el.auditTagInput, el.fallbackRuleInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await bootstrap();
+      });
     });
 
     bootstrap();

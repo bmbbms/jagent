@@ -567,6 +567,8 @@ def test_workflows_ui_page(client: TestClient) -> None:
     assert 'id="domainFilter"' in response.text
     assert 'id="requiredToolInput"' in response.text
     assert 'id="approvalFilter"' in response.text
+    assert 'id="auditTagInput"' in response.text
+    assert 'id="fallbackRuleInput"' in response.text
     assert 'id="workflowCodeInput"' in response.text
     assert 'id="loadBtn"' in response.text
 
@@ -739,6 +741,8 @@ def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
         params={
             "required_tool": "quota_approval_submit",
             "has_approval_points": True,
+            "audit_tag": "approval",
+            "fallback_rule": "转人工",
         },
     )
     assert governance_filtered_response.status_code == 200
@@ -746,6 +750,8 @@ def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     assert governance_items
     assert all("quota_approval_submit" in item["required_tools"] for item in governance_items)
     assert all(item["approval_points"] for item in governance_items)
+    assert all("approval" in item["audit_tags"] for item in governance_items)
+    assert all(any("转人工" in rule for rule in item["fallback_rules"]) for item in governance_items)
 
     chat_response = client.post(
         "/api/chat",

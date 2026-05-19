@@ -13,6 +13,8 @@ def list_workflows(
     workflow_code: str | None = None,
     required_tool: str | None = None,
     has_approval_points: bool | None = None,
+    audit_tag: str | None = None,
+    fallback_rule: str | None = None,
     workflow_service: WorkflowService = Depends(get_workflow_service),
 ) -> list[WorkflowDefinitionResponse]:
     return workflow_service.list_workflows(
@@ -20,6 +22,8 @@ def list_workflows(
         workflow_code,
         required_tool,
         has_approval_points,
+        audit_tag,
+        fallback_rule,
     )
 
 

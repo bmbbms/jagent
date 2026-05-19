@@ -23,6 +23,8 @@ class WorkflowService:
         workflow_code: str | None = None,
         required_tool: str | None = None,
         has_approval_points: bool | None = None,
+        audit_tag: str | None = None,
+        fallback_rule: str | None = None,
     ) -> list[WorkflowDefinitionResponse]:
         items = self._registry.list(biz_domain)
         if workflow_code:
@@ -34,6 +36,12 @@ class WorkflowService:
                 item
                 for item in items
                 if bool(item.approval_points) == has_approval_points
+            ]
+        if audit_tag:
+            items = [item for item in items if audit_tag in item.audit_tags]
+        if fallback_rule:
+            items = [
+                item for item in items if any(fallback_rule in rule for rule in item.fallback_rules)
             ]
         return [self._to_response(item) for item in items]
 
