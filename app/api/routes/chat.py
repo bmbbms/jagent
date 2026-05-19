@@ -62,13 +62,32 @@ def chat(
         action="chat.request",
         actor_id=request.user_id,
         payload={
+            "source": "chat",
+            "event_type": "chat",
+            "outcome": 1,
             "task_id": response.task_id,
-            "biz_domain": request.biz_domain.value,
-            "message": request.message,
+            "trace_id": runtime_task["trace_id"],
+            "session_id": runtime_task["contact_id"],
             "capability_id": response.capability_id,
-            "approval_id": response.approval_id,
+            "agent_id": response.capability_id,
             "workflow": response.workflow,
-            "selected_skills": response.selected_skills,
+            "request_summary": request.message,
+            "response_summary": response.summary,
+            "payload": {
+                "biz_domain": request.biz_domain.value,
+                "message": request.message,
+                "selected_skills": response.selected_skills,
+                "selected_tools": response.selected_tools,
+                "references": [
+                    item.model_dump(mode="json") if hasattr(item, "model_dump") else item
+                    for item in response.references
+                ],
+                "routing_trace": (
+                    response.routing_trace.model_dump(mode="json")
+                    if response.routing_trace is not None
+                    else None
+                ),
+            },
         },
     )
 

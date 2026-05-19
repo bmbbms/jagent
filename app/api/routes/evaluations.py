@@ -194,12 +194,15 @@ def apply_optimization_execution_plan(
         {
             "source": "evaluation",
             "event_type": "execution_plan",
-            "task_id": None,
+            "outcome": 1,
             "agent_id": request.agent_id,
             "capability_id": request.agent_id,
-            "request_summary": "apply optimization execution plan",
+            "request_summary": (
+                f"apply execution plan agent={request.agent_id or '-'} "
+                f"owner={request.owner or '-'} priority={request.priority or '-'} "
+                f"max_items={request.max_items}"
+            ),
             "response_summary": result.summary,
-            "outcome": 1,
             "payload": {
                 "agent_id": request.agent_id,
                 "owner": result.owner,
@@ -224,10 +227,41 @@ def update_optimization_suggestion(
     suggestion_id: int,
     request: AgentOptimizationSuggestionUpdateRequest,
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> AgentOptimizationSuggestionResponse:
+    suggestion_ctx = evaluation_service.get_suggestion_audit_context(suggestion_id)
     item = evaluation_service.update_optimization_suggestion(suggestion_id, request)
     if item is None:
         raise HTTPException(status_code=404, detail="optimization suggestion not found")
+    audit_service.record(
+        "evaluation.suggestion.update",
+        request.owner or "system",
+        {
+            "source": "evaluation",
+            "event_type": "suggestion",
+            "outcome": 1,
+            "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
+            "evaluation_id": item.evaluation_id,
+            "suggestion_id": item.suggestion_id,
+            "agent_id": item.agent_id,
+            "capability_id": item.agent_id,
+            "request_summary": f"update optimization suggestion {suggestion_id}",
+            "response_summary": (
+                f"status={item.status}, owner={item.owner or '-'}, priority={item.priority}"
+            ),
+            "payload": {
+                "suggestion_id": item.suggestion_id,
+                "evaluation_id": item.evaluation_id,
+                "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
+                "agent_id": item.agent_id,
+                "status": item.status,
+                "owner": item.owner,
+                "priority": item.priority,
+                "optimization_type": item.optimization_type,
+                "target_ref": item.target_ref,
+            },
+        },
+    )
     return item
 
 
@@ -251,6 +285,7 @@ def create_optimization_suggestion_ticket(
         {
             "source": "evaluation",
             "event_type": "service_ticket",
+            "outcome": 1,
             "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
             "evaluation_id": suggestion_ctx.get("evaluation_id") if suggestion_ctx else None,
             "suggestion_id": item.suggestion_id,
@@ -258,16 +293,18 @@ def create_optimization_suggestion_ticket(
             "ticket_status": item.ticket_status,
             "agent_id": suggestion_ctx.get("agent_id") if suggestion_ctx else None,
             "capability_id": suggestion_ctx.get("agent_id") if suggestion_ctx else None,
-            "request_summary": "create service ticket from optimization suggestion",
-            "response_summary": item.suggested_change,
-            "outcome": 1,
+            "request_summary": f"create service ticket from suggestion {item.suggestion_id}",
+            "response_summary": f"ticket created: {item.ticket_id}",
             "payload": {
                 "ticket_id": item.ticket_id,
                 "suggestion_id": item.suggestion_id,
                 "evaluation_id": suggestion_ctx.get("evaluation_id") if suggestion_ctx else None,
                 "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
+                "agent_id": suggestion_ctx.get("agent_id") if suggestion_ctx else None,
                 "priority": item.priority,
                 "owner": item.owner,
+                "ticket_status": item.ticket_status,
+                "suggested_change": item.suggested_change,
             },
         },
     )

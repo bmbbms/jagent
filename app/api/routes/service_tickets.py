@@ -69,18 +69,28 @@ def update_service_ticket(
         {
             "source": item.source,
             "event_type": "service_ticket",
+            "outcome": 1,
             "task_id": ticket_ctx.get("task_id") if ticket_ctx else item.linked_task_id,
-            "approval_id": None,
+            "evaluation_id": (
+                ticket_ctx.get("evaluation_id") if ticket_ctx else item.linked_evaluation_id
+            ),
+            "suggestion_id": (
+                ticket_ctx.get("suggestion_id") if ticket_ctx else item.linked_suggestion_id
+            ),
+            "ticket_id": item.ticket_id,
+            "ticket_status": item.status,
             "capability_id": ticket_ctx.get("agent_id") if ticket_ctx else item.linked_agent_id,
             "agent_id": ticket_ctx.get("agent_id") if ticket_ctx else item.linked_agent_id,
-            "request_summary": "update service ticket",
-            "response_summary": item.description,
-            "outcome": 1,
+            "request_summary": f"update service ticket {item.ticket_id}",
+            "response_summary": (
+                f"status={item.status}, owner={item.owner or '-'}, priority={item.priority}"
+            ),
             "payload": {
                 "ticket_id": item.ticket_id,
                 "suggestion_id": item.linked_suggestion_id,
                 "evaluation_id": item.linked_evaluation_id,
                 "task_id": item.linked_task_id,
+                "agent_id": item.linked_agent_id,
                 "status": item.status,
                 "priority": item.priority,
                 "owner": item.owner,

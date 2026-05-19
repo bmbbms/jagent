@@ -255,6 +255,24 @@ def test_knowledge_search(client: TestClient) -> None:
     assert body["biz_domain"] == "operations"
     assert body["hits"]
 
+    audit_response = client.get(
+        "/api/audit",
+        params={"action": "knowledge.search", "actor_id": "system"},
+    )
+    assert audit_response.status_code == 200
+    audit_items = audit_response.json()
+    assert audit_items
+    latest = audit_items[0]
+    assert latest["source"] == "knowledge"
+    assert latest["event_type"] == "knowledge_search"
+    assert latest["outcome"] == 1
+    assert latest["payload"]["request_summary"] == body["query"]
+    assert latest["payload"]["response_summary"].startswith("knowledge hits=")
+    assert latest["payload"]["payload"]["biz_domain"] == "operations"
+    assert latest["payload"]["payload"]["query"] == body["query"]
+    assert latest["payload"]["payload"]["hits"] >= 1
+    assert latest["payload"]["payload"]["hit_sources"]
+
 
 def test_audit_events(client: TestClient) -> None:
     response = client.get("/api/audit")
@@ -285,6 +303,13 @@ def test_audit_events_support_filters(client: TestClient) -> None:
     assert isinstance(body, list)
     assert any(item["action"] == "chat.request" for item in body)
     assert all(item["actor_id"] == "u-audit-filter" for item in body)
+    latest_chat_audit = body[0]
+    assert latest_chat_audit["source"] == "chat"
+    assert latest_chat_audit["event_type"] == "chat"
+    assert latest_chat_audit["outcome"] == 1
+    assert latest_chat_audit["payload"]["trace_id"]
+    assert latest_chat_audit["payload"]["session_id"]
+    assert latest_chat_audit["payload"]["payload"]["selected_tools"]
 
     governance_response = client.get(
         "/api/audit",
@@ -305,17 +330,17 @@ def test_audit_events_support_filters(client: TestClient) -> None:
     extended_response = client.get(
         "/api/audit",
         params={
-            "source": "platform",
-            "event_type": "audit",
-            "outcome": 0,
+            "source": "chat",
+            "event_type": "chat",
+            "outcome": 1,
         },
     )
     assert extended_response.status_code == 200
     extended_body = extended_response.json()
     assert extended_body
-    assert all(item["source"] == "platform" for item in extended_body)
-    assert all(item["event_type"] == "audit" for item in extended_body)
-    assert all(item["outcome"] == 0 for item in extended_body)
+    assert all(item["source"] == "chat" for item in extended_body)
+    assert all(item["event_type"] == "chat" for item in extended_body)
+    assert all(item["outcome"] == 1 for item in extended_body)
 
 def test_audit_overview_api(client: TestClient) -> None:
     response = client.get("/api/audit/overview")
@@ -1195,6 +1220,28 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert updated["owner"] == "agent-ops"
     assert updated["priority"] == "high"
 
+    suggestion_update_audit_response = client.get(
+        "/api/audit",
+        params={
+            "action": "evaluation.suggestion.update",
+            "suggestion_id": first["suggestion_id"],
+        },
+    )
+    assert suggestion_update_audit_response.status_code == 200
+    suggestion_update_audits = suggestion_update_audit_response.json()
+    assert suggestion_update_audits
+    suggestion_update_audit = suggestion_update_audits[0]
+    assert suggestion_update_audit["source"] == "evaluation"
+    assert suggestion_update_audit["event_type"] == "suggestion"
+    assert suggestion_update_audit["outcome"] == 1
+    assert suggestion_update_audit["payload"]["agent_id"] == agent_id
+    assert suggestion_update_audit["payload"]["response_summary"] == (
+        "status=in_progress, owner=agent-ops, priority=high"
+    )
+    assert suggestion_update_audit["payload"]["payload"]["status"] == "in_progress"
+    assert suggestion_update_audit["payload"]["payload"]["owner"] == "agent-ops"
+    assert suggestion_update_audit["payload"]["payload"]["priority"] == "high"
+
     ticket_response = client.post(
         f"/api/evaluations/suggestions/{first['suggestion_id']}/ticket",
         json={
@@ -1309,6 +1356,23 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     ticket_id_audit_events = ticket_id_audit_response.json()
     assert ticket_id_audit_events
     assert all(item["payload"].get("ticket_id") == ticket_bound["ticket_id"] for item in ticket_id_audit_events)
+    ticket_create_audit = next(
+        item for item in ticket_id_audit_events if item["action"] == "service_ticket.create"
+    )
+    ticket_update_audit = next(
+        item for item in ticket_id_audit_events if item["action"] == "service_ticket.update"
+    )
+    assert ticket_create_audit["source"] == "evaluation"
+    assert ticket_create_audit["event_type"] == "service_ticket"
+    assert ticket_create_audit["payload"]["response_summary"] == (
+        f"ticket created: {ticket_bound['ticket_id']}"
+    )
+    assert ticket_create_audit["payload"]["payload"]["ticket_status"] == "submitted"
+    assert ticket_update_audit["payload"]["ticket_status"] == "resolved"
+    assert ticket_update_audit["payload"]["response_summary"] == (
+        "status=resolved, owner=agent-optimizer, priority=medium"
+    )
+    assert ticket_update_audit["payload"]["payload"]["agent_id"] == agent_id
 
     suggestion_id_audit_response = client.get(
         "/api/audit",
@@ -1407,6 +1471,13 @@ def test_execution_plan_apply_api(client: TestClient) -> None:
         and item["payload"].get("payload", {}).get("created_ticket_count", 0) >= 1
         for item in execution_plan_audits
     )
+    latest_execution_plan_audit = execution_plan_audits[0]
+    assert latest_execution_plan_audit["source"] == "evaluation"
+    assert latest_execution_plan_audit["event_type"] == "execution_plan"
+    assert latest_execution_plan_audit["outcome"] == 1
+    assert "max_items=2" in latest_execution_plan_audit["payload"]["request_summary"]
+    assert latest_execution_plan_audit["payload"]["capability_id"] == agent_id
+    assert latest_execution_plan_audit["payload"]["response_summary"] == applied["summary"]
 
 
 def test_audit_execution_plan_runs_api(client: TestClient) -> None:

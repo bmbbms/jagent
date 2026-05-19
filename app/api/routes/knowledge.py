@@ -19,6 +19,18 @@ def search_knowledge(
     audit_service.record(
         action="knowledge.search",
         actor_id="system",
-        payload={"biz_domain": biz_domain.value, "query": query, "hits": len(hits)},
+        payload={
+            "source": "knowledge",
+            "event_type": "knowledge_search",
+            "outcome": 1,
+            "request_summary": query,
+            "response_summary": f"knowledge hits={len(hits)}",
+            "payload": {
+                "biz_domain": biz_domain.value,
+                "query": query,
+                "hits": len(hits),
+                "hit_sources": [item.source for item in hits],
+            },
+        },
     )
     return KnowledgeSearchResponse(query=query, biz_domain=biz_domain, hits=hits)

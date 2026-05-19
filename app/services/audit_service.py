@@ -28,12 +28,13 @@ class AuditService:
         self._repository = repository
 
     def record(self, action: str, actor_id: str, payload: Dict[str, Any]) -> None:
+        normalized_payload = self._normalize_payload(action=action, actor_id=actor_id, payload=payload)
         with session_scope(self._session_factory) as session:
             self._repository.create(
                 session,
                 action=action,
                 actor_id=actor_id,
-                payload=payload,
+                payload=normalized_payload,
             )
 
     def list_events(
@@ -373,3 +374,48 @@ class AuditService:
             target_api=target_api_map.get(context_type),
             title=title_map.get(context_type, context_type),
         )
+
+    @staticmethod
+    def _normalize_payload(
+        *,
+        action: str,
+        actor_id: str,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        normalized = dict(payload)
+        nested_payload = normalized.get("payload")
+        if not isinstance(nested_payload, dict):
+            nested_payload = {}
+
+        normalized.setdefault("source", "platform")
+        normalized.setdefault("event_type", "audit")
+        normalized.setdefault("outcome", 0)
+        normalized.setdefault("action", action)
+        normalized.setdefault("actor_id", actor_id)
+
+        for field in (
+            "task_id",
+            "approval_id",
+            "capability_id",
+            "agent_id",
+            "workflow",
+            "workflow_id",
+            "ticket_id",
+            "ticket_status",
+            "suggestion_id",
+            "evaluation_id",
+            "trace_id",
+            "session_id",
+            "request_summary",
+            "response_summary",
+            "risk_level",
+            "error_code",
+            "error_msg",
+            "tags",
+        ):
+            if normalized.get(field) in (None, "") and nested_payload.get(field) not in (None, ""):
+                normalized[field] = nested_payload.get(field)
+
+        if normalized.get("workflow") in (None, "") and normalized.get("workflow_id") not in (None, ""):
+            normalized["workflow"] = normalized["workflow_id"]
+        return normalized
