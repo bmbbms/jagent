@@ -20,17 +20,20 @@
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
+
     .page {
       max-width: 1500px;
       margin: 0 auto;
       padding: 24px;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -39,22 +42,26 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
+
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
+
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
-      max-width: 860px;
+      max-width: 900px;
     }
+
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
+
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -64,7 +71,9 @@
       background: var(--panel);
       padding: 10px 14px;
       color: var(--text);
+      font: inherit;
     }
+
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -72,15 +81,19 @@
       cursor: pointer;
       font-weight: 700;
     }
-    .toolbar button.secondary {
+
+    .toolbar button.secondary,
+    button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
+
     .layout {
       display: grid;
       grid-template-columns: 420px minmax(0, 1fr);
       gap: 20px;
     }
+
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -88,10 +101,12 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
+
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
+
     .list,
     .overview-grid,
     .stats,
@@ -99,23 +114,28 @@
       display: grid;
       gap: 10px;
     }
+
     .overview-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       margin-bottom: 18px;
     }
+
     .overview-card {
       background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
       border: 1px solid #eadcca;
       border-radius: 14px;
       padding: 14px;
     }
+
     .overview-card.interactive {
       cursor: pointer;
     }
+
     .overview-card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(154, 79, 37, 0.14);
     }
+
     .overview-card strong {
       display: block;
       margin-top: 8px;
@@ -123,6 +143,7 @@
       color: var(--accent);
       line-height: 1;
     }
+
     .card {
       background: var(--panel);
       border: 1px solid #eadcca;
@@ -131,21 +152,25 @@
       display: grid;
       gap: 10px;
     }
+
     .card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(154, 79, 37, 0.14);
     }
+
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
+
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
+
     .tag {
       display: inline-flex;
       align-items: center;
@@ -156,9 +181,11 @@
       background: #f2e4d5;
       color: #6d563f;
     }
+
     .success { background: rgba(29, 122, 74, 0.12); color: var(--success); }
     .warning { background: rgba(155, 109, 31, 0.14); color: var(--warning); }
     .danger { background: rgba(181, 63, 53, 0.12); color: var(--danger); }
+
     .row {
       display: flex;
       justify-content: space-between;
@@ -167,19 +194,23 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
+
     .row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
+
     .label {
       color: var(--muted);
       flex: 0 0 140px;
     }
+
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
+
     .hero {
       padding: 14px 16px;
       border-radius: 16px;
@@ -187,22 +218,26 @@
       border: 1px solid #eadcca;
       margin-bottom: 14px;
     }
+
     .hero strong {
       font-size: 34px;
       color: var(--accent);
       line-height: 1;
     }
+
     .section-split {
       margin-top: 22px;
       padding-top: 18px;
       border-top: 1px solid #eadcca;
     }
+
     .inline-form {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
     }
+
     .inline-form input,
     .inline-form select,
     .inline-form button {
@@ -214,6 +249,7 @@
       background: var(--panel);
       color: var(--text);
     }
+
     .inline-form button {
       background: var(--accent);
       border: 0;
@@ -221,6 +257,7 @@
       cursor: pointer;
       font-weight: 700;
     }
+
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
       .overview-grid { grid-template-columns: 1fr; }
@@ -232,7 +269,7 @@
     <div class="header">
       <div>
         <h1>Agent 评估中心</h1>
-        <p>集中查看任务级评估结果、维度得分与优化建议，并把评估建议转成可跟踪的优化工作项，帮助我们持续评估和优化各类 Agent 的运行质量。</p>
+        <p>集中查看任务级评估结果、维度得分、趋势变化与优化建议，并把建议持续推进到工单和审计闭环，帮助我们稳定优化各类 Agent 的运行质量。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -325,6 +362,10 @@
       suggestionOverview: null,
       selectedAnalyticsAgentId: "",
       selectedSuggestionId: "",
+      suggestionView: {
+        backlogOnly: false,
+        ticketBound: null,
+      },
     };
 
     const el = {
@@ -388,6 +429,37 @@
       return date.toLocaleString("zh-CN", { hour12: false });
     }
 
+    function resetSuggestionView() {
+      state.suggestionView = {
+        backlogOnly: false,
+        ticketBound: null,
+      };
+    }
+
+    function applySuggestionView(options = {}) {
+      state.suggestionView = {
+        backlogOnly: Boolean(options.backlogOnly),
+        ticketBound:
+          options.ticketBound === "true" || options.ticketBound === "false"
+            ? options.ticketBound
+            : null,
+      };
+    }
+
+    function buildSuggestionOverviewCard(label, value, options = {}) {
+      return {
+        label,
+        value,
+        status: options.status || "",
+        priority: options.priority || "",
+        ticketBound:
+          options.ticketBound === "true" || options.ticketBound === "false"
+            ? options.ticketBound
+            : "",
+        backlogOnly: Boolean(options.backlogOnly),
+      };
+    }
+
     async function fetchJson(url, options = {}) {
       const response = await fetch(url, options);
       const text = await response.text();
@@ -444,46 +516,75 @@
       `).join("");
     }
 
+    function isSuggestionOverviewCardActive(item) {
+      const currentStatus = el.suggestionStatusFilter.value || "";
+      const currentPriority = el.suggestionPriorityFilter.value || "";
+      const currentTicketBound = state.suggestionView.ticketBound || "";
+      const currentBacklogOnly = state.suggestionView.backlogOnly;
+      return (
+        currentStatus === item.status &&
+        currentPriority === item.priority &&
+        currentTicketBound === item.ticketBound &&
+        currentBacklogOnly === item.backlogOnly
+      );
+    }
+
     function renderSuggestionOverview() {
       if (!state.suggestionOverview) {
         el.suggestionOverviewGrid.innerHTML = '<div class="empty">暂无优化建议概览。</div>';
         return;
       }
       const cards = [
-        { label: "建议总数", value: state.suggestionOverview.total, status: "", priority: "" },
-        { label: "新建", value: state.suggestionOverview.new_count, status: "new", priority: "" },
-        { label: "进行中", value: state.suggestionOverview.in_progress_count, status: "in_progress", priority: "" },
-        { label: "已完成", value: state.suggestionOverview.completed_count, status: "completed", priority: "" },
-        { label: "高优先级", value: state.suggestionOverview.high_priority_count, status: "", priority: "high" },
+        buildSuggestionOverviewCard("建议总数", state.suggestionOverview.total),
+        buildSuggestionOverviewCard("新建", state.suggestionOverview.new_count, { status: "new" }),
+        buildSuggestionOverviewCard("进行中", state.suggestionOverview.in_progress_count, { status: "in_progress" }),
+        buildSuggestionOverviewCard("已完成", state.suggestionOverview.completed_count, { status: "completed" }),
+        buildSuggestionOverviewCard("高优先级", state.suggestionOverview.high_priority_count, { priority: "high" }),
+        buildSuggestionOverviewCard("已转工单", state.suggestionOverview.ticket_bound_count, { ticketBound: "true" }),
+        buildSuggestionOverviewCard("未转工单", state.suggestionOverview.ticket_unbound_count, { ticketBound: "false" }),
+        buildSuggestionOverviewCard("已闭环工单", state.suggestionOverview.completed_ticket_count, {
+          status: "completed",
+          ticketBound: "true",
+        }),
+        buildSuggestionOverviewCard("积压中", state.suggestionOverview.backlog_count, { backlogOnly: true }),
+        buildSuggestionOverviewCard("高优积压", state.suggestionOverview.high_priority_backlog_count, {
+          priority: "high",
+          backlogOnly: true,
+        }),
+        buildSuggestionOverviewCard("闭环率", `${state.suggestionOverview.completion_rate}%`, {
+          status: "completed",
+        }),
       ];
       el.suggestionOverviewGrid.innerHTML = cards.map(item => `
         <div
           class="overview-card interactive ${isSuggestionOverviewCardActive(item) ? "active" : ""}"
           data-suggestion-overview-status="${escapeHtml(item.status)}"
           data-suggestion-overview-priority="${escapeHtml(item.priority)}"
+          data-suggestion-overview-ticket-bound="${escapeHtml(item.ticketBound)}"
+          data-suggestion-overview-backlog="${item.backlogOnly ? "true" : "false"}"
         >
           <div class="subtle">${escapeHtml(item.label)}</div>
           <strong>${escapeHtml(item.value)}</strong>
         </div>
       `).join("");
       el.suggestionOverviewGrid
-        .querySelectorAll("[data-suggestion-overview-status], [data-suggestion-overview-priority]")
+        .querySelectorAll("[data-suggestion-overview-status]")
         .forEach(node => {
           node.addEventListener("click", async () => {
-            el.suggestionStatusFilter.value =
-              node.getAttribute("data-suggestion-overview-status") || "";
-            el.suggestionPriorityFilter.value =
-              node.getAttribute("data-suggestion-overview-priority") || "";
+            const nextStatus = node.getAttribute("data-suggestion-overview-status") || "";
+            const nextPriority = node.getAttribute("data-suggestion-overview-priority") || "";
+            const nextTicketBound = node.getAttribute("data-suggestion-overview-ticket-bound") || "";
+            const backlogOnly = node.getAttribute("data-suggestion-overview-backlog") === "true";
+            el.suggestionStatusFilter.value = nextStatus;
+            el.suggestionPriorityFilter.value = nextPriority;
+            applySuggestionView({
+              backlogOnly,
+              ticketBound: nextTicketBound || null,
+            });
             await loadSuggestionOverview();
             await loadSuggestions();
           });
         });
-    }
-
-    function isSuggestionOverviewCardActive(item) {
-      const currentStatus = el.suggestionStatusFilter.value || "";
-      const currentPriority = el.suggestionPriorityFilter.value || "";
-      return currentStatus === item.status && currentPriority === item.priority;
     }
 
     function renderAnalyticsList() {
@@ -491,7 +592,6 @@
         el.analyticsList.innerHTML = '<div class="empty">暂无分析结果。</div>';
         return;
       }
-
       el.analyticsList.innerHTML = state.analytics.map(item => `
         <div class="card ${item.agent_id === state.selectedAnalyticsAgentId ? "active" : ""}" data-agent-id="${escapeHtml(item.agent_id)}">
           <div class="title">${escapeHtml(item.agent_id)}</div>
@@ -511,9 +611,11 @@
           const agentId = node.getAttribute("data-agent-id") || "";
           state.selectedAnalyticsAgentId = agentId;
           el.agentFilterInput.value = agentId;
+          resetSuggestionView();
           await loadEvaluationList();
           await loadSuggestionOverview();
           await loadSuggestions();
+          await loadTrend();
           renderAnalyticsList();
         });
       });
@@ -549,7 +651,6 @@
         el.evaluationList.innerHTML = '<div class="empty">暂无评估记录。</div>';
         return;
       }
-
       el.evaluationList.innerHTML = state.evaluations.map(item => `
         <div class="card ${item.evaluation_id === state.evaluationId ? "active" : ""}" data-evaluation-id="${escapeHtml(item.evaluation_id)}">
           <div class="title">${escapeHtml(item.agent_id)} / ${escapeHtml(item.task_id)}</div>
@@ -571,16 +672,17 @@
 
     function renderEvaluationDetail(detail) {
       const detailsHtml = (detail.details || []).map(item => `
-        <div class="row">
-          <div class="label">${escapeHtml(item.dimension_name)}</div>
-          <div class="value">${escapeHtml(item.score)}</div>
+        <div class="card">
+          <div class="row"><div class="label">${escapeHtml(item.dimension_name)}</div><div class="value">${escapeHtml(item.score)}</div></div>
+          <div class="subtle">evidence：${escapeHtml(item.evidence || "-")}</div>
+          <div class="subtle">suggestion：${escapeHtml(item.suggestion || "-")}</div>
         </div>
       `).join("");
 
       const suggestionsHtml = (detail.suggestions || []).length
         ? detail.suggestions.map(item => `
           <div class="card">
-            <div class="title">${escapeHtml(item.optimization_type)}</div>
+            <div class="title">${escapeHtml(item.optimization_type)} / ${escapeHtml(item.target_ref || "-")}</div>
             <div>
               <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
               <span class="tag">${escapeHtml(item.priority)}</span>
@@ -590,11 +692,10 @@
             <div class="subtle">来源：${escapeHtml(item.source_type || "-")} / ${escapeHtml(item.source_ref || "-")}</div>
             <div class="subtle">工单：${escapeHtml(buildTicketSummary(item))}</div>
             <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
-            ${item.ticket_id ? `
-              <div>
-                <button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>
-              </div>
-            ` : ""}
+            <div class="inline-form">
+              ${item.ticket_id ? `<button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
+              <button class="secondary" type="button" data-open-audit="${escapeHtml(item.suggestion_id)}" data-open-audit-ticket="${escapeHtml(item.ticket_id || "")}">打开审计</button>
+            </div>
           </div>
         `).join("")
         : '<div class="empty">暂无优化建议。</div>';
@@ -619,6 +720,31 @@
         <h2 style="margin-top: 18px;">优化建议</h2>
         <div class="list">${suggestionsHtml}</div>
       `;
+
+      el.evaluationDetail.querySelectorAll("[data-open-ticket]").forEach(node => {
+        node.addEventListener("click", () => {
+          const ticketId = node.getAttribute("data-open-ticket") || "";
+          if (!ticketId) return;
+          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+        });
+      });
+      el.evaluationDetail.querySelectorAll("[data-open-audit]").forEach(node => {
+        node.addEventListener("click", () => {
+          const suggestionId = node.getAttribute("data-open-audit") || "";
+          const ticketId = node.getAttribute("data-open-audit-ticket") || "";
+          openAudit(ticketId, suggestionId);
+        });
+      });
+    }
+
+    function openAudit(ticketId, suggestionId) {
+      if (ticketId) {
+        window.location.href = `/ui/audit?ticket_id=${encodeURIComponent(ticketId)}`;
+        return;
+      }
+      if (suggestionId) {
+        window.location.href = `/ui/audit?suggestion_id=${encodeURIComponent(suggestionId)}`;
+      }
     }
 
     function renderSuggestionList() {
@@ -652,23 +778,16 @@
               <option value="low" ${item.priority === "low" ? "selected" : ""}>low</option>
             </select>
             <button data-save-suggestion="${escapeHtml(item.suggestion_id)}">保存</button>
-            <button
-              data-create-ticket="${escapeHtml(item.suggestion_id)}"
-              ${item.ticket_id ? "disabled" : ""}
-            >${item.ticket_id ? "已转工单" : "转为工单"}</button>
+            <button data-create-ticket="${escapeHtml(item.suggestion_id)}" ${item.ticket_id ? "disabled" : ""}>${item.ticket_id ? "已转工单" : "转为工单"}</button>
             ${item.ticket_id ? `<button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
-            <button
-              class="secondary"
-              type="button"
-              data-open-audit="${escapeHtml(item.suggestion_id)}"
-              data-open-audit-ticket="${escapeHtml(item.ticket_id || "")}"
-            >打开审计</button>
+            <button class="secondary" type="button" data-open-audit="${escapeHtml(item.suggestion_id)}" data-open-audit-ticket="${escapeHtml(item.ticket_id || "")}">打开审计</button>
           </div>
         </div>
       `).join("");
 
       el.suggestionList.querySelectorAll("[data-save-suggestion]").forEach(node => {
-        node.addEventListener("click", async () => {
+        node.addEventListener("click", async event => {
+          event.stopPropagation();
           const suggestionId = node.getAttribute("data-save-suggestion");
           const ownerNode = document.querySelector(`[data-owner-input="${suggestionId}"]`);
           const statusNode = document.querySelector(`[data-status-input="${suggestionId}"]`);
@@ -689,6 +808,7 @@
           }
         });
       });
+
       el.suggestionList.querySelectorAll("[data-create-ticket]").forEach(node => {
         node.addEventListener("click", async event => {
           event.stopPropagation();
@@ -716,6 +836,7 @@
           }
         });
       });
+
       el.suggestionList.querySelectorAll("[data-suggestion-card]").forEach(node => {
         node.addEventListener("click", () => {
           state.selectedSuggestionId = node.getAttribute("data-suggestion-card") || "";
@@ -723,6 +844,7 @@
           renderSuggestionList();
         });
       });
+
       el.suggestionList.querySelectorAll("[data-open-ticket]").forEach(node => {
         node.addEventListener("click", event => {
           event.stopPropagation();
@@ -731,18 +853,13 @@
           window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
         });
       });
+
       el.suggestionList.querySelectorAll("[data-open-audit]").forEach(node => {
         node.addEventListener("click", event => {
           event.stopPropagation();
-          const ticketId = node.getAttribute("data-open-audit-ticket") || "";
           const suggestionId = node.getAttribute("data-open-audit") || "";
-          if (ticketId) {
-            window.location.href = `/ui/audit?ticket_id=${encodeURIComponent(ticketId)}`;
-            return;
-          }
-          if (suggestionId) {
-            window.location.href = `/ui/audit?suggestion_id=${encodeURIComponent(suggestionId)}`;
-          }
+          const ticketId = node.getAttribute("data-open-audit-ticket") || "";
+          openAudit(ticketId, suggestionId);
         });
       });
     }
@@ -808,9 +925,20 @@
       renderSuggestionOverview();
     }
 
-    async function loadSuggestions() {
+    async function loadSuggestions(options = null) {
+      if (options) {
+        applySuggestionView(options);
+      }
       const query = buildSuggestionQuery();
       state.suggestions = await fetchJson(`/api/evaluations/suggestions?${query.toString()}`);
+      if (state.suggestionView.backlogOnly) {
+        state.suggestions = state.suggestions.filter(item => item.status !== "completed");
+      }
+      if (state.suggestionView.ticketBound === "true") {
+        state.suggestions = state.suggestions.filter(item => Boolean(item.ticket_id));
+      } else if (state.suggestionView.ticketBound === "false") {
+        state.suggestions = state.suggestions.filter(item => !item.ticket_id);
+      }
       if (state.selectedSuggestionId) {
         const exists = state.suggestions.some(item => String(item.suggestion_id) === String(state.selectedSuggestionId));
         if (!exists) {
@@ -831,83 +959,6 @@
       syncQuery();
     }
 
-    function renderSuggestionOverview() {
-      if (!state.suggestionOverview) {
-        el.suggestionOverviewGrid.innerHTML = '<div class="empty">暂无优化建议概览。</div>';
-        return;
-      }
-      const cards = [
-        { label: "建议总数", value: state.suggestionOverview.total, status: "", priority: "", ticketBound: "" },
-        { label: "新建", value: state.suggestionOverview.new_count, status: "new", priority: "", ticketBound: "" },
-        { label: "进行中", value: state.suggestionOverview.in_progress_count, status: "in_progress", priority: "", ticketBound: "" },
-        { label: "已完成", value: state.suggestionOverview.completed_count, status: "completed", priority: "", ticketBound: "" },
-        { label: "高优先级", value: state.suggestionOverview.high_priority_count, status: "", priority: "high", ticketBound: "" },
-        { label: "已转工单", value: state.suggestionOverview.ticket_bound_count, status: "", priority: "", ticketBound: "true" },
-        { label: "未转工单", value: state.suggestionOverview.ticket_unbound_count, status: "", priority: "", ticketBound: "false" },
-        { label: "已闭环工单", value: state.suggestionOverview.completed_ticket_count, status: "completed", priority: "", ticketBound: "true" },
-        { label: "积压中", value: state.suggestionOverview.backlog_count, status: "backlog", priority: "", ticketBound: "" },
-        { label: "高优积压", value: state.suggestionOverview.high_priority_backlog_count, status: "backlog", priority: "high", ticketBound: "" },
-        { label: "闭环率", value: `${state.suggestionOverview.completion_rate}%`, status: "completed", priority: "", ticketBound: "" },
-      ];
-      el.suggestionOverviewGrid.innerHTML = cards.map(item => `
-        <div
-          class="overview-card interactive ${isSuggestionOverviewCardActive(item) ? "active" : ""}"
-          data-suggestion-overview-status="${escapeHtml(item.status)}"
-          data-suggestion-overview-priority="${escapeHtml(item.priority)}"
-          data-suggestion-overview-ticket-bound="${escapeHtml(item.ticketBound)}"
-        >
-          <div class="subtle">${escapeHtml(item.label)}</div>
-          <strong>${escapeHtml(item.value)}</strong>
-        </div>
-      `).join("");
-      el.suggestionOverviewGrid
-        .querySelectorAll("[data-suggestion-overview-status], [data-suggestion-overview-priority], [data-suggestion-overview-ticket-bound]")
-        .forEach(node => {
-          node.addEventListener("click", async () => {
-            const nextStatus = node.getAttribute("data-suggestion-overview-status") || "";
-            const nextPriority = node.getAttribute("data-suggestion-overview-priority") || "";
-            const ticketBound = node.getAttribute("data-suggestion-overview-ticket-bound") || "";
-            el.suggestionStatusFilter.value = nextStatus === "backlog" ? "" : nextStatus;
-            el.suggestionPriorityFilter.value = nextPriority;
-            await loadSuggestionOverview();
-            await loadSuggestions({
-              backlogOnly: nextStatus === "backlog",
-              ticketBound: ticketBound || null,
-            });
-          });
-        });
-    }
-
-    function isSuggestionOverviewCardActive(item) {
-      const currentStatus = el.suggestionStatusFilter.value || "";
-      const currentPriority = el.suggestionPriorityFilter.value || "";
-      if (item.status === "backlog") {
-        return currentPriority === item.priority;
-      }
-      return currentStatus === item.status && currentPriority === item.priority;
-    }
-
-    async function loadSuggestions(options = {}) {
-      const query = buildSuggestionQuery();
-      state.suggestions = await fetchJson(`/api/evaluations/suggestions?${query.toString()}`);
-      if (options.backlogOnly) {
-        state.suggestions = state.suggestions.filter(item => item.status !== "completed");
-      }
-      if (options.ticketBound === "true") {
-        state.suggestions = state.suggestions.filter(item => Boolean(item.ticket_id));
-      } else if (options.ticketBound === "false") {
-        state.suggestions = state.suggestions.filter(item => !item.ticket_id);
-      }
-      if (state.selectedSuggestionId) {
-        const exists = state.suggestions.some(item => String(item.suggestion_id) === String(state.selectedSuggestionId));
-        if (!exists) {
-          state.selectedSuggestionId = "";
-        }
-      }
-      renderSuggestionList();
-      syncQuery();
-    }
-
     async function bootstrap() {
       const query = new URLSearchParams(window.location.search);
       state.evaluationId = query.get("evaluation_id") || "";
@@ -923,6 +974,7 @@
       el.suggestionPriorityFilter.value = query.get("suggestion_priority") || "";
       el.suggestionOwnerFilter.value = query.get("suggestion_owner") || "";
       el.evaluationIdInput.value = state.evaluationId;
+      resetSuggestionView();
       await loadOverview();
       await loadAnalytics();
       await loadTrend();
@@ -950,6 +1002,7 @@
     el.loadBtn.addEventListener("click", loadEvaluationDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
     el.loadSuggestionsBtn.addEventListener("click", async () => {
+      resetSuggestionView();
       await loadSuggestionOverview();
       await loadSuggestions();
     });
@@ -959,7 +1012,10 @@
       });
     });
     [el.attentionFilter, el.startDateFrom, el.startDateTo, el.suggestionStatusFilter, el.suggestionPriorityFilter].forEach(node => {
-      node.addEventListener("change", bootstrap);
+      node.addEventListener("change", async () => {
+        resetSuggestionView();
+        await bootstrap();
+      });
     });
     el.evaluationIdInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadEvaluationDetail();

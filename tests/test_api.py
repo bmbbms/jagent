@@ -718,6 +718,9 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
+    assert response.text.count("function renderSuggestionOverview()") == 1
+    assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
+    assert response.text.count("async function loadSuggestions(") == 1
 
 
 def test_approvals_ui_page(client: TestClient) -> None:
