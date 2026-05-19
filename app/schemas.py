@@ -573,6 +573,20 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     risk_flags: List[str] = Field(default_factory=list)
 
 
+class TaskRuntimeGovernanceOverviewResponse(BaseModel):
+    task_count: int = 0
+    completed_task_count: int = 0
+    waiting_approval_task_count: int = 0
+    failed_task_count: int = 0
+    fallback_task_count: int = 0
+    mcp_error_task_count: int = 0
+    external_agent_error_task_count: int = 0
+    multi_agent_task_count: int = 0
+    multi_session_task_count: int = 0
+    risk_flag_counts: Dict[str, int] = Field(default_factory=dict)
+    active_agent_counts: Dict[str, int] = Field(default_factory=dict)
+
+
 class AgentEvaluationDetailResponse(BaseModel):
     dimension_code: str
     dimension_name: str

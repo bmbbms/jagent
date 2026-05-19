@@ -619,6 +619,34 @@ def test_task_list_supports_pagination_and_legacy_limit(client: TestClient) -> N
     assert body["total"] >= len(body["items"])
 
 
+def test_task_runtime_governance_overview_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-runtime-overview",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+
+    response = client.get(
+        "/api/tasks/runtime-governance/overview",
+        params={"biz_domain": "operations", "limit": 20},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "task_count" in body
+    assert "completed_task_count" in body
+    assert "fallback_task_count" in body
+    assert "mcp_error_task_count" in body
+    assert "external_agent_error_task_count" in body
+    assert "multi_agent_task_count" in body
+    assert "multi_session_task_count" in body
+    assert "risk_flag_counts" in body
+    assert "active_agent_counts" in body
+
+
 def test_task_realtime_ui_page(client: TestClient) -> None:
     response = client.get("/ui/tasks")
     assert response.status_code == 200
@@ -632,6 +660,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="outputOverview"' in response.text
+    assert 'id="runtimeGovernanceOverview"' in response.text
     assert 'id="riskFilter"' in response.text
     assert 'id="stageFilter"' in response.text
     assert 'id="approvalFilterInput"' in response.text

@@ -420,6 +420,10 @@
           <div id="summaryMeta" class="meta-list">
             <div class="empty">请选择任务后查看摘要。</div>
           </div>
+          <h2 style="margin-top: 22px;">运行时治理总览</h2>
+          <div id="runtimeGovernanceOverview" class="stats-list">
+            <div class="empty">正在加载运行时治理总览。</div>
+          </div>
           <h2 style="margin-top: 22px;">快速统计</h2>
           <div id="summaryStats" class="stats-list">
             <div class="empty">暂无统计。</div>
@@ -522,6 +526,7 @@
       taskId: "",
       task: null,
       taskList: [],
+      runtimeGovernanceOverview: null,
       eventSource: null,
       lastEventSeq: 0,
       filters: {
@@ -577,6 +582,7 @@
       taskListMeta: document.getElementById("taskListMeta"),
       taskList: document.getElementById("taskList"),
       summaryMeta: document.getElementById("summaryMeta"),
+      runtimeGovernanceOverview: document.getElementById("runtimeGovernanceOverview"),
       summaryStats: document.getElementById("summaryStats"),
       outputOverview: document.getElementById("outputOverview"),
       structuredToolResults: document.getElementById("structuredToolResults"),
@@ -756,10 +762,30 @@
       };
     }
 
+    function buildRuntimeGovernanceOverviewUrl() {
+      syncFiltersFromInputs();
+      const query = new URLSearchParams();
+      if (state.filters.status) query.set("status", state.filters.status);
+      if (state.filters.bizDomain) query.set("biz_domain", state.filters.bizDomain);
+      if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
+      if (state.filters.riskLevel) query.set("risk_level", state.filters.riskLevel);
+      if (state.filters.currentStage) query.set("current_stage", state.filters.currentStage);
+      if (state.filters.approvalId) query.set("approval_id", state.filters.approvalId);
+      if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
+      if (state.filters.startDateTo) query.set("start_date_to", state.filters.startDateTo);
+      query.set("limit", state.filters.pageSize || "50");
+      return `/api/tasks/runtime-governance/overview?${query.toString()}`;
+    }
+
     async function loadTaskList() {
       try {
-        const payload = normalizeTaskListPayload(await fetchJson(buildTaskListUrl()));
+        const [taskPayload, runtimeOverview] = await Promise.all([
+          fetchJson(buildTaskListUrl()),
+          fetchJson(buildRuntimeGovernanceOverviewUrl()),
+        ]);
+        const payload = normalizeTaskListPayload(taskPayload);
         state.taskList = payload.items;
+        state.runtimeGovernanceOverview = runtimeOverview;
         state.pagination.total = payload.total;
         state.pagination.page = payload.page;
         state.pagination.pageSize = payload.page_size;
@@ -767,10 +793,12 @@
         state.filters.page = payload.page;
         renderTaskListMeta();
         renderTaskList();
+        renderRuntimeGovernanceOverview(runtimeOverview);
         updateQuery();
       } catch (error) {
         el.taskListMeta.textContent = "任务列表加载失败";
         el.taskList.innerHTML = `<div class="empty">任务列表加载失败：${escapeHtml(error.message)}</div>`;
+        el.runtimeGovernanceOverview.innerHTML = `<div class="empty">运行时治理总览加载失败：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -841,6 +869,36 @@
         ["耗时", task.duration_ms ? `${task.duration_ms} ms` : "-"],
       ];
       el.summaryStats.innerHTML = rows.map(([label, value]) => `
+        <div class="stat-item">
+          <div class="label">${escapeHtml(label)}</div>
+          <div class="value">${escapeHtml(value)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderRuntimeGovernanceOverview(summary) {
+      if (!summary) {
+        el.runtimeGovernanceOverview.innerHTML = `<div class="empty">暂无运行时治理总览。</div>`;
+        return;
+      }
+      const riskFlags = Object.entries(summary.risk_flag_counts || {})
+        .map(([key, value]) => `${key}:${value}`)
+        .join(", ") || "-";
+      const activeAgents = Object.entries(summary.active_agent_counts || {})
+        .slice(0, 5)
+        .map(([key, value]) => `${key}:${value}`)
+        .join(", ") || "-";
+      const rows = [
+        ["任务数", summary.task_count || 0],
+        ["成功 / 待审批 / 失败", `${summary.completed_task_count || 0} / ${summary.waiting_approval_task_count || 0} / ${summary.failed_task_count || 0}`],
+        ["Fallback 风险", summary.fallback_task_count || 0],
+        ["MCP 错误风险", summary.mcp_error_task_count || 0],
+        ["外部 Agent 错误", summary.external_agent_error_task_count || 0],
+        ["多 Agent / 多会话", `${summary.multi_agent_task_count || 0} / ${summary.multi_session_task_count || 0}`],
+        ["风险标记分布", riskFlags],
+        ["活跃 Agent 分布", activeAgents],
+      ];
+      el.runtimeGovernanceOverview.innerHTML = rows.map(([label, value]) => `
         <div class="stat-item">
           <div class="label">${escapeHtml(label)}</div>
           <div class="value">${escapeHtml(value)}</div>

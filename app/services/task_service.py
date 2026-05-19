@@ -21,6 +21,7 @@ from app.schemas import (
     ChatResponse,
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
+    TaskRuntimeGovernanceOverviewResponse,
     TaskRuntimeGovernanceSummaryResponse,
     StructuredToolResultResponse,
     ToolCallLogResponse,
@@ -404,6 +405,92 @@ class TaskService:
         if detail is None:
             return None
         return detail.output_overview
+
+    def build_runtime_governance_overview(
+        self,
+        *,
+        status: str | None = None,
+        biz_domain: str | None = None,
+        selected_agent_id: str | None = None,
+        risk_level: str | None = None,
+        current_stage: str | None = None,
+        approval_id: str | None = None,
+        start_time_from: datetime | None = None,
+        start_time_to: datetime | None = None,
+        limit: int = 50,
+    ) -> TaskRuntimeGovernanceOverviewResponse:
+        task_list = self.list_tasks(
+            status=status,
+            biz_domain=biz_domain,
+            selected_agent_id=selected_agent_id,
+            risk_level=risk_level,
+            current_stage=current_stage,
+            approval_id=approval_id,
+            start_time_from=start_time_from,
+            start_time_to=start_time_to,
+            page=1,
+            page_size=limit,
+            sort_by="start_time",
+            sort_order="desc",
+        )
+
+        details = [
+            self.get_task_detail(item.task_id)
+            for item in task_list.items
+        ]
+        valid_details = [item for item in details if item is not None]
+
+        risk_flag_counts: dict[str, int] = {}
+        active_agent_counts: dict[str, int] = {}
+        completed_task_count = 0
+        waiting_approval_task_count = 0
+        failed_task_count = 0
+        fallback_task_count = 0
+        mcp_error_task_count = 0
+        external_agent_error_task_count = 0
+        multi_agent_task_count = 0
+        multi_session_task_count = 0
+
+        for item in valid_details:
+            summary = item.runtime_governance
+            if item.status == "success":
+                completed_task_count += 1
+            elif item.status == "waiting_approval":
+                waiting_approval_task_count += 1
+            elif item.status == "failed":
+                failed_task_count += 1
+
+            if summary is None:
+                continue
+            if summary.fallback_count > 0:
+                fallback_task_count += 1
+            if summary.mcp_error_count > 0:
+                mcp_error_task_count += 1
+            if summary.external_agent_error_count > 0:
+                external_agent_error_task_count += 1
+            if summary.agent_handoff_count > 0 or summary.unique_agent_count > 1:
+                multi_agent_task_count += 1
+            if summary.runtime_session_count > 1:
+                multi_session_task_count += 1
+
+            for risk_flag in summary.risk_flags:
+                risk_flag_counts[risk_flag] = risk_flag_counts.get(risk_flag, 0) + 1
+            for agent_id in summary.active_agents:
+                active_agent_counts[agent_id] = active_agent_counts.get(agent_id, 0) + 1
+
+        return TaskRuntimeGovernanceOverviewResponse(
+            task_count=len(valid_details),
+            completed_task_count=completed_task_count,
+            waiting_approval_task_count=waiting_approval_task_count,
+            failed_task_count=failed_task_count,
+            fallback_task_count=fallback_task_count,
+            mcp_error_task_count=mcp_error_task_count,
+            external_agent_error_task_count=external_agent_error_task_count,
+            multi_agent_task_count=multi_agent_task_count,
+            multi_session_task_count=multi_session_task_count,
+            risk_flag_counts=risk_flag_counts,
+            active_agent_counts=active_agent_counts,
+        )
 
     def list_task_events_after(
         self,

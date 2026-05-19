@@ -20,6 +20,7 @@ from app.schemas import (
     AgentTaskOutputOverviewResponse,
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
+    TaskRuntimeGovernanceOverviewResponse,
     ToolCallLogResponse,
 )
 from app.services.evaluation_service import EvaluationService
@@ -74,6 +75,38 @@ def list_tasks(
         page_size=effective_page_size,
         sort_by=sort_by,
         sort_order=sort_order,
+    )
+
+
+@router.get("/runtime-governance/overview", response_model=TaskRuntimeGovernanceOverviewResponse)
+def get_task_runtime_governance_overview(
+    status: str | None = None,
+    biz_domain: str | None = None,
+    selected_agent_id: str | None = None,
+    risk_level: str | None = None,
+    current_stage: str | None = None,
+    approval_id: str | None = None,
+    start_date_from: date | None = None,
+    start_date_to: date | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    task_service: TaskService = Depends(get_task_service),
+) -> TaskRuntimeGovernanceOverviewResponse:
+    start_time_from = (
+        datetime.combine(start_date_from, time.min) if start_date_from is not None else None
+    )
+    start_time_to = (
+        datetime.combine(start_date_to, time.max) if start_date_to is not None else None
+    )
+    return task_service.build_runtime_governance_overview(
+        status=status,
+        biz_domain=biz_domain,
+        selected_agent_id=selected_agent_id,
+        risk_level=risk_level,
+        current_stage=current_stage,
+        approval_id=approval_id,
+        start_time_from=start_time_from,
+        start_time_to=start_time_to,
+        limit=limit,
     )
 
 
