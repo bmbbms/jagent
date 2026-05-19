@@ -13,6 +13,8 @@ def list_audit_events(
     actor_id: str | None = None,
     task_id: str | None = None,
     approval_id: str | None = None,
+    capability_id: str | None = None,
+    workflow: str | None = None,
     audit_service: AuditService = Depends(get_audit_service),
 ) -> list[AuditEventResponse]:
     return audit_service.list_events(
@@ -20,4 +22,6 @@ def list_audit_events(
         actor_id=actor_id,
         task_id=task_id,
         approval_id=approval_id,
+        capability_id=capability_id,
+        workflow=workflow,
     )

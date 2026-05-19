@@ -191,6 +191,8 @@
         <input id="actorFilterInput" placeholder="按 actor_id 过滤" />
         <input id="taskFilterInput" placeholder="按 task_id 过滤" />
         <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
+        <input id="capabilityFilterInput" placeholder="按 capability_id 过滤" />
+        <input id="workflowFilterInput" placeholder="按 workflow 过滤" />
         <button id="loadBtn">加载审计</button>
       </div>
     </div>
@@ -228,6 +230,8 @@
       actorFilterInput: document.getElementById("actorFilterInput"),
       taskFilterInput: document.getElementById("taskFilterInput"),
       approvalFilterInput: document.getElementById("approvalFilterInput"),
+      capabilityFilterInput: document.getElementById("capabilityFilterInput"),
+      workflowFilterInput: document.getElementById("workflowFilterInput"),
       loadBtn: document.getElementById("loadBtn"),
       auditMeta: document.getElementById("auditMeta"),
       auditList: document.getElementById("auditList"),
@@ -264,6 +268,8 @@
         actor_id: el.actorFilterInput.value.trim(),
         task_id: el.taskFilterInput.value.trim(),
         approval_id: el.approvalFilterInput.value.trim(),
+        capability_id: el.capabilityFilterInput.value.trim(),
+        workflow: el.workflowFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -281,6 +287,8 @@
       if (el.actorFilterInput.value.trim()) query.set("actor_id", el.actorFilterInput.value.trim());
       if (el.taskFilterInput.value.trim()) query.set("task_id", el.taskFilterInput.value.trim());
       if (el.approvalFilterInput.value.trim()) query.set("approval_id", el.approvalFilterInput.value.trim());
+      if (el.capabilityFilterInput.value.trim()) query.set("capability_id", el.capabilityFilterInput.value.trim());
+      if (el.workflowFilterInput.value.trim()) query.set("workflow", el.workflowFilterInput.value.trim());
       return query;
     }
 
@@ -395,6 +403,8 @@
       el.actorFilterInput.value = query.get("actor_id") || "";
       el.taskFilterInput.value = query.get("task_id") || "";
       el.approvalFilterInput.value = query.get("approval_id") || "";
+      el.capabilityFilterInput.value = query.get("capability_id") || "";
+      el.workflowFilterInput.value = query.get("workflow") || "";
       await loadAudit();
     }
 
@@ -419,7 +429,7 @@
       window.location.href = target;
     });
     el.loadBtn.addEventListener("click", loadAudit);
-    [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput].forEach(node => {
+    [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput, el.capabilityFilterInput, el.workflowFilterInput].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await loadAudit();
       });

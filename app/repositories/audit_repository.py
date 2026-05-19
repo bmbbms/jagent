@@ -33,7 +33,7 @@ class AuditRepository:
                 trace_id=payload.get("trace_id", uuid4().hex),
                 capability_id=payload.get("capability_id"),
                 tool_id=payload.get("tool_id"),
-                workflow_id=payload.get("workflow_id"),
+                workflow_id=payload.get("workflow_id") or payload.get("workflow"),
                 approval_id=payload.get("approval_id"),
                 risk_level=payload.get("risk_level", "low"),
                 request_summary=payload.get("request_summary"),
@@ -59,6 +59,8 @@ class AuditRepository:
         actor_id: str | None = None,
         task_id: str | None = None,
         approval_id: str | None = None,
+        capability_id: str | None = None,
+        workflow: str | None = None,
     ) -> List[AuditEventResponse]:
         query = session.query(AuditLogModel)
         if action:
@@ -69,6 +71,10 @@ class AuditRepository:
             query = query.filter(AuditLogModel.task_id == task_id)
         if approval_id:
             query = query.filter(AuditLogModel.approval_id == approval_id)
+        if capability_id:
+            query = query.filter(AuditLogModel.capability_id == capability_id)
+        if workflow:
+            query = query.filter(AuditLogModel.workflow_id == workflow)
         items = query.order_by(AuditLogModel.create_time.desc()).all()
         return [
             AuditEventResponse(

@@ -34,6 +34,8 @@ class AuditService:
         actor_id: str | None = None,
         task_id: str | None = None,
         approval_id: str | None = None,
+        capability_id: str | None = None,
+        workflow: str | None = None,
     ) -> List[AuditEventResponse]:
         with self._session_factory() as session:
             return self._repository.list_events(
@@ -42,4 +44,6 @@ class AuditService:
                 actor_id=actor_id,
                 task_id=task_id,
                 approval_id=approval_id,
+                capability_id=capability_id,
+                workflow=workflow,
             )
