@@ -283,12 +283,21 @@ class ExternalAgentGovernanceIssueResponse(BaseModel):
     capability_id: str
     capability_name: str
     biz_domain: BizDomain
+    source: str = "manual_remote"
+    transport: str = "http"
+    risk_level: str = "low"
+    requires_approval: bool = False
     health_status: str = "unknown"
     governance_status: str = "healthy"
+    severity: str = "normal"
     consecutive_failures: int = 0
     last_latency_ms: Optional[int] = None
+    last_check_time: Optional[str] = None
+    last_error: Optional[str] = None
     reasons: List[str] = Field(default_factory=list)
     recommended_action: str = ""
+    target_ui: Optional[str] = None
+    target_api: Optional[str] = None
 
 
 class MCPToolInfo(BaseModel):

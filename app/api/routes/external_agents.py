@@ -236,6 +236,14 @@ def get_external_agent_governance_overview(
 
 @router.get("/governance-issues", response_model=list[ExternalAgentGovernanceIssueResponse])
 def list_external_agent_governance_issues(
+    governance_status: str | None = Query(default=None),
+    biz_domain: str | None = Query(default=None),
+    health_status: str | None = Query(default=None),
+    source: str | None = Query(default=None),
+    transport: str | None = Query(default=None),
+    severity: str | None = Query(default=None),
+    min_consecutive_failures: int = Query(default=0, ge=0),
+    latency_ms_from: int | None = Query(default=None, ge=0),
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
@@ -252,28 +260,62 @@ def list_external_agent_governance_issues(
             continue
         if health.governance_status == "healthy":
             continue
+        issue_severity = _resolve_governance_issue_severity(health)
+        if governance_status and health.governance_status != governance_status:
+            continue
+        if biz_domain and response.biz_domain.value != biz_domain:
+            continue
+        if health_status and response.health_status != health_status:
+            continue
+        if source and response.source != source:
+            continue
+        if transport and response.transport != transport:
+            continue
+        if severity and issue_severity != severity:
+            continue
+        if int(health.consecutive_failures or 0) < min_consecutive_failures:
+            continue
+        if latency_ms_from is not None and int(health.last_latency_ms or 0) < latency_ms_from:
+            continue
         issues.append(
             ExternalAgentGovernanceIssueResponse(
                 capability_id=response.capability_id,
                 capability_name=response.capability_name,
                 biz_domain=response.biz_domain,
+                source=response.source,
+                transport=response.transport,
+                risk_level=response.risk_level,
+                requires_approval=response.requires_approval,
                 health_status=response.health_status,
                 governance_status=health.governance_status,
+                severity=issue_severity,
                 consecutive_failures=health.consecutive_failures,
                 last_latency_ms=health.last_latency_ms,
+                last_check_time=health.last_check_time,
+                last_error=health.last_error,
                 reasons=health.governance_reasons,
                 recommended_action=health.recommended_action,
+                target_ui=f"/ui/external-agents?capability_id={response.capability_id}",
+                target_api=f"/api/external-agents/{response.capability_id}/health",
             )
         )
     issues.sort(
         key=lambda item: (
-            0 if item.governance_status == "blocked" else 1,
+            0 if item.severity == "critical" else 1 if item.severity == "high" else 2,
             -item.consecutive_failures,
             -(item.last_latency_ms or 0),
             item.capability_id,
         )
     )
     return issues
+
+
+def _resolve_governance_issue_severity(health: ExternalAgentHealthResponse) -> str:
+    if health.governance_status == "blocked":
+        return "critical"
+    if int(health.consecutive_failures or 0) >= 2 or int(health.last_latency_ms or 0) >= 3000:
+        return "high"
+    return "medium"
 
 
 @router.put("/{capability_id}", response_model=ExternalAgentInfo)

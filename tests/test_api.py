@@ -814,8 +814,36 @@ def test_external_agent_governance_issues_api(client: TestClient) -> None:
       first = body[0]
       assert "capability_id" in first
       assert "governance_status" in first
+      assert "severity" in first
       assert "reasons" in first
       assert "recommended_action" in first
+      assert "target_ui" in first
+      assert "target_api" in first
+
+
+def test_external_agent_governance_issues_support_filters(client: TestClient) -> None:
+    response = client.get(
+        "/api/external-agents/governance-issues",
+        params={
+            "governance_status": "degraded",
+            "health_status": "unknown",
+            "source": "manual_remote",
+            "transport": "http",
+            "severity": "medium",
+            "min_consecutive_failures": 0,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    for item in body:
+        assert item["governance_status"] == "degraded"
+        assert item["health_status"] == "unknown"
+        assert item["source"] == "manual_remote"
+        assert item["transport"] == "http"
+        assert item["severity"] == "medium"
+        assert item["target_ui"].startswith("/ui/external-agents?capability_id=")
+        assert item["target_api"].startswith("/api/external-agents/")
 
 
 def test_evaluations_ui_page(client: TestClient) -> None:
