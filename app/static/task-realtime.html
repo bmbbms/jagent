@@ -333,6 +333,7 @@
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="capabilityCenterBtn" class="secondary">Capability 中心</button>
         <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
         <button id="skillCenterBtn" class="secondary">Skill 中心</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
@@ -515,6 +516,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      capabilityCenterBtn: document.getElementById("capabilityCenterBtn"),
       workflowCenterBtn: document.getElementById("workflowCenterBtn"),
       skillCenterBtn: document.getElementById("skillCenterBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
@@ -1252,6 +1254,13 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.capabilityCenterBtn.addEventListener("click", () => {
+      const capabilityId = state.task?.selected_agent_id || "";
+      const target = capabilityId
+        ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`
+        : "/ui/capabilities";
+      window.location.href = target;
     });
     el.workflowCenterBtn.addEventListener("click", () => {
       const workflowCode = extractWorkflowSnapshot(state.task || {})?.workflow_code || "";

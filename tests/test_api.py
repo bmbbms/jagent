@@ -382,6 +382,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     response = client.get("/ui/tasks")
     assert response.status_code == 200
     assert 'id="agentManagerBtn"' in response.text
+    assert 'id="capabilityCenterBtn"' in response.text
     assert 'id="workflowCenterBtn"' in response.text
     assert 'id="skillCenterBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
@@ -402,6 +403,8 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
 def test_external_agent_manager_ui_page(client: TestClient) -> None:
     response = client.get("/ui/external-agents")
     assert response.status_code == 200
+    assert '/ui/capabilities' in response.text
+    assert '/ui/skills' in response.text
     assert 'id="agentUrlInput"' in response.text
     assert 'id="capabilityNameInput"' in response.text
     assert 'id="discoverBtn"' in response.text
