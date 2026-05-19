@@ -206,6 +206,7 @@
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <button id="agentPageBtn" class="secondary">外部 Agent</button>
         <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
+        <button id="capabilityPageBtn" class="secondary">Capability 中心</button>
         <select id="domainFilter">
           <option value="">全部业务域</option>
           <option value="merchant">merchant</option>
@@ -219,6 +220,7 @@
           <option value="true">has_human_escalation=true</option>
           <option value="false">has_human_escalation=false</option>
         </select>
+        <input id="capabilityFilterInput" placeholder="按 capability_id 反查 skill" />
         <input id="skillIdInput" placeholder="输入 skill_id 直接打开" />
         <button id="loadBtn">加载 Skill</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
@@ -255,9 +257,11 @@
       taskPageBtn: document.getElementById("taskPageBtn"),
       agentPageBtn: document.getElementById("agentPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
+      capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
       toolFilterInput: document.getElementById("toolFilterInput"),
       escalationFilter: document.getElementById("escalationFilter"),
+      capabilityFilterInput: document.getElementById("capabilityFilterInput"),
       skillIdInput: document.getElementById("skillIdInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -290,6 +294,7 @@
         biz_domain: el.domainFilter.value,
         allowed_tool: el.toolFilterInput.value.trim(),
         has_human_escalation: el.escalationFilter.value,
+        capability_id: el.capabilityFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -417,11 +422,22 @@
                 </div>
                 <div class="subtle">${escapeHtml(capability.description || "-")}</div>
                 <div class="subtle">Triggers: ${escapeHtml((capability.triggers || []).join(", ") || "-")}</div>
+                <div><button class="secondary" type="button" data-open-capability="${escapeHtml(capability.capability_id)}">打开 Capability</button></div>
               </div>
             `).join("")}</div>`
             : '<div class="empty">当前还没有 Agent 声明依赖这个 Skill。</div>'}
         </div>
       `;
+
+      el.skillDetail.querySelectorAll("[data-open-capability]").forEach(node => {
+        node.addEventListener("click", () => {
+          const capabilityId = node.getAttribute("data-open-capability") || "";
+          if (!capabilityId) {
+            return;
+          }
+          window.location.href = `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`;
+        });
+      });
     }
 
     async function loadSkills() {
@@ -436,6 +452,9 @@
       }
       if (el.escalationFilter.value) {
         skillQuery.set("has_human_escalation", el.escalationFilter.value);
+      }
+      if (el.capabilityFilterInput.value.trim()) {
+        skillQuery.set("capability_id", el.capabilityFilterInput.value.trim());
       }
 
       const [skills, capabilities] = await Promise.all([
@@ -478,6 +497,7 @@
       el.domainFilter.value = query.get("biz_domain") || "";
       el.toolFilterInput.value = query.get("allowed_tool") || "";
       el.escalationFilter.value = query.get("has_human_escalation") || "";
+      el.capabilityFilterInput.value = query.get("capability_id") || "";
       await loadSkills();
       if (state.skillId) {
         loadSkillDetail();
@@ -497,6 +517,13 @@
     el.workflowPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/workflows";
     });
+    el.capabilityPageBtn.addEventListener("click", () => {
+      const capabilityId = el.capabilityFilterInput.value.trim();
+      const target = capabilityId
+        ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`
+        : "/ui/capabilities";
+      window.location.href = target;
+    });
     el.domainFilter.addEventListener("change", bootstrap);
     el.escalationFilter.addEventListener("change", bootstrap);
     el.loadBtn.addEventListener("click", loadSkillDetail);
@@ -504,8 +531,10 @@
     el.skillIdInput.addEventListener("keydown", event => {
       if (event.key === "Enter") loadSkillDetail();
     });
-    el.toolFilterInput.addEventListener("keydown", async event => {
-      if (event.key === "Enter") await bootstrap();
+    [el.toolFilterInput, el.capabilityFilterInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await bootstrap();
+      });
     });
 
     bootstrap();

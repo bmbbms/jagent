@@ -97,6 +97,15 @@ def test_skills(client: TestClient) -> None:
     filtered_ids = {item["skill_id"] for item in filtered_body}
     assert "quota_review" in filtered_ids
 
+    capability_filtered_response = client.get(
+        "/api/skills",
+        params={"capability_id": "operations.quota_review"},
+    )
+    assert capability_filtered_response.status_code == 200
+    capability_filtered_body = capability_filtered_response.json()
+    assert capability_filtered_body
+    assert {item["skill_id"] for item in capability_filtered_body} == {"quota_review"}
+
 
 def test_skill_detail(client: TestClient) -> None:
     response = client.get("/api/skills/merchant_qa")
@@ -602,6 +611,8 @@ def test_skills_ui_page(client: TestClient) -> None:
     assert 'id="domainFilter"' in response.text
     assert 'id="toolFilterInput"' in response.text
     assert 'id="escalationFilter"' in response.text
+    assert 'id="capabilityPageBtn"' in response.text
+    assert 'id="capabilityFilterInput"' in response.text
     assert 'id="skillIdInput"' in response.text
     assert 'id="loadBtn"' in response.text
 

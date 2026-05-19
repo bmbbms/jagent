@@ -124,10 +124,14 @@ class SkillRegistry:
         *,
         allowed_tool: str | None = None,
         has_human_escalation: bool | None = None,
+        skill_ids: Iterable[str] | None = None,
     ) -> List[SkillInfo]:
         specs = list(self._runtime_specs.values())
         if biz_domain is not None:
             specs = [item for item in specs if item.biz_domain == biz_domain]
+        if skill_ids is not None:
+            skill_id_set = set(skill_ids)
+            specs = [item for item in specs if item.skill_id in skill_id_set]
         if allowed_tool:
             specs = [item for item in specs if allowed_tool in item.allowed_tools]
         if has_human_escalation is not None:
