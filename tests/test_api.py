@@ -493,6 +493,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="agentFilterInput"' in response.text
     assert 'id="resultFilterInput"' in response.text
     assert 'id="suggestionList"' in response.text
+    assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
 
 
@@ -654,6 +655,15 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert updated["status"] == "in_progress"
     assert updated["owner"] == "agent-ops"
     assert updated["priority"] == "high"
+
+    priority_filtered_response = client.get(
+        "/api/evaluations/suggestions",
+        params={"agent_id": agent_id, "priority": "high"},
+    )
+    assert priority_filtered_response.status_code == 200
+    priority_filtered = priority_filtered_response.json()
+    assert priority_filtered
+    assert all(item["priority"] == "high" for item in priority_filtered)
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

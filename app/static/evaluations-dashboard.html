@@ -276,6 +276,12 @@
               <option value="in_progress">in_progress</option>
               <option value="completed">completed</option>
             </select>
+            <select id="suggestionPriorityFilter">
+              <option value="">全部优先级</option>
+              <option value="high">high</option>
+              <option value="medium">medium</option>
+              <option value="low">low</option>
+            </select>
             <input id="suggestionOwnerFilter" placeholder="按 owner 过滤建议" />
             <button id="loadSuggestionsBtn">加载建议</button>
           </div>
@@ -325,6 +331,7 @@
       evaluationDetail: document.getElementById("evaluationDetail"),
       suggestionOverviewGrid: document.getElementById("suggestionOverviewGrid"),
       suggestionStatusFilter: document.getElementById("suggestionStatusFilter"),
+      suggestionPriorityFilter: document.getElementById("suggestionPriorityFilter"),
       suggestionOwnerFilter: document.getElementById("suggestionOwnerFilter"),
       loadSuggestionsBtn: document.getElementById("loadSuggestionsBtn"),
       suggestionList: document.getElementById("suggestionList"),
@@ -381,6 +388,7 @@
         start_date_from: el.startDateFrom.value,
         start_date_to: el.startDateTo.value,
         suggestion_status: el.suggestionStatusFilter.value,
+        suggestion_priority: el.suggestionPriorityFilter.value,
         suggestion_owner: el.suggestionOwnerFilter.value.trim(),
         suggestion_id: state.selectedSuggestionId,
       };
@@ -617,6 +625,7 @@
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
       if (el.suggestionStatusFilter.value) query.set("status", el.suggestionStatusFilter.value);
+      if (el.suggestionPriorityFilter.value) query.set("priority", el.suggestionPriorityFilter.value);
       if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
       return query;
     }
@@ -647,6 +656,7 @@
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
       if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
+      if (el.suggestionPriorityFilter.value) query.set("priority", el.suggestionPriorityFilter.value);
       state.suggestionOverview = await fetchJson(`/api/evaluations/suggestions/overview?${query.toString()}`);
       renderSuggestionOverview();
     }
@@ -686,6 +696,7 @@
       el.startDateFrom.value = query.get("start_date_from") || "";
       el.startDateTo.value = query.get("start_date_to") || "";
       el.suggestionStatusFilter.value = query.get("suggestion_status") || "";
+      el.suggestionPriorityFilter.value = query.get("suggestion_priority") || "";
       el.suggestionOwnerFilter.value = query.get("suggestion_owner") || "";
       el.evaluationIdInput.value = state.evaluationId;
       await loadOverview();
@@ -719,7 +730,7 @@
         if (event.key === "Enter") await bootstrap();
       });
     });
-    [el.attentionFilter, el.startDateFrom, el.startDateTo, el.suggestionStatusFilter].forEach(node => {
+    [el.attentionFilter, el.startDateFrom, el.startDateTo, el.suggestionStatusFilter, el.suggestionPriorityFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
     });
     el.evaluationIdInput.addEventListener("keydown", async event => {

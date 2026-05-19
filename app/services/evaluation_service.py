@@ -255,6 +255,7 @@ class EvaluationService:
         agent_id: str | None = None,
         status: str | None = None,
         owner: str | None = None,
+        priority: str | None = None,
     ) -> list[AgentOptimizationSuggestionResponse]:
         with self._session_factory() as session:
             items = self._repository.list_all_suggestions(
@@ -262,6 +263,7 @@ class EvaluationService:
                 agent_id=agent_id,
                 status=status,
                 owner=owner,
+                priority=priority,
             )
             return [self._to_suggestion(item) for item in items]
 
@@ -270,8 +272,13 @@ class EvaluationService:
         *,
         agent_id: str | None = None,
         owner: str | None = None,
+        priority: str | None = None,
     ) -> AgentOptimizationSuggestionOverviewResponse:
-        items = self.list_optimization_suggestions(agent_id=agent_id, owner=owner)
+        items = self.list_optimization_suggestions(
+            agent_id=agent_id,
+            owner=owner,
+            priority=priority,
+        )
         return AgentOptimizationSuggestionOverviewResponse(
             total=len(items),
             new_count=sum(1 for item in items if item.status == "new"),

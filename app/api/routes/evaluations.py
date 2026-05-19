@@ -65,12 +65,14 @@ def list_optimization_suggestions(
     agent_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
     owner: str | None = Query(default=None),
+    priority: str | None = Query(default=None),
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> list[AgentOptimizationSuggestionResponse]:
     return evaluation_service.list_optimization_suggestions(
         agent_id=agent_id,
         status=status,
         owner=owner,
+        priority=priority,
     )
 
 
@@ -81,11 +83,13 @@ def list_optimization_suggestions(
 def get_optimization_suggestion_overview(
     agent_id: str | None = Query(default=None),
     owner: str | None = Query(default=None),
+    priority: str | None = Query(default=None),
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> AgentOptimizationSuggestionOverviewResponse:
     return evaluation_service.build_optimization_suggestion_overview(
         agent_id=agent_id,
         owner=owner,
+        priority=priority,
     )
 
 

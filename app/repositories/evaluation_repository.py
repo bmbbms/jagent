@@ -152,6 +152,7 @@ class EvaluationRepository:
         agent_id: str | None = None,
         status: str | None = None,
         owner: str | None = None,
+        priority: str | None = None,
     ) -> List[AgentOptimizationSuggestionModel]:
         query = session.query(AgentOptimizationSuggestionModel).order_by(
             AgentOptimizationSuggestionModel.create_time.desc(),
@@ -163,6 +164,8 @@ class EvaluationRepository:
             query = query.filter(AgentOptimizationSuggestionModel.status == status)
         if owner:
             query = query.filter(AgentOptimizationSuggestionModel.owner == owner)
+        if priority:
+            query = query.filter(AgentOptimizationSuggestionModel.priority == priority)
         return query.all()
 
     def get_suggestion(
