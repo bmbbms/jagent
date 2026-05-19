@@ -5,6 +5,7 @@ from app.dependencies import (
     get_external_agent_discovery_service,
     get_external_agent_health_service,
     get_manual_remote_registry,
+    get_task_service,
 )
 from app.registry.base import CapabilityMetadata
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
@@ -16,12 +17,14 @@ from app.schemas import (
     ExternalAgentInfo,
     ExternalAgentRegisterRequest,
     ExternalAgentUpdateRequest,
+    AgentTaskSummaryResponse,
 )
 from app.services.external_agent_health_service import ExternalAgentHealthService
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
 from app.services.external_capability_persistence_service import (
     ExternalCapabilityPersistenceService,
 )
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/external-agents", tags=["external-agents"])
 
@@ -309,6 +312,22 @@ def check_external_agent_health(
             detail=f"External agent not found: {capability_id}",
         )
     return health
+
+
+@router.get("/{capability_id}/recent-tasks", response_model=list[AgentTaskSummaryResponse])
+def list_external_agent_recent_tasks(
+    capability_id: str,
+    limit: int = Query(default=10, ge=1, le=50),
+    task_service: TaskService = Depends(get_task_service),
+) -> list[AgentTaskSummaryResponse]:
+    task_list = task_service.list_tasks(
+        selected_agent_id=capability_id,
+        page=1,
+        page_size=limit,
+        sort_by="start_time",
+        sort_order="desc",
+    )
+    return task_list.items
 
 
 def _to_response(

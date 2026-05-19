@@ -660,6 +660,20 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="agentList"' in response.text
 
 
+def test_external_agent_recent_tasks_api(client: TestClient) -> None:
+    response = client.get("/api/external-agents/external.stub.agent/recent-tasks", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        first = body[0]
+        assert "task_id" in first
+        assert "selected_agent_id" in first
+        assert first["selected_agent_id"] == "external.stub.agent"
+        assert "status" in first
+        assert "start_time" in first
+
+
 def test_external_agent_list_supports_governance_filters(client: TestClient) -> None:
     response = client.get(
         "/api/external-agents",
