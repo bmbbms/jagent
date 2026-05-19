@@ -715,6 +715,30 @@ class AgentEvaluationDetailResponse(BaseModel):
     severity: Optional[str] = None
 
 
+class AgentEvaluationRootCauseSignalResponse(BaseModel):
+    root_cause_code: str
+    root_cause_name: str
+    dimension_code: str
+    dimension_name: str
+    score: float = 0.0
+    severity: str = "low"
+    problem_type: Optional[str] = None
+    evidence: str = ""
+    related_suggestion_count: int = 0
+    related_suggestion_ids: List[int] = Field(default_factory=list)
+    recommended_action: str = ""
+
+
+class AgentEvaluationGovernanceSummaryResponse(BaseModel):
+    attention_level: str = "normal"
+    primary_root_cause: Optional[str] = None
+    root_cause_count: int = 0
+    fallback_related: bool = False
+    high_priority_suggestion_count: int = 0
+    summary: str = ""
+    recommended_actions: List[str] = Field(default_factory=list)
+
+
 class AgentOptimizationSuggestionResponse(BaseModel):
     suggestion_id: int
     evaluation_id: str
@@ -867,6 +891,10 @@ class AgentEvaluationSummaryResponse(BaseModel):
 
 class AgentEvaluationResponse(AgentEvaluationSummaryResponse):
     details: List[AgentEvaluationDetailResponse] = Field(default_factory=list)
+    governance_summary: Optional[AgentEvaluationGovernanceSummaryResponse] = None
+    root_cause_signals: List[AgentEvaluationRootCauseSignalResponse] = Field(
+        default_factory=list
+    )
     suggestions: List[AgentOptimizationSuggestionResponse] = Field(default_factory=list)
 
 

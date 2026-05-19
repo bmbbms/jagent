@@ -11,10 +11,12 @@ from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
     AgentEvaluationDimensionAnalyticsResponse,
+    AgentEvaluationGovernanceSummaryResponse,
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationFocusAgentResponse,
     AgentEvaluationDetailResponse,
+    AgentEvaluationRootCauseSignalResponse,
     AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
@@ -1081,10 +1083,156 @@ class EvaluationService:
             self._to_suggestion(x)
             for x in self._repository.list_suggestions(session, evaluation_id)
         ]
+        root_cause_signals = self._build_root_cause_signals(
+            details=details,
+            suggestions=suggestions,
+        )
+        governance_summary = self._build_governance_summary(
+            item=item,
+            root_cause_signals=root_cause_signals,
+            suggestions=suggestions,
+        )
         payload = self._to_summary(item).model_dump()
         payload["details"] = [x.model_dump() for x in details]
+        payload["governance_summary"] = governance_summary.model_dump()
+        payload["root_cause_signals"] = [x.model_dump() for x in root_cause_signals]
         payload["suggestions"] = [x.model_dump() for x in suggestions]
         return AgentEvaluationResponse(**payload)
+
+    @staticmethod
+    def _build_root_cause_signals(
+        *,
+        details: list[AgentEvaluationDetailResponse],
+        suggestions: list[AgentOptimizationSuggestionResponse],
+    ) -> list[AgentEvaluationRootCauseSignalResponse]:
+        signals: list[AgentEvaluationRootCauseSignalResponse] = []
+        for detail in details:
+            related_suggestions = [
+                item
+                for item in suggestions
+                if EvaluationService._is_related_suggestion(
+                    detail=detail,
+                    suggestion=item,
+                )
+            ]
+            root_cause_code = detail.problem_type or detail.dimension_code
+            signals.append(
+                AgentEvaluationRootCauseSignalResponse(
+                    root_cause_code=root_cause_code,
+                    root_cause_name=EvaluationService._resolve_root_cause_name(
+                        root_cause_code=root_cause_code,
+                        dimension_name=detail.dimension_name,
+                    ),
+                    dimension_code=detail.dimension_code,
+                    dimension_name=detail.dimension_name,
+                    score=detail.score,
+                    severity=detail.severity or "low",
+                    problem_type=detail.problem_type,
+                    evidence=detail.evidence,
+                    related_suggestion_count=len(related_suggestions),
+                    related_suggestion_ids=[
+                        item.suggestion_id for item in related_suggestions[:5]
+                    ],
+                    recommended_action=detail.suggestion,
+                )
+            )
+
+        severity_rank = {"high": 0, "medium": 1, "low": 2}
+        return sorted(
+            signals,
+            key=lambda item: (
+                severity_rank.get(item.severity, 3),
+                item.score,
+                -item.related_suggestion_count,
+                item.dimension_code,
+            ),
+        )
+
+    @staticmethod
+    def _build_governance_summary(
+        *,
+        item,
+        root_cause_signals: list[AgentEvaluationRootCauseSignalResponse],
+        suggestions: list[AgentOptimizationSuggestionResponse],
+    ) -> AgentEvaluationGovernanceSummaryResponse:
+        high_priority_suggestion_count = sum(
+            1
+            for suggestion in suggestions
+            if suggestion.priority == "high" and suggestion.status != "completed"
+        )
+        attention_level = (
+            "high"
+            if item.overall_score < 75
+            or any(signal.severity == "high" for signal in root_cause_signals)
+            or high_priority_suggestion_count > 0
+            else "normal"
+        )
+        fallback_related = any(
+            signal.problem_type == "runtime_fallback" for signal in root_cause_signals
+        )
+        recommended_actions: list[str] = []
+        for signal in root_cause_signals:
+            action = signal.recommended_action.strip()
+            if not action or action in recommended_actions:
+                continue
+            recommended_actions.append(action)
+            if len(recommended_actions) >= 3:
+                break
+
+        primary_root_cause = root_cause_signals[0].root_cause_code if root_cause_signals else None
+        if root_cause_signals:
+            summary = (
+                f"主因信号为 {root_cause_signals[0].root_cause_name}，"
+                f"共识别 {len(root_cause_signals)} 个归因信号，"
+                f"高优先级治理建议 {high_priority_suggestion_count} 条，"
+                f"fallback 关联={'是' if fallback_related else '否'}。"
+            )
+        else:
+            summary = "当前未识别到显著根因信号，可继续观察后续评估趋势。"
+
+        return AgentEvaluationGovernanceSummaryResponse(
+            attention_level=attention_level,
+            primary_root_cause=primary_root_cause,
+            root_cause_count=len(root_cause_signals),
+            fallback_related=fallback_related,
+            high_priority_suggestion_count=high_priority_suggestion_count,
+            summary=summary,
+            recommended_actions=recommended_actions,
+        )
+
+    @staticmethod
+    def _is_related_suggestion(
+        *,
+        detail: AgentEvaluationDetailResponse,
+        suggestion: AgentOptimizationSuggestionResponse,
+    ) -> bool:
+        refs = {detail.dimension_code}
+        if detail.problem_type:
+            refs.add(detail.problem_type)
+        if detail.problem_type == "runtime_fallback":
+            refs.add("fallback_count")
+        return suggestion.source_ref in refs
+
+    @staticmethod
+    def _resolve_root_cause_name(
+        *,
+        root_cause_code: str,
+        dimension_name: str,
+    ) -> str:
+        root_cause_names = {
+            "result_delivery": "结果交付收口",
+            "missing_final_response": "缺少最终答复",
+            "tool_selection_efficiency": "工具选择收敛",
+            "tool_not_executed": "工具未执行",
+            "tool_over_invocation": "工具调用过多",
+            "execution_latency": "执行时延",
+            "high_latency": "高时延执行链路",
+            "runtime_fallback": "Runtime Fallback",
+            "audit_traceability": "审计留痕完整性",
+            "sensitive_access_control": "敏感访问控制",
+            "risk_governance": "风险治理策略",
+        }
+        return root_cause_names.get(root_cause_code, dimension_name or root_cause_code)
 
     @staticmethod
     def _build_scores(
@@ -1187,21 +1335,56 @@ class EvaluationService:
         scores: dict[str, float],
         runtime_facts: EvaluationRuntimeFacts,
     ) -> list[dict]:
+        selected_tool_count = len(response.selected_tools)
+        executed_tool_count = len(runtime_facts.tool_calls)
+        completion_problem_type = (
+            "result_delivery" if response.summary else "missing_final_response"
+        )
+        if selected_tool_count > 0 and executed_tool_count == 0:
+            tool_problem_type = "tool_not_executed"
+        elif executed_tool_count > selected_tool_count > 0:
+            tool_problem_type = "tool_over_invocation"
+        else:
+            tool_problem_type = "tool_selection_efficiency"
+
+        if runtime_facts.fallback_count > 0:
+            efficiency_problem_type = "runtime_fallback"
+        elif runtime_facts.total_latency_ms >= 1500:
+            efficiency_problem_type = "high_latency"
+        else:
+            efficiency_problem_type = "execution_latency"
+
+        if runtime_facts.sensitive_access_count > runtime_facts.approved_access_count:
+            compliance_problem_type = "sensitive_access_control"
+        elif runtime_facts.data_access_logs:
+            compliance_problem_type = "audit_traceability"
+        else:
+            compliance_problem_type = "risk_governance"
         return [
             {
                 "dimension_code": "completion",
                 "dimension_name": "任务完成度",
                 "score": scores["completion"],
+                "problem_type": completion_problem_type,
                 "evidence": response.summary,
+                "severity": EvaluationService._resolve_detail_severity(
+                    scores["completion"],
+                    hard_failure=not response.summary,
+                ),
                 "suggestion": "继续补强结果结构化输出，让任务结论更容易复核和回收。",
             },
             {
                 "dimension_code": "tool_usage",
                 "dimension_name": "工具使用合理性",
                 "score": scores["tool_usage"],
+                "problem_type": tool_problem_type,
                 "evidence": (
                     f"selected={','.join(response.selected_tools) or 'none'};"
                     f" executed={len(runtime_facts.tool_calls)}"
+                ),
+                "severity": EvaluationService._resolve_detail_severity(
+                    scores["tool_usage"],
+                    hard_failure=tool_problem_type == "tool_not_executed",
                 ),
                 "suggestion": "保持工具选择收敛，减少低收益调用，提升执行稳定性。",
             },
@@ -1209,9 +1392,14 @@ class EvaluationService:
                 "dimension_code": "efficiency",
                 "dimension_name": "执行效率",
                 "score": scores["efficiency"],
+                "problem_type": efficiency_problem_type,
                 "evidence": (
                     f"latency_ms={runtime_facts.total_latency_ms};"
                     f" fallback_count={runtime_facts.fallback_count}"
+                ),
+                "severity": EvaluationService._resolve_detail_severity(
+                    scores["efficiency"],
+                    hard_failure=efficiency_problem_type in {"runtime_fallback", "high_latency"},
                 ),
                 "suggestion": "持续降低 fallback 频率和总执行耗时，提升稳定性与实时性。",
             },
@@ -1219,14 +1407,31 @@ class EvaluationService:
                 "dimension_code": "compliance",
                 "dimension_name": "合规与风险控制",
                 "score": scores["compliance"],
+                "problem_type": compliance_problem_type,
                 "evidence": (
                     f"requires_approval={response.requires_approval};"
                     f" sensitive_access={runtime_facts.sensitive_access_count};"
                     f" approved_access={runtime_facts.approved_access_count}"
                 ),
+                "severity": EvaluationService._resolve_detail_severity(
+                    scores["compliance"],
+                    hard_failure=compliance_problem_type == "sensitive_access_control",
+                ),
                 "suggestion": "高风险场景继续绑定审批、审计和数据访问留痕策略。",
             },
         ]
+
+    @staticmethod
+    def _resolve_detail_severity(
+        score: float,
+        *,
+        hard_failure: bool = False,
+    ) -> str:
+        if hard_failure or score < 75:
+            return "high"
+        if score < 88:
+            return "medium"
+        return "low"
 
     @staticmethod
     def _build_suggestions(

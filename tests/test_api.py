@@ -575,7 +575,18 @@ def test_task_evaluation_api(client: TestClient) -> None:
     assert "overall_score" in body
     assert isinstance(body["details"], list)
     assert any(item["dimension_code"] == "efficiency" for item in body["details"])
+    assert all(item["problem_type"] for item in body["details"])
+    assert all(item["severity"] in {"low", "medium", "high"} for item in body["details"])
     assert "fallback" in body["summary"] or "工具调用" in body["summary"] or "次工具调用" in body["summary"]
+    assert "governance_summary" in body
+    assert body["governance_summary"]["attention_level"] in {"normal", "high"}
+    assert "root_cause_signals" in body
+    assert isinstance(body["root_cause_signals"], list)
+    assert body["root_cause_signals"]
+    assert all(
+        item["severity"] in {"low", "medium", "high"}
+        for item in body["root_cause_signals"]
+    )
     assert isinstance(body["suggestions"], list)
     assert any(item["optimization_type"] in {"runtime", "workflow", "tool", "prompt"} for item in body["suggestions"])
 
@@ -833,6 +844,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="focusAgentList"' in response.text
     assert 'id="dimensionAnalyticsList"' in response.text
     assert 'id="rootCauseAnalyticsList"' in response.text
+    assert "root_cause_signals" in response.text or "governance_summary" in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
     assert response.text.count("function renderExecutionBacklogOverview()") == 1

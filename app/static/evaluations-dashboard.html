@@ -968,10 +968,43 @@
       const detailsHtml = (detail.details || []).map(item => `
         <div class="card">
           <div class="row"><div class="label">${escapeHtml(item.dimension_name)}</div><div class="value">${escapeHtml(item.score)}</div></div>
+          <div class="subtle">problem type：${escapeHtml(item.problem_type || "-")} / severity：${escapeHtml(item.severity || "-")}</div>
           <div class="subtle">evidence：${escapeHtml(item.evidence || "-")}</div>
           <div class="subtle">suggestion：${escapeHtml(item.suggestion || "-")}</div>
         </div>
       `).join("");
+
+      const governanceSummaryHtml = detail.governance_summary
+        ? `
+          <div class="card">
+            <div class="title">治理摘要 / ${escapeHtml(detail.governance_summary.primary_root_cause || "-")}</div>
+            <div>
+              <span class="tag ${toneByAttention(detail.governance_summary.attention_level)}">${escapeHtml(detail.governance_summary.attention_level)}</span>
+              <span class="tag">root causes / ${escapeHtml(detail.governance_summary.root_cause_count || 0)}</span>
+              <span class="tag">high priority / ${escapeHtml(detail.governance_summary.high_priority_suggestion_count || 0)}</span>
+            </div>
+            <div class="subtle">${escapeHtml(detail.governance_summary.summary || "-")}</div>
+            <div class="subtle">fallback 关联：${escapeHtml(detail.governance_summary.fallback_related ? "yes" : "no")}</div>
+            <div class="subtle">建议动作：${escapeHtml((detail.governance_summary.recommended_actions || []).join("；") || "-")}</div>
+          </div>
+        `
+        : '<div class="empty">暂无治理摘要。</div>';
+
+      const rootCauseSignalsHtml = (detail.root_cause_signals || []).length
+        ? detail.root_cause_signals.map(item => `
+          <div class="card">
+            <div class="title">${escapeHtml(item.root_cause_name)} / ${escapeHtml(item.root_cause_code)}</div>
+            <div>
+              <span class="tag ${toneByAttention(item.severity === "high" ? "high" : "normal")}">${escapeHtml(item.severity)}</span>
+              <span class="tag ${toneByScore(item.score)}">${escapeHtml(item.score)}</span>
+              <span class="tag">${escapeHtml(item.dimension_code)}</span>
+            </div>
+            <div class="subtle">problem type：${escapeHtml(item.problem_type || "-")} / related suggestions：${escapeHtml(item.related_suggestion_count || 0)}</div>
+            <div class="subtle">evidence：${escapeHtml(item.evidence || "-")}</div>
+            <div class="subtle">recommended action：${escapeHtml(item.recommended_action || "-")}</div>
+          </div>
+        `).join("")
+        : '<div class="empty">暂无自动归因信号。</div>';
 
       const suggestionsHtml = (detail.suggestions || []).length
         ? detail.suggestions.map(item => `
