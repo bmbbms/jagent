@@ -408,6 +408,97 @@
       await loadAudit();
     }
 
+    const ticketFilterInput = document.createElement("input");
+    ticketFilterInput.id = "ticketFilterInput";
+    ticketFilterInput.placeholder = "按 ticket_id 过滤";
+    el.workflowFilterInput.insertAdjacentElement("afterend", ticketFilterInput);
+
+    const suggestionFilterInput = document.createElement("input");
+    suggestionFilterInput.id = "suggestionFilterInput";
+    suggestionFilterInput.placeholder = "按 suggestion_id 过滤";
+    ticketFilterInput.insertAdjacentElement("afterend", suggestionFilterInput);
+
+    const evaluationFilterInput = document.createElement("input");
+    evaluationFilterInput.id = "evaluationFilterInput";
+    evaluationFilterInput.placeholder = "按 evaluation_id 过滤";
+    suggestionFilterInput.insertAdjacentElement("afterend", evaluationFilterInput);
+
+    const originalBuildQuery = buildQuery;
+    buildQuery = function buildAuditQueryExtended() {
+      const query = originalBuildQuery();
+      if (ticketFilterInput.value.trim()) query.set("ticket_id", ticketFilterInput.value.trim());
+      if (suggestionFilterInput.value.trim()) query.set("suggestion_id", suggestionFilterInput.value.trim());
+      if (evaluationFilterInput.value.trim()) query.set("evaluation_id", evaluationFilterInput.value.trim());
+      return query;
+    };
+
+    const originalSyncQuery = syncQuery;
+    syncQuery = function syncAuditQueryExtended() {
+      originalSyncQuery();
+      const url = new URL(window.location.href);
+      const extraPairs = {
+        ticket_id: ticketFilterInput.value.trim(),
+        suggestion_id: suggestionFilterInput.value.trim(),
+        evaluation_id: evaluationFilterInput.value.trim(),
+      };
+      Object.entries(extraPairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
+      window.history.replaceState({}, "", url);
+    };
+
+    const originalRenderDetail = renderDetail;
+    renderDetail = function renderAuditDetailExtended() {
+      originalRenderDetail();
+      const item = currentEvent();
+      if (!item) {
+        return;
+      }
+      const payload = item.payload || {};
+      const ticketId = payload.ticket_id || item.ticket_id || "";
+      const suggestionId = payload.suggestion_id || item.suggestion_id || "";
+      const evaluationId = payload.evaluation_id || item.evaluation_id || "";
+      const toolbar = el.auditDetail.querySelector(".toolbar");
+      if (!toolbar) {
+        return;
+      }
+      if (ticketId && !document.getElementById("openTicketBtn")) {
+        const ticketBtn = document.createElement("button");
+        ticketBtn.id = "openTicketBtn";
+        ticketBtn.type = "button";
+        ticketBtn.className = "secondary";
+        ticketBtn.textContent = "打开工单";
+        ticketBtn.addEventListener("click", () => {
+          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+        });
+        toolbar.appendChild(ticketBtn);
+      }
+      if (suggestionId && evaluationId && !document.getElementById("openSuggestionBtn")) {
+        const suggestionBtn = document.createElement("button");
+        suggestionBtn.id = "openSuggestionBtn";
+        suggestionBtn.type = "button";
+        suggestionBtn.className = "secondary";
+        suggestionBtn.textContent = "打开建议";
+        suggestionBtn.addEventListener("click", () => {
+          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}&suggestion_id=${encodeURIComponent(suggestionId)}`;
+        });
+        toolbar.appendChild(suggestionBtn);
+      }
+    };
+
+    const originalBootstrap = bootstrap;
+    bootstrap = async function bootstrapAuditExtended() {
+      const query = new URLSearchParams(window.location.search);
+      ticketFilterInput.value = query.get("ticket_id") || "";
+      suggestionFilterInput.value = query.get("suggestion_id") || "";
+      evaluationFilterInput.value = query.get("evaluation_id") || "";
+      await originalBootstrap();
+    };
+
     el.taskPageBtn.addEventListener("click", () => {
       const taskId = el.taskFilterInput.value.trim() || currentPayload().task_id || "";
       const target = taskId ? `/ui/tasks?task_id=${encodeURIComponent(taskId)}` : "/ui/tasks";
@@ -430,6 +521,11 @@
     });
     el.loadBtn.addEventListener("click", loadAudit);
     [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput, el.capabilityFilterInput, el.workflowFilterInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await loadAudit();
+      });
+    });
+    [ticketFilterInput, suggestionFilterInput, evaluationFilterInput].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await loadAudit();
       });

@@ -61,6 +61,9 @@ class AuditRepository:
         approval_id: str | None = None,
         capability_id: str | None = None,
         workflow: str | None = None,
+        ticket_id: str | None = None,
+        suggestion_id: int | None = None,
+        evaluation_id: str | None = None,
     ) -> List[AuditEventResponse]:
         query = session.query(AuditLogModel)
         if action:
@@ -75,6 +78,16 @@ class AuditRepository:
             query = query.filter(AuditLogModel.capability_id == capability_id)
         if workflow:
             query = query.filter(AuditLogModel.workflow_id == workflow)
+        if ticket_id:
+            query = query.filter(AuditLogModel.payload["ticket_id"].as_string() == ticket_id)
+        if suggestion_id is not None:
+            query = query.filter(
+                AuditLogModel.payload["suggestion_id"].as_integer() == suggestion_id
+            )
+        if evaluation_id:
+            query = query.filter(
+                AuditLogModel.payload["evaluation_id"].as_string() == evaluation_id
+            )
         items = query.order_by(AuditLogModel.create_time.desc()).all()
         return [
             AuditEventResponse(
@@ -82,6 +95,13 @@ class AuditRepository:
                 actor_id=item.user_id,
                 payload=item.payload or {},
                 created_at=item.create_time.isoformat(),
+                task_id=item.task_id,
+                approval_id=item.approval_id,
+                capability_id=item.capability_id,
+                workflow=item.workflow_id,
+                ticket_id=(item.payload or {}).get("ticket_id"),
+                suggestion_id=(item.payload or {}).get("suggestion_id"),
+                evaluation_id=(item.payload or {}).get("evaluation_id"),
             )
             for item in items
         ]

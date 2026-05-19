@@ -636,10 +636,15 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'id="actorFilterInput"' in response.text
     assert 'id="capabilityFilterInput"' in response.text
     assert 'id="workflowFilterInput"' in response.text
+    assert 'ticketFilterInput' in response.text or 'ticket_id' in response.text
+    assert 'suggestionFilterInput' in response.text or 'suggestion_id' in response.text
+    assert 'evaluationFilterInput' in response.text or 'evaluation_id' in response.text
     assert 'id="workflowPageBtn"' in response.text
     assert 'id="capabilityPageBtn"' in response.text
     assert 'id="openApprovalBtn"' in response.text or "openApprovalBtn" in response.text
     assert 'id="openCapabilityBtn"' in response.text or "openCapabilityBtn" in response.text
+    assert 'openTicketBtn' in response.text or '/ui/service-tickets?ticket_id=' in response.text
+    assert 'openSuggestionBtn' in response.text or 'suggestion_id=' in response.text
 
 
 def test_workflows_ui_page(client: TestClient) -> None:
@@ -893,6 +898,33 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     audit_actions = {item["action"] for item in ticket_audit_events}
     assert "service_ticket.create" in audit_actions
     assert "service_ticket.update" in audit_actions
+
+    ticket_id_audit_response = client.get(
+        "/api/audit",
+        params={"ticket_id": ticket_bound["ticket_id"]},
+    )
+    assert ticket_id_audit_response.status_code == 200
+    ticket_id_audit_events = ticket_id_audit_response.json()
+    assert ticket_id_audit_events
+    assert all(item["payload"].get("ticket_id") == ticket_bound["ticket_id"] for item in ticket_id_audit_events)
+
+    suggestion_id_audit_response = client.get(
+        "/api/audit",
+        params={"suggestion_id": first["suggestion_id"]},
+    )
+    assert suggestion_id_audit_response.status_code == 200
+    suggestion_id_audit_events = suggestion_id_audit_response.json()
+    assert suggestion_id_audit_events
+    assert all(item["payload"].get("suggestion_id") == first["suggestion_id"] for item in suggestion_id_audit_events)
+
+    evaluation_id_audit_response = client.get(
+        "/api/audit",
+        params={"evaluation_id": ticket["linked_evaluation_id"]},
+    )
+    assert evaluation_id_audit_response.status_code == 200
+    evaluation_id_audit_events = evaluation_id_audit_response.json()
+    assert evaluation_id_audit_events
+    assert all(item["payload"].get("evaluation_id") == ticket["linked_evaluation_id"] for item in evaluation_id_audit_events)
 
     final_overview_response = client.get(
         "/api/evaluations/suggestions/overview",

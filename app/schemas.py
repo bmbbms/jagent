@@ -278,6 +278,13 @@ class AuditEventResponse(BaseModel):
     actor_id: str
     payload: Dict[str, Any]
     created_at: str
+    task_id: Optional[str] = None
+    approval_id: Optional[str] = None
+    capability_id: Optional[str] = None
+    workflow: Optional[str] = None
+    ticket_id: Optional[str] = None
+    suggestion_id: Optional[int] = None
+    evaluation_id: Optional[str] = None
 
 
 class AgentTaskEventResponse(BaseModel):
