@@ -122,6 +122,17 @@ class CapabilityInfo(BaseModel):
     triggers: List[str] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
     source: str = "local"
+    version: str = "v1"
+    risk_level: str = "low"
+    requires_approval: bool = False
+    tags: List[str] = Field(default_factory=list)
+    transport: str = "inproc"
+    endpoint: Optional[str] = None
+    service_name: Optional[str] = None
+    service_host: Optional[str] = None
+    service_port: Optional[int] = None
+    service_path: str = "/api/chat"
+    extras: Dict[str, str] = Field(default_factory=dict)
 
 
 class ExternalAgentRegisterRequest(BaseModel):

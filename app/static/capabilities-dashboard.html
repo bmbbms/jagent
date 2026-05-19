@@ -415,6 +415,9 @@
             <div class="detail-row"><div class="label">来源</div><div class="value">${escapeHtml(source)}</div></div>
             <div class="detail-row"><div class="label">业务域</div><div class="value">${escapeHtml(item.biz_domain)}</div></div>
             <div class="detail-row"><div class="label">优先级</div><div class="value">${escapeHtml(item.priority)}</div></div>
+            <div class="detail-row"><div class="label">版本</div><div class="value">${escapeHtml(item.version || "-")}</div></div>
+            <div class="detail-row"><div class="label">风险等级</div><div class="value">${escapeHtml(item.risk_level || "-")}</div></div>
+            <div class="detail-row"><div class="label">审批要求</div><div class="value">${escapeHtml(item.requires_approval ? "true" : "false")}</div></div>
             <div class="detail-row"><div class="label">Skill 数</div><div class="value">${escapeHtml((item.skills || []).length)}</div></div>
             <div class="detail-row"><div class="label">Trigger 数</div><div class="value">${escapeHtml((item.triggers || []).length)}</div></div>
           </div>
@@ -431,17 +434,31 @@
         </div>
 
         <div class="section-split">
+          <h2>Tags</h2>
+          ${renderTagList(item.tags || [], "warning")}
+        </div>
+
+        <div class="section-split">
           <h2>Integration Info</h2>
-          ${external ? `
+          ${(external || item.transport !== "inproc") ? `
             <div class="detail-card">
               <div class="detail-grid">
-                <div class="detail-row"><div class="label">Transport</div><div class="value">${escapeHtml(external.transport || "-")}</div></div>
-                <div class="detail-row"><div class="label">Endpoint</div><div class="value">${escapeHtml(external.endpoint || "-")}</div></div>
-                <div class="detail-row"><div class="label">Service Path</div><div class="value">${escapeHtml(external.service_path || "-")}</div></div>
-                <div class="detail-row"><div class="label">Version</div><div class="value">${escapeHtml(external.version || "-")}</div></div>
+                <div class="detail-row"><div class="label">Transport</div><div class="value">${escapeHtml(item.transport || "-")}</div></div>
+                <div class="detail-row"><div class="label">Endpoint</div><div class="value">${escapeHtml(item.endpoint || "-")}</div></div>
+                <div class="detail-row"><div class="label">Service Path</div><div class="value">${escapeHtml(item.service_path || "-")}</div></div>
+                <div class="detail-row"><div class="label">Service Name</div><div class="value">${escapeHtml(item.service_name || "-")}</div></div>
+                <div class="detail-row"><div class="label">Service Host</div><div class="value">${escapeHtml(item.service_host || "-")}</div></div>
+                <div class="detail-row"><div class="label">Service Port</div><div class="value">${escapeHtml(item.service_port ?? "-")}</div></div>
               </div>
             </div>
           ` : '<div class="empty">当前为本地内置能力，没有额外的远端接入元数据。</div>'}
+        </div>
+
+        <div class="section-split">
+          <h2>Extras</h2>
+          ${Object.keys(item.extras || {}).length ? `<div class="detail-card"><div class="detail-grid">${Object.entries(item.extras || {}).map(([key, value]) => `
+            <div class="detail-row"><div class="label">${escapeHtml(key)}</div><div class="value">${escapeHtml(value)}</div></div>
+          `).join("")}</div></div>` : '<div class="empty">暂无 extras 元数据。</div>'}
         </div>
 
         <div class="section-split">
@@ -498,10 +515,18 @@
       const capabilityId = el.capabilityIdInput.value.trim() || state.capabilityId;
       if (!capabilityId) return;
       state.capabilityId = capabilityId;
-      state.selectedCapability = state.capabilities.find(item => item.capability_id === capabilityId) || null;
-      renderCapabilityList();
-      renderCapabilityDetail();
-      updateQuery();
+      fetchJson(`/api/capabilities/${encodeURIComponent(capabilityId)}`)
+        .then(detail => {
+          state.selectedCapability = detail;
+          renderCapabilityList();
+          renderCapabilityDetail();
+          updateQuery();
+        })
+        .catch(() => {
+          state.selectedCapability = null;
+          renderCapabilityList();
+          renderCapabilityDetail();
+        });
     }
 
     async function bootstrap() {

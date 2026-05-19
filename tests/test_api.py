@@ -34,6 +34,9 @@ def test_capabilities(client: TestClient) -> None:
     merchant_qa = next(item for item in body if item["capability_id"] == "merchant.qa")
     assert "merchant_qa" in merchant_qa["skills"]
     assert merchant_qa["source"] == "local"
+    assert "risk_level" in merchant_qa
+    assert "requires_approval" in merchant_qa
+    assert "transport" in merchant_qa
 
 
 def test_capabilities_support_source_filter(client: TestClient) -> None:
@@ -46,6 +49,16 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
     external_response = client.get("/api/capabilities", params={"source": "external"})
     assert external_response.status_code == 200
     assert isinstance(external_response.json(), list)
+
+
+def test_capability_detail(client: TestClient) -> None:
+    response = client.get("/api/capabilities/merchant.qa")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["capability_id"] == "merchant.qa"
+    assert body["source"] == "local"
+    assert "tags" in body
+    assert "extras" in body
 
 
 def test_skills(client: TestClient) -> None:
