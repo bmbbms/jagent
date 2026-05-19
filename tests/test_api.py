@@ -43,6 +43,10 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
     assert body
     assert all(item["source"] == "local" for item in body)
 
+    external_response = client.get("/api/capabilities", params={"source": "external"})
+    assert external_response.status_code == 200
+    assert isinstance(external_response.json(), list)
+
 
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})

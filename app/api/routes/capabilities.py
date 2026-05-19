@@ -15,7 +15,10 @@ def list_capabilities(
 ) -> list[CapabilityInfo]:
     items = registry.describe_capabilities(biz_domain)
     if source:
-        items = [item for item in items if item.source == source]
+        if source == "external":
+            items = [item for item in items if item.source != "local"]
+        else:
+            items = [item for item in items if item.source == source]
     return [
         CapabilityInfo(
             capability_id=item.capability_id,
