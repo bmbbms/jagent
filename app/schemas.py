@@ -493,6 +493,10 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     runtime_session_count: int = 0
     observation_count: int = 0
     fallback_count: int = 0
+    mcp_call_count: int = 0
+    mcp_error_count: int = 0
+    mcp_provider_count: int = 0
+    mcp_providers: List[str] = Field(default_factory=list)
     external_agent_call_count: int = 0
     external_agent_error_count: int = 0
     agent_handoff_count: int = 0

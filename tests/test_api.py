@@ -357,6 +357,9 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert body["runtime_sessions"][0]["tool_call_count"] >= 1
     assert "runtime_session_count" in body["runtime_governance"]
     assert "fallback_count" in body["runtime_governance"]
+    assert "mcp_call_count" in body["runtime_governance"]
+    assert "mcp_error_count" in body["runtime_governance"]
+    assert "mcp_providers" in body["runtime_governance"]
     assert "risk_flags" in body["runtime_governance"]
     assert body["evaluation"] is not None
     event_titles = {item["title"] for item in body["events"]}
@@ -560,6 +563,8 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="observations"' in response.text
     assert 'id="runtimeSessions"' in response.text
     assert 'id="runtimeGovernance"' in response.text
+    assert "MCP 调用" in response.text
+    assert "MCP Provider" in response.text
     assert 'id="pageSizeFilter"' in response.text
     assert 'id="sortByFilter"' in response.text
     assert 'id="prevPageBtn"' in response.text

@@ -1150,6 +1150,8 @@
           <div class="detail-item"><div class="label">运行会话</div><div class="value">${escapeHtml(summary.runtime_session_count)}</div></div>
           <div class="detail-item"><div class="label">观测数</div><div class="value">${escapeHtml(summary.observation_count)}</div></div>
           <div class="detail-item"><div class="label">Fallback</div><div class="value">${escapeHtml(summary.fallback_count)}</div></div>
+          <div class="detail-item"><div class="label">MCP 调用</div><div class="value">${escapeHtml(summary.mcp_call_count || 0)} / 失败 ${escapeHtml(summary.mcp_error_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">MCP Provider</div><div class="value">${escapeHtml((summary.mcp_providers || []).join(", ") || "-")} / ${escapeHtml(summary.mcp_provider_count || 0)}</div></div>
           <div class="detail-item"><div class="label">外部 Agent 调用</div><div class="value">${escapeHtml(summary.external_agent_call_count)} / 失败 ${escapeHtml(summary.external_agent_error_count)}</div></div>
           <div class="detail-item"><div class="label">Agent 切换</div><div class="value">${escapeHtml(summary.agent_handoff_count)} / ${escapeHtml(summary.unique_agent_count)}</div></div>
           <div class="detail-item"><div class="label">活跃 Agent</div><div class="value">${escapeHtml((summary.active_agents || []).join(", ") || "-")}</div></div>

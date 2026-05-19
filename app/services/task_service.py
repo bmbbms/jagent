@@ -627,6 +627,21 @@ class TaskService:
             if item.agent_id and item.agent_id not in active_agents:
                 active_agents.append(item.agent_id)
         agent_handoff_count = max(0, len(active_agents) - 1)
+        mcp_call_count = sum(1 for item in events if item.event_type == "mcp_call_finished")
+        mcp_error_count = sum(
+            1
+            for item in events
+            if item.event_type == "mcp_call_finished" and item.event_status == "failed"
+        )
+        mcp_providers = sorted(
+            {
+                str(item.event_payload.get("provider"))
+                for item in events
+                if item.event_type in {"mcp_call_started", "mcp_call_finished"}
+                and isinstance(item.event_payload, dict)
+                and item.event_payload.get("provider")
+            }
+        )
         external_agent_call_count = sum(
             1 for item in events if item.event_type == "external_agent_call_finished"
         )
@@ -639,6 +654,8 @@ class TaskService:
         risk_flags: list[str] = []
         if fallback_count:
             risk_flags.append("runtime_fallback_detected")
+        if mcp_error_count:
+            risk_flags.append("mcp_error_detected")
         if external_agent_error_count:
             risk_flags.append("external_agent_error_detected")
         if agent_handoff_count > 0:
@@ -649,6 +666,10 @@ class TaskService:
             runtime_session_count=len(runtime_sessions),
             observation_count=len(observations),
             fallback_count=fallback_count,
+            mcp_call_count=mcp_call_count,
+            mcp_error_count=mcp_error_count,
+            mcp_provider_count=len(mcp_providers),
+            mcp_providers=mcp_providers,
             external_agent_call_count=external_agent_call_count,
             external_agent_error_count=external_agent_error_count,
             agent_handoff_count=agent_handoff_count,
