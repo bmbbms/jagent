@@ -139,6 +139,26 @@ class ExternalAgentRegisterRequest(BaseModel):
     extras: Dict[str, str] = Field(default_factory=dict)
 
 
+class ExternalAgentUpdateRequest(BaseModel):
+    capability_name: str
+    biz_domain: BizDomain
+    description: str
+    priority: int = 100
+    triggers: List[str] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+    version: str = "v1"
+    risk_level: str = "low"
+    requires_approval: bool = False
+    tags: List[str] = Field(default_factory=list)
+    transport: str = "http"
+    endpoint: Optional[str] = None
+    service_name: Optional[str] = None
+    service_host: Optional[str] = None
+    service_port: Optional[int] = None
+    service_path: str = "/api/chat"
+    extras: Dict[str, str] = Field(default_factory=dict)
+
+
 class ExternalAgentAddRequest(BaseModel):
     agent_url: str
     biz_domain: BizDomain

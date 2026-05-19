@@ -57,9 +57,13 @@
       border-color: var(--accent);
       color: #fff;
     }
+    button.secondary {
+      background: #f1e4d4;
+      border-color: #e0c9af;
+    }
     .layout {
       display: grid;
-      grid-template-columns: 460px minmax(0, 1fr);
+      grid-template-columns: 520px minmax(0, 1fr);
       gap: 20px;
     }
     .panel {
@@ -137,6 +141,16 @@
       font-size: 12px;
       margin: 0;
     }
+    .mode-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8ecdd;
+      border: 1px solid #ecd1b2;
+    }
     @media (max-width: 1180px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -147,7 +161,7 @@
     <div class="header">
       <div>
         <h1>外部 Agent 管理</h1>
-        <p>支持按 URL 自动发现和添加通用外部 Agent。当前优先支持 A2A Agent Card 自动发现，也支持保留手工指定业务域、触发词、优先级和技能，用于接入企业内部或第三方智能体服务。</p>
+        <p>支持通过 URL 自动发现、添加、编辑、验证和删除通用外部 Agent。当前优先支持 A2A Agent Card 自动发现，也支持保留手工配置的业务域、触发词、优先级和技能标签，用于接入企业内部或第三方智能体服务。</p>
       </div>
       <div class="nav">
         <a href="/ui/tasks">任务面板</a>
@@ -158,11 +172,30 @@
     <div class="layout">
       <div>
         <section class="panel">
-          <h2>通用添加</h2>
-          <div class="form-grid">
+          <h2>通用接入与编辑</h2>
+          <div id="editorModeBanner" class="mode-banner">
+            <div>
+              <strong id="editorModeText">当前模式：新增外部 Agent</strong>
+              <div class="subtle">可以先自动发现，再直接新增；也可以从右侧列表加载已有 Agent 后进行编辑保存。</div>
+            </div>
+            <button id="resetFormBtn" class="secondary">重置表单</button>
+          </div>
+          <div class="form-grid" style="margin-top: 14px;">
             <div class="field">
               <label for="agentUrlInput">Agent URL</label>
               <input id="agentUrlInput" value="http://172.20.6.16:36483/a2a" placeholder="例如 http://host:port/a2a 或 http://host:port" />
+            </div>
+            <div class="field">
+              <label for="capabilityIdInput">capability_id</label>
+              <input id="capabilityIdInput" placeholder="发现或从列表载入后自动填充，编辑时不可修改" />
+            </div>
+            <div class="field">
+              <label for="capabilityNameInput">Agent 名称</label>
+              <input id="capabilityNameInput" placeholder="例如 Payment Regulation Agent" />
+            </div>
+            <div class="field">
+              <label for="descriptionInput">描述</label>
+              <textarea id="descriptionInput" placeholder="简要说明该 Agent 的能力边界和适用场景"></textarea>
             </div>
             <div class="row">
               <div class="field">
@@ -179,25 +212,59 @@
                 <input id="priorityInput" type="number" value="1" min="1" max="999" />
               </div>
             </div>
+            <div class="row">
+              <div class="field">
+                <label for="transportInput">传输协议</label>
+                <select id="transportInput">
+                  <option value="a2a">a2a</option>
+                  <option value="http">http</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="servicePathInput">服务路径</label>
+                <input id="servicePathInput" value="/a2a" placeholder="/a2a 或 /api/chat" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="versionInput">版本</label>
+                <input id="versionInput" value="v1" />
+              </div>
+              <div class="field">
+                <label for="riskLevelInput">风险等级</label>
+                <select id="riskLevelInput">
+                  <option value="low" selected>low</option>
+                  <option value="medium">medium</option>
+                  <option value="high">high</option>
+                </select>
+              </div>
+            </div>
             <div class="field">
               <label for="triggersInput">触发词</label>
               <input id="triggersInput" value="法规,合规,报告,功能" placeholder="逗号分隔，例如 法规,合规,报告" />
             </div>
             <div class="field">
-              <label for="skillsInput">技能标识</label>
+              <label for="skillsInput">技能标签</label>
               <input id="skillsInput" value="external_task_execution,regulation_query" placeholder="逗号分隔，例如 external_task_execution,regulation_query" />
             </div>
             <div class="field">
               <label for="tagsInput">标签</label>
               <input id="tagsInput" value="generic-add,a2a" placeholder="逗号分隔，例如 external,a2a" />
             </div>
+            <div class="field">
+              <label>
+                <input id="requiresApprovalInput" type="checkbox" />
+                高风险执行需要审批
+              </label>
+            </div>
             <div class="actions">
               <button id="discoverBtn" class="primary">先发现</button>
               <button id="addBtn" class="primary">直接添加</button>
+              <button id="updateBtn" class="secondary">保存编辑</button>
               <button id="refreshBtn">刷新列表</button>
             </div>
             <div id="pageStatus" class="status">待操作</div>
-            <div class="hint">建议流程：先点“先发现”确认自动识别结果，再点“直接添加”。</div>
+            <div class="hint">建议流程：先点击“先发现”确认自动识别结果，再点击“直接添加”。如果右侧已有 Agent，需要调整业务域、触发词、优先级或技能标签，可以先加载到表单后点击“保存编辑”。</div>
           </div>
         </section>
 
@@ -205,23 +272,19 @@
           <h2>验证执行</h2>
           <div class="form-grid">
             <div class="field">
-              <label for="capabilityIdInput">目标 capability_id</label>
-              <input id="capabilityIdInput" placeholder="先发现或添加后会自动填充" />
-            </div>
-            <div class="field">
               <label for="verifyMessageInput">验证问题</label>
               <textarea id="verifyMessageInput">你支持的功能</textarea>
             </div>
             <div class="actions">
               <button id="verifyBtn" class="primary">发送验证任务</button>
             </div>
-            <div class="hint">验证会直接调用 `/api/chat`，并将 `metadata.requested_agent_id` 指向当前外部 Agent。</div>
+            <div class="hint">验证会直接调用 <code>/api/chat</code>，并将 <code>metadata.requested_agent_id</code> 指向当前 capability_id。</div>
           </div>
         </section>
 
         <section class="panel">
           <h2>最近结果</h2>
-          <pre id="resultBox" class="payload">等待发现、添加或验证结果...</pre>
+          <pre id="resultBox" class="payload">等待发现、添加、编辑或验证结果...</pre>
         </section>
       </div>
 
@@ -236,24 +299,53 @@
   </div>
 
   <script>
+    const defaultFormState = {
+      agent_url: "http://172.20.6.16:36483/a2a",
+      capability_id: "",
+      capability_name: "",
+      description: "",
+      biz_domain: "merchant",
+      priority: 1,
+      transport: "a2a",
+      service_path: "/a2a",
+      version: "v1",
+      risk_level: "low",
+      triggers: "法规,合规,报告,功能",
+      skills: "external_task_execution,regulation_query",
+      tags: "generic-add,a2a",
+      requires_approval: false,
+    };
+
     const el = {
       agentUrlInput: document.getElementById("agentUrlInput"),
+      capabilityIdInput: document.getElementById("capabilityIdInput"),
+      capabilityNameInput: document.getElementById("capabilityNameInput"),
+      descriptionInput: document.getElementById("descriptionInput"),
       bizDomainSelect: document.getElementById("bizDomainSelect"),
       priorityInput: document.getElementById("priorityInput"),
+      transportInput: document.getElementById("transportInput"),
+      servicePathInput: document.getElementById("servicePathInput"),
+      versionInput: document.getElementById("versionInput"),
+      riskLevelInput: document.getElementById("riskLevelInput"),
       triggersInput: document.getElementById("triggersInput"),
       skillsInput: document.getElementById("skillsInput"),
       tagsInput: document.getElementById("tagsInput"),
-      capabilityIdInput: document.getElementById("capabilityIdInput"),
+      requiresApprovalInput: document.getElementById("requiresApprovalInput"),
       verifyMessageInput: document.getElementById("verifyMessageInput"),
       discoverBtn: document.getElementById("discoverBtn"),
       addBtn: document.getElementById("addBtn"),
+      updateBtn: document.getElementById("updateBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
+      resetFormBtn: document.getElementById("resetFormBtn"),
       verifyBtn: document.getElementById("verifyBtn"),
+      editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
       listMeta: document.getElementById("listMeta"),
       agentList: document.getElementById("agentList"),
     };
+
+    let editingCapabilityId = "";
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -280,6 +372,33 @@
         : JSON.stringify(payload, null, 2);
     }
 
+    function setEditorMode(isEditing) {
+      el.capabilityIdInput.readOnly = true;
+      el.updateBtn.disabled = !isEditing;
+      el.editorModeText.textContent = isEditing
+        ? `当前模式：编辑 ${editingCapabilityId}`
+        : "当前模式：新增外部 Agent";
+    }
+
+    function resetForm() {
+      editingCapabilityId = "";
+      el.agentUrlInput.value = defaultFormState.agent_url;
+      el.capabilityIdInput.value = defaultFormState.capability_id;
+      el.capabilityNameInput.value = defaultFormState.capability_name;
+      el.descriptionInput.value = defaultFormState.description;
+      el.bizDomainSelect.value = defaultFormState.biz_domain;
+      el.priorityInput.value = String(defaultFormState.priority);
+      el.transportInput.value = defaultFormState.transport;
+      el.servicePathInput.value = defaultFormState.service_path;
+      el.versionInput.value = defaultFormState.version;
+      el.riskLevelInput.value = defaultFormState.risk_level;
+      el.triggersInput.value = defaultFormState.triggers;
+      el.skillsInput.value = defaultFormState.skills;
+      el.tagsInput.value = defaultFormState.tags;
+      el.requiresApprovalInput.checked = defaultFormState.requires_approval;
+      setEditorMode(false);
+    }
+
     async function requestJson(url, options = {}) {
       const response = await fetch(url, options);
       const text = await response.text();
@@ -291,21 +410,61 @@
       return body;
     }
 
-    function buildPayload() {
+    function buildDiscoveryPayload() {
       return {
         agent_url: el.agentUrlInput.value.trim(),
         biz_domain: el.bizDomainSelect.value,
+        capability_id: el.capabilityIdInput.value.trim() || null,
+        capability_name: el.capabilityNameInput.value.trim() || null,
+        description: el.descriptionInput.value.trim() || null,
         priority: Number(el.priorityInput.value || "50"),
         triggers: parseCsv(el.triggersInput.value),
         skills: parseCsv(el.skillsInput.value),
+        version: el.versionInput.value.trim() || null,
+        risk_level: el.riskLevelInput.value,
+        requires_approval: el.requiresApprovalInput.checked,
         tags: parseCsv(el.tagsInput.value),
+        transport: el.transportInput.value,
+        service_path: el.servicePathInput.value.trim() || null,
       };
     }
 
-    function fillCapability(metadata) {
-      if (metadata?.capability_id) {
-        el.capabilityIdInput.value = metadata.capability_id;
-      }
+    function buildUpdatePayload() {
+      return {
+        capability_name: el.capabilityNameInput.value.trim(),
+        biz_domain: el.bizDomainSelect.value,
+        description: el.descriptionInput.value.trim(),
+        priority: Number(el.priorityInput.value || "100"),
+        triggers: parseCsv(el.triggersInput.value),
+        skills: parseCsv(el.skillsInput.value),
+        version: el.versionInput.value.trim() || "v1",
+        risk_level: el.riskLevelInput.value,
+        requires_approval: el.requiresApprovalInput.checked,
+        tags: parseCsv(el.tagsInput.value),
+        transport: el.transportInput.value,
+        endpoint: el.agentUrlInput.value.trim(),
+        service_path: el.servicePathInput.value.trim() || "/api/chat",
+        extras: {},
+      };
+    }
+
+    function fillForm(metadata) {
+      editingCapabilityId = metadata?.capability_id || "";
+      el.agentUrlInput.value = metadata?.endpoint || "";
+      el.capabilityIdInput.value = metadata?.capability_id || "";
+      el.capabilityNameInput.value = metadata?.capability_name || "";
+      el.descriptionInput.value = metadata?.description || "";
+      el.bizDomainSelect.value = metadata?.biz_domain || "merchant";
+      el.priorityInput.value = String(metadata?.priority ?? 1);
+      el.transportInput.value = metadata?.transport || "http";
+      el.servicePathInput.value = metadata?.service_path || "/api/chat";
+      el.versionInput.value = metadata?.version || "v1";
+      el.riskLevelInput.value = metadata?.risk_level || "low";
+      el.triggersInput.value = (metadata?.triggers || []).join(",");
+      el.skillsInput.value = (metadata?.skills || []).join(",");
+      el.tagsInput.value = (metadata?.tags || []).join(",");
+      el.requiresApprovalInput.checked = Boolean(metadata?.requires_approval);
+      setEditorMode(Boolean(editingCapabilityId));
     }
 
     function renderAgentList(items) {
@@ -323,6 +482,7 @@
               <div class="subtle">${escapeHtml(item.capability_id)}</div>
             </div>
             <div class="actions">
+              <button data-edit-agent="${escapeHtml(item.capability_id)}">加载编辑</button>
               <button data-use-agent="${escapeHtml(item.capability_id)}">用于验证</button>
               <button data-delete-agent="${escapeHtml(item.capability_id)}">删除</button>
             </div>
@@ -343,22 +503,50 @@
         </div>
       `).join("");
 
+      el.agentList.querySelectorAll("[data-edit-agent]").forEach(node => {
+        node.addEventListener("click", () => {
+          const capabilityId = node.getAttribute("data-edit-agent") || "";
+          const target = items.find(item => item.capability_id === capabilityId);
+          if (!target) {
+            return;
+          }
+          fillForm(target);
+          setStatus(`已载入 ${capabilityId}，可以编辑后保存`, "success");
+          showResult(target);
+        });
+      });
+
       el.agentList.querySelectorAll("[data-use-agent]").forEach(node => {
         node.addEventListener("click", () => {
-          el.capabilityIdInput.value = node.getAttribute("data-use-agent") || "";
-          setStatus("已填充到验证区域", "success");
+          const capabilityId = node.getAttribute("data-use-agent") || "";
+          if (!capabilityId) {
+            return;
+          }
+          el.capabilityIdInput.value = capabilityId;
+          editingCapabilityId = capabilityId;
+          setEditorMode(true);
+          setStatus("已填入到验证区域", "success");
         });
       });
 
       el.agentList.querySelectorAll("[data-delete-agent]").forEach(node => {
         node.addEventListener("click", async () => {
           const capabilityId = node.getAttribute("data-delete-agent") || "";
-          if (!capabilityId) return;
-          if (!window.confirm(`确认删除外部 Agent：${capabilityId} 吗？`)) return;
+          if (!capabilityId) {
+            return;
+          }
+          if (!window.confirm(`确认删除外部 Agent：${capabilityId} 吗？`)) {
+            return;
+          }
           try {
             setStatus("删除中...");
             const response = await fetch(`/api/external-agents/${encodeURIComponent(capabilityId)}`, { method: "DELETE" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            if (editingCapabilityId === capabilityId) {
+              resetForm();
+            }
             setStatus("删除成功", "success");
             await loadAgentList();
           } catch (error) {
@@ -385,9 +573,9 @@
         const result = await requestJson("/api/external-agents/discover", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPayload()),
+          body: JSON.stringify(buildDiscoveryPayload()),
         });
-        fillCapability(result);
+        fillForm(result);
         showResult(result);
         setStatus("发现成功", "success");
       } catch (error) {
@@ -402,9 +590,9 @@
         const result = await requestJson("/api/external-agents/add", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPayload()),
+          body: JSON.stringify(buildDiscoveryPayload()),
         });
-        fillCapability(result);
+        fillForm(result);
         showResult(result);
         setStatus("添加成功", "success");
         await loadAgentList();
@@ -414,8 +602,31 @@
       }
     }
 
+    async function updateAgent() {
+      const capabilityId = (editingCapabilityId || el.capabilityIdInput.value || "").trim();
+      if (!capabilityId) {
+        setStatus("请先从列表加载一个 Agent 再编辑保存", "warning");
+        return;
+      }
+      try {
+        setStatus("保存编辑中...");
+        const result = await requestJson(`/api/external-agents/${encodeURIComponent(capabilityId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildUpdatePayload()),
+        });
+        fillForm(result);
+        showResult(result);
+        setStatus("保存成功", "success");
+        await loadAgentList();
+      } catch (error) {
+        setStatus("保存失败", "danger");
+        showResult(error.message);
+      }
+    }
+
     async function verifyAgent() {
-      const capabilityId = el.capabilityIdInput.value.trim();
+      const capabilityId = (editingCapabilityId || el.capabilityIdInput.value || "").trim();
       if (!capabilityId) {
         setStatus("请先填写 capability_id", "warning");
         return;
@@ -442,9 +653,15 @@
 
     el.discoverBtn.addEventListener("click", discoverAgent);
     el.addBtn.addEventListener("click", addAgent);
+    el.updateBtn.addEventListener("click", updateAgent);
     el.refreshBtn.addEventListener("click", loadAgentList);
+    el.resetFormBtn.addEventListener("click", () => {
+      resetForm();
+      setStatus("已重置表单", "success");
+    });
     el.verifyBtn.addEventListener("click", verifyAgent);
 
+    resetForm();
     loadAgentList();
   </script>
 </body>

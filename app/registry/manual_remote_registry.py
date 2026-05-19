@@ -33,6 +33,17 @@ class ManualRemoteCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         self._capabilities[metadata.capability_id] = metadata
         return metadata
 
+    def update_remote(
+        self,
+        capability_id: str,
+        metadata: CapabilityMetadata,
+    ) -> CapabilityMetadata:
+        if capability_id not in self._capabilities:
+            raise KeyError(f"External capability not found: {capability_id}")
+        if metadata.capability_id != capability_id:
+            raise ValueError("capability_id in path and payload must match.")
+        return self.register_remote(metadata)
+
     def unregister(self, capability_id: str) -> bool:
         return self._capabilities.pop(capability_id, None) is not None
 

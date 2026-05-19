@@ -10,6 +10,7 @@ from app.schemas import (
     ExternalAgentAddRequest,
     ExternalAgentInfo,
     ExternalAgentRegisterRequest,
+    ExternalAgentUpdateRequest,
 )
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
 
@@ -93,6 +94,49 @@ def list_external_agents(
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
 ) -> list[ExternalAgentInfo]:
     return [_to_response(item) for item in registry.describe_capabilities()]
+
+
+@router.put("/{capability_id}", response_model=ExternalAgentInfo)
+def update_external_agent(
+    capability_id: str,
+    request: ExternalAgentUpdateRequest,
+    registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+) -> ExternalAgentInfo:
+    try:
+        metadata = registry.update_remote(
+            capability_id,
+            CapabilityMetadata(
+                capability_id=capability_id,
+                capability_name=request.capability_name,
+                biz_domain=request.biz_domain,
+                description=request.description,
+                priority=request.priority,
+                triggers=request.triggers,
+                skills=request.skills,
+                version=request.version,
+                risk_level=request.risk_level,
+                requires_approval=request.requires_approval,
+                tags=request.tags,
+                transport=request.transport,
+                endpoint=request.endpoint,
+                service_name=request.service_name,
+                service_host=request.service_host,
+                service_port=request.service_port,
+                service_path=request.service_path,
+                extras=request.extras,
+            ),
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return _to_response(metadata)
 
 
 @router.delete("/{capability_id}", status_code=status.HTTP_204_NO_CONTENT)

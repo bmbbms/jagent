@@ -332,8 +332,10 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     response = client.get("/ui/external-agents")
     assert response.status_code == 200
     assert 'id="agentUrlInput"' in response.text
+    assert 'id="capabilityNameInput"' in response.text
     assert 'id="discoverBtn"' in response.text
     assert 'id="addBtn"' in response.text
+    assert 'id="updateBtn"' in response.text
     assert 'id="verifyBtn"' in response.text
     assert 'id="agentList"' in response.text
 

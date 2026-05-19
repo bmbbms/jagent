@@ -328,3 +328,65 @@ def test_discover_and_add_generic_a2a_agent(
     chat_body = chat_response.json()
     assert chat_body["capability_id"] == added["capability_id"]
     assert "transport:a2a" in chat_body["audit_tags"]
+
+
+def test_update_registered_external_agent(
+    client: TestClient,
+    external_agent_server: str,
+) -> None:
+    register_response = client.post(
+        "/api/external-agents/register",
+        json={
+            "capability_id": "external.stub.agent",
+            "capability_name": "External Stub Agent",
+            "biz_domain": "merchant",
+            "description": "External agent integration verification",
+            "priority": 1,
+            "triggers": ["external", "remote"],
+            "skills": ["external_task_execution"],
+            "endpoint": external_agent_server,
+            "service_path": "/api/chat",
+            "tags": ["test"],
+        },
+    )
+    assert register_response.status_code == 200
+
+    update_response = client.put(
+        "/api/external-agents/external.stub.agent",
+        json={
+            "capability_name": "External Stub Agent Updated",
+            "biz_domain": "operations",
+            "description": "Updated description for external stub agent",
+            "priority": 9,
+            "triggers": ["quota", "approval"],
+            "skills": ["external_task_execution", "quota_review_support"],
+            "version": "v2",
+            "risk_level": "medium",
+            "requires_approval": True,
+            "tags": ["updated", "external"],
+            "transport": "http",
+            "endpoint": external_agent_server,
+            "service_path": "/api/chat",
+            "extras": {"source": "manual_remote"},
+        },
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["capability_id"] == "external.stub.agent"
+    assert updated["capability_name"] == "External Stub Agent Updated"
+    assert updated["biz_domain"] == "operations"
+    assert updated["priority"] == 9
+    assert updated["triggers"] == ["quota", "approval"]
+    assert updated["skills"] == ["external_task_execution", "quota_review_support"]
+    assert updated["version"] == "v2"
+    assert updated["risk_level"] == "medium"
+    assert updated["requires_approval"] is True
+
+    external_agents_response = client.get("/api/external-agents")
+    assert external_agents_response.status_code == 200
+    external_agents = external_agents_response.json()
+    updated_item = next(
+        item for item in external_agents if item["capability_id"] == "external.stub.agent"
+    )
+    assert updated_item["capability_name"] == "External Stub Agent Updated"
+    assert updated_item["biz_domain"] == "operations"
