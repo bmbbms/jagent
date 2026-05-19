@@ -62,6 +62,18 @@ def _ensure_version_table_column_size(connection) -> None:
     )
 
 
+def _log_current_version_state(connection) -> None:
+    inspector = inspect(connection)
+    if "alembic_version" not in inspector.get_table_names():
+        print("[alembic env] alembic_version table does not exist yet", flush=True)
+        return
+
+    rows = connection.exec_driver_sql(
+        "SELECT version_num FROM alembic_version"
+    ).fetchall()
+    print(f"[alembic env] current alembic_version rows: {rows!r}", flush=True)
+
+
 def run_migrations_offline() -> None:
     _patch_version_table_impl()
     url = config.get_main_option("sqlalchemy.url")
@@ -87,6 +99,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         _ensure_version_table_column_size(connection)
+        _log_current_version_state(connection)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
