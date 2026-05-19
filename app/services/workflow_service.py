@@ -20,8 +20,12 @@ class WorkflowService:
     def list_workflows(
         self,
         biz_domain: BizDomain | None = None,
+        workflow_code: str | None = None,
     ) -> list[WorkflowDefinitionResponse]:
-        return [self._to_response(item) for item in self._registry.list(biz_domain)]
+        items = self._registry.list(biz_domain)
+        if workflow_code:
+            items = [item for item in items if item.workflow_code == workflow_code]
+        return [self._to_response(item) for item in items]
 
     def get_workflow(self, workflow_code: str) -> WorkflowDefinitionResponse | None:
         item = self._registry.get(workflow_code)

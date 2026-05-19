@@ -442,6 +442,7 @@
     async function loadWorkflowList() {
       const query = new URLSearchParams();
       if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      if (el.workflowCodeInput.value.trim()) query.set("workflow_code", el.workflowCodeInput.value.trim());
       state.workflows = await fetchJson(`/api/workflows?${query.toString()}`);
       renderWorkflowList();
       updateQuery();

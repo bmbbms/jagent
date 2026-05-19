@@ -613,6 +613,12 @@ def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     assert workflow_detail["workflow_code"] == "quota_review"
     assert workflow_detail["steps"]
 
+    filtered_response = client.get("/api/workflows", params={"workflow_code": "quota_review"})
+    assert filtered_response.status_code == 200
+    filtered_items = filtered_response.json()
+    assert len(filtered_items) == 1
+    assert filtered_items[0]["workflow_code"] == "quota_review"
+
     chat_response = client.post(
         "/api/chat",
         json={

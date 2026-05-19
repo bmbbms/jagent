@@ -10,9 +10,10 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 @router.get("", response_model=list[WorkflowDefinitionResponse])
 def list_workflows(
     biz_domain: BizDomain | None = None,
+    workflow_code: str | None = None,
     workflow_service: WorkflowService = Depends(get_workflow_service),
 ) -> list[WorkflowDefinitionResponse]:
-    return workflow_service.list_workflows(biz_domain)
+    return workflow_service.list_workflows(biz_domain, workflow_code)
 
 
 @router.get("/{workflow_code}", response_model=WorkflowDefinitionResponse)
