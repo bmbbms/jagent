@@ -184,6 +184,8 @@ class TaskRepository:
         status: str | None = None,
         biz_domain: str | None = None,
         selected_agent_id: str | None = None,
+        current_stage: str | None = None,
+        approval_id: str | None = None,
         start_time_from: datetime | None = None,
         start_time_to: datetime | None = None,
         offset: int = 0,
@@ -196,6 +198,8 @@ class TaskRepository:
             status=status,
             biz_domain=biz_domain,
             selected_agent_id=selected_agent_id,
+            current_stage=current_stage,
+            approval_id=approval_id,
             start_time_from=start_time_from,
             start_time_to=start_time_to,
         )
@@ -214,6 +218,8 @@ class TaskRepository:
         status: str | None = None,
         biz_domain: str | None = None,
         selected_agent_id: str | None = None,
+        current_stage: str | None = None,
+        approval_id: str | None = None,
         start_time_from: datetime | None = None,
         start_time_to: datetime | None = None,
     ) -> int:
@@ -222,6 +228,8 @@ class TaskRepository:
             status=status,
             biz_domain=biz_domain,
             selected_agent_id=selected_agent_id,
+            current_stage=current_stage,
+            approval_id=approval_id,
             start_time_from=start_time_from,
             start_time_to=start_time_to,
         )
@@ -275,6 +283,8 @@ class TaskRepository:
         status: str | None,
         biz_domain: str | None,
         selected_agent_id: str | None,
+        current_stage: str | None,
+        approval_id: str | None,
         start_time_from: datetime | None,
         start_time_to: datetime | None,
     ):
@@ -284,6 +294,10 @@ class TaskRepository:
             query = query.filter(AgentTaskModel.biz_domain == biz_domain)
         if selected_agent_id:
             query = query.filter(AgentTaskModel.selected_agent_id == selected_agent_id)
+        if current_stage:
+            query = query.filter(AgentTaskModel.current_stage == current_stage)
+        if approval_id:
+            query = query.filter(AgentTaskModel.approval_id == approval_id)
         if start_time_from is not None:
             query = query.filter(AgentTaskModel.start_time >= start_time_from)
         if start_time_to is not None:

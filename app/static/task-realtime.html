@@ -354,6 +354,15 @@
           <option value="data_support">data_support</option>
         </select>
         <input id="agentFilter" placeholder="按 agent_id 过滤" />
+        <select id="stageFilter">
+          <option value="">全部阶段</option>
+          <option value="routing">routing</option>
+          <option value="workflow">workflow</option>
+          <option value="approval">approval</option>
+          <option value="completed">completed</option>
+          <option value="failed">failed</option>
+        </select>
+        <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
         <input id="startDateFrom" type="date" />
         <input id="startDateTo" type="date" />
         <select id="pageSizeFilter">
@@ -498,6 +507,8 @@
         status: "",
         bizDomain: "",
         selectedAgentId: "",
+        currentStage: "",
+        approvalId: "",
         startDateFrom: "",
         startDateTo: "",
         page: 1,
@@ -525,6 +536,8 @@
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
       agentFilter: document.getElementById("agentFilter"),
+      stageFilter: document.getElementById("stageFilter"),
+      approvalFilterInput: document.getElementById("approvalFilterInput"),
       startDateFrom: document.getElementById("startDateFrom"),
       startDateTo: document.getElementById("startDateTo"),
       pageSizeFilter: document.getElementById("pageSizeFilter"),
@@ -603,6 +616,8 @@
       state.filters.status = el.statusFilter.value;
       state.filters.bizDomain = el.domainFilter.value;
       state.filters.selectedAgentId = el.agentFilter.value.trim();
+      state.filters.currentStage = el.stageFilter.value;
+      state.filters.approvalId = el.approvalFilterInput.value.trim();
       state.filters.startDateFrom = el.startDateFrom.value;
       state.filters.startDateTo = el.startDateTo.value;
       state.filters.pageSize = el.pageSizeFilter.value || "50";
@@ -614,6 +629,8 @@
       el.statusFilter.value = state.filters.status;
       el.domainFilter.value = state.filters.bizDomain;
       el.agentFilter.value = state.filters.selectedAgentId;
+      el.stageFilter.value = state.filters.currentStage;
+      el.approvalFilterInput.value = state.filters.approvalId;
       el.startDateFrom.value = state.filters.startDateFrom;
       el.startDateTo.value = state.filters.startDateTo;
       el.pageSizeFilter.value = state.filters.pageSize;
@@ -628,6 +645,8 @@
         status: state.filters.status,
         biz_domain: state.filters.bizDomain,
         selected_agent_id: state.filters.selectedAgentId,
+        current_stage: state.filters.currentStage,
+        approval_id: state.filters.approvalId,
         start_date_from: state.filters.startDateFrom,
         start_date_to: state.filters.startDateTo,
         page: String(state.filters.page || 1),
@@ -658,6 +677,8 @@
       state.filters.status = query.get("status") || "";
       state.filters.bizDomain = query.get("biz_domain") || "";
       state.filters.selectedAgentId = query.get("selected_agent_id") || "";
+      state.filters.currentStage = query.get("current_stage") || "";
+      state.filters.approvalId = query.get("approval_id") || "";
       state.filters.startDateFrom = query.get("start_date_from") || "";
       state.filters.startDateTo = query.get("start_date_to") || "";
       state.filters.page = Number(query.get("page") || "1");
@@ -674,6 +695,8 @@
       if (state.filters.status) query.set("status", state.filters.status);
       if (state.filters.bizDomain) query.set("biz_domain", state.filters.bizDomain);
       if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
+      if (state.filters.currentStage) query.set("current_stage", state.filters.currentStage);
+      if (state.filters.approvalId) query.set("approval_id", state.filters.approvalId);
       if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
       if (state.filters.startDateTo) query.set("start_date_to", state.filters.startDateTo);
       query.set("page", String(state.filters.page || 1));
@@ -1345,9 +1368,16 @@
       }
     });
 
-    [el.statusFilter, el.domainFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
+    [el.statusFilter, el.domainFilter, el.stageFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
 
     el.agentFilter.addEventListener("keydown", async event => {
+      if (event.key === "Enter") {
+        state.filters.page = 1;
+        await loadTaskList();
+      }
+    });
+
+    el.approvalFilterInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") {
         state.filters.page = 1;
         await loadTaskList();
