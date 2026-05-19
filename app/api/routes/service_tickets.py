@@ -15,6 +15,7 @@ def list_service_tickets(
     requested_by: str | None = Query(default=None),
     source: str | None = Query(default=None),
     priority: str | None = Query(default=None),
+    task_id: str | None = Query(default=None),
     service_ticket_service: ServiceTicketService = Depends(get_service_ticket_service),
 ) -> list[ServiceTicketResponse]:
     return service_ticket_service.list_tickets(
@@ -24,6 +25,7 @@ def list_service_tickets(
         requested_by=requested_by,
         source=source,
         priority=priority,
+        task_id=task_id,
     )
 
 

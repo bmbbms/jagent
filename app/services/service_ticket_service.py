@@ -30,6 +30,7 @@ class ServiceTicketService:
         requested_by: str | None = None,
         source: str | None = None,
         priority: str | None = None,
+        task_id: str | None = None,
     ) -> list[ServiceTicketResponse]:
         with self._session_factory() as session:
             items = self._repository.list_tickets(
@@ -40,6 +41,7 @@ class ServiceTicketService:
                 requested_by=requested_by,
                 source=source,
                 priority=priority,
+                task_id=task_id,
             )
             return [self._to_response(item) for item in items]
 

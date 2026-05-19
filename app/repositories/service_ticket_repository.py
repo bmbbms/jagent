@@ -18,6 +18,7 @@ class ServiceTicketRepository:
         requested_by: str | None = None,
         source: str | None = None,
         priority: str | None = None,
+        task_id: str | None = None,
     ) -> list[ServiceTicketModel]:
         query = session.query(ServiceTicketModel).order_by(
             ServiceTicketModel.create_time.desc(),
@@ -35,6 +36,8 @@ class ServiceTicketRepository:
             query = query.filter(ServiceTicketModel.source == source)
         if priority:
             query = query.filter(ServiceTicketModel.priority == priority)
+        if task_id:
+            query = query.filter(ServiceTicketModel.payload["task_id"].as_string() == task_id)
         return query.all()
 
     def get_ticket(self, session: Session, ticket_id: str) -> ServiceTicketModel | None:

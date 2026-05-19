@@ -621,8 +621,10 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
     assert 'id="priorityFilter"' in response.text
     assert 'id="ownerFilterInput"' in response.text
     assert 'id="requestedByFilterInput"' in response.text
+    assert 'taskFilterInput' in response.text or 'task_id' in response.text
     assert 'id="evaluationPageBtn"' in response.text
     assert 'openTaskBtn' in response.text or '/ui/tasks?task_id=' in response.text
+    assert 'openAuditBtn' in response.text or '/ui/audit?task_id=' in response.text
 
 
 def test_audit_ui_page(client: TestClient) -> None:
@@ -837,6 +839,14 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert ticket["linked_evaluation_id"] is not None
     assert ticket["owner"] == "agent-ops"
     assert ticket["linked_task_id"] == task_id
+
+    task_filtered_ticket_list_response = client.get(
+        "/api/service-tickets",
+        params={"task_id": task_id},
+    )
+    assert task_filtered_ticket_list_response.status_code == 200
+    task_filtered_tickets = task_filtered_ticket_list_response.json()
+    assert any(item["ticket_id"] == ticket_bound["ticket_id"] for item in task_filtered_tickets)
 
     ticket_detail_response = client.get(f"/api/service-tickets/{ticket_bound['ticket_id']}")
     assert ticket_detail_response.status_code == 200

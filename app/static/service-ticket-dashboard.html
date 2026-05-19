@@ -581,6 +581,59 @@
       }
     }
 
+    const taskFilterInput = document.createElement("input");
+    taskFilterInput.id = "taskFilterInput";
+    taskFilterInput.placeholder = "按 task_id 过滤";
+    el.requestedByFilterInput.insertAdjacentElement("afterend", taskFilterInput);
+
+    const originalBuildTicketListQuery = buildTicketListQuery;
+    buildTicketListQuery = function buildTicketListQueryWithTask() {
+      const query = originalBuildTicketListQuery();
+      if (taskFilterInput.value.trim()) query.set("task_id", taskFilterInput.value.trim());
+      return query;
+    };
+
+    const originalSyncQuery = syncQuery;
+    syncQuery = function syncQueryWithTask() {
+      originalSyncQuery();
+      const url = new URL(window.location.href);
+      const taskId = taskFilterInput.value.trim();
+      if (taskId) {
+        url.searchParams.set("task_id", taskId);
+      } else {
+        url.searchParams.delete("task_id");
+      }
+      window.history.replaceState({}, "", url);
+    };
+
+    const originalRenderTicketDetail = renderTicketDetail;
+    renderTicketDetail = function renderTicketDetailWithAudit(item) {
+      originalRenderTicketDetail(item);
+      if (!item || !item.linked_task_id) {
+        return;
+      }
+      const form = el.ticketDetail.querySelector(".inline-form");
+      if (!form || document.getElementById("openAuditBtn")) {
+        return;
+      }
+      const auditBtn = document.createElement("button");
+      auditBtn.id = "openAuditBtn";
+      auditBtn.type = "button";
+      auditBtn.className = "secondary";
+      auditBtn.textContent = "打开审计";
+      auditBtn.addEventListener("click", () => {
+        window.location.href = `/ui/audit?task_id=${encodeURIComponent(item.linked_task_id)}`;
+      });
+      form.appendChild(auditBtn);
+    };
+
+    const originalBootstrap = bootstrap;
+    bootstrap = async function bootstrapWithTaskFilter() {
+      const query = new URLSearchParams(window.location.search);
+      taskFilterInput.value = query.get("task_id") || "";
+      await originalBootstrap();
+    };
+
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
     });
@@ -609,6 +662,9 @@
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await bootstrap();
       });
+    });
+    taskFilterInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
     });
     el.ticketIdInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadTicketDetail();
