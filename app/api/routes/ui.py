@@ -49,3 +49,9 @@ def workflows_page() -> FileResponse:
 def skills_page() -> FileResponse:
     page_path = Path(__file__).resolve().parents[2] / "static" / "skills-dashboard.html"
     return FileResponse(page_path)
+
+
+@router.get("/capabilities")
+def capabilities_page() -> FileResponse:
+    page_path = Path(__file__).resolve().parents[2] / "static" / "capabilities-dashboard.html"
+    return FileResponse(page_path)

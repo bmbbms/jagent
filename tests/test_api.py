@@ -464,6 +464,16 @@ def test_skills_ui_page(client: TestClient) -> None:
     assert 'id="loadBtn"' in response.text
 
 
+def test_capabilities_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/capabilities")
+    assert response.status_code == 200
+    assert 'id="capabilityList"' in response.text
+    assert 'id="capabilityDetail"' in response.text
+    assert 'id="domainFilter"' in response.text
+    assert 'id="sourceFilter"' in response.text
+    assert 'id="capabilityIdInput"' in response.text
+
+
 def test_evaluation_analytics_api(client: TestClient) -> None:
     client.post(
         "/api/chat",
