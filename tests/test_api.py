@@ -622,6 +622,7 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
     assert 'id="ownerFilterInput"' in response.text
     assert 'id="requestedByFilterInput"' in response.text
     assert 'id="evaluationPageBtn"' in response.text
+    assert 'openTaskBtn' in response.text or '/ui/tasks?task_id=' in response.text
 
 
 def test_audit_ui_page(client: TestClient) -> None:
@@ -740,7 +741,9 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
         },
     )
     assert chat_response.status_code == 200
-    agent_id = chat_response.json()["capability_id"]
+    chat_body = chat_response.json()
+    agent_id = chat_body["capability_id"]
+    task_id = chat_body["task_id"]
 
     list_response = client.get("/api/evaluations/suggestions", params={"agent_id": agent_id})
     assert list_response.status_code == 200
@@ -833,12 +836,14 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert ticket["linked_suggestion_id"] == first["suggestion_id"]
     assert ticket["linked_evaluation_id"] is not None
     assert ticket["owner"] == "agent-ops"
+    assert ticket["linked_task_id"] == task_id
 
     ticket_detail_response = client.get(f"/api/service-tickets/{ticket_bound['ticket_id']}")
     assert ticket_detail_response.status_code == 200
     ticket_detail = ticket_detail_response.json()
     assert ticket_detail["ticket_id"] == ticket_bound["ticket_id"]
     assert ticket_detail["source"] == "evaluation"
+    assert ticket_detail["linked_task_id"] == task_id
 
     ticket_update_response = client.put(
         f"/api/service-tickets/{ticket_bound['ticket_id']}",

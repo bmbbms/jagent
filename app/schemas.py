@@ -590,6 +590,7 @@ class ServiceTicketResponse(BaseModel):
     linked_suggestion_id: Optional[int] = None
     linked_evaluation_id: Optional[str] = None
     linked_agent_id: Optional[str] = None
+    linked_task_id: Optional[str] = None
 
 
 class ServiceTicketUpdateRequest(BaseModel):

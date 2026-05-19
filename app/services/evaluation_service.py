@@ -345,6 +345,7 @@ class EvaluationService:
                 return None
             if suggestion.ticket_id:
                 return self._to_suggestion(suggestion)
+            evaluation = self._repository.get_evaluation(session, suggestion.evaluation_id)
 
             ticket_id = f"EVAL-{uuid4().hex[:8].upper()}"
             description_lines = [
@@ -380,6 +381,7 @@ class EvaluationService:
                     payload={
                         "suggestion_id": suggestion.id,
                         "evaluation_id": suggestion.evaluation_id,
+                        "task_id": evaluation.task_id if evaluation is not None else None,
                         "agent_id": suggestion.agent_id,
                         "optimization_type": suggestion.optimization_type,
                         "target_ref": suggestion.target_ref,

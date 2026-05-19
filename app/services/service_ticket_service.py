@@ -99,4 +99,5 @@ class ServiceTicketService:
             linked_suggestion_id=payload.get("suggestion_id"),
             linked_evaluation_id=payload.get("evaluation_id"),
             linked_agent_id=payload.get("agent_id"),
+            linked_task_id=payload.get("task_id"),
         )
