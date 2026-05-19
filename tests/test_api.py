@@ -658,6 +658,7 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="healthCheckBtn"' in response.text
     assert 'id="verifyBtn"' in response.text
     assert 'id="agentList"' in response.text
+    assert 'id="recentTaskList"' in response.text
 
 
 def test_external_agent_recent_tasks_api(client: TestClient) -> None:

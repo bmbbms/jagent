@@ -289,6 +289,13 @@
           <h2>最近结果</h2>
           <pre id="resultBox" class="payload">等待发现、添加、编辑或验证结果...</pre>
         </section>
+
+        <section class="panel">
+          <h2>最近验证任务</h2>
+          <div id="recentTaskList" class="cards">
+            <div class="empty">请选择一个外部 Agent 查看最近验证任务...</div>
+          </div>
+        </section>
       </div>
 
       <section class="panel">
@@ -393,6 +400,7 @@
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
+      recentTaskList: document.getElementById("recentTaskList"),
       listMeta: document.getElementById("listMeta"),
       agentList: document.getElementById("agentList"),
     };
@@ -524,6 +532,42 @@
       setEditorMode(Boolean(editingCapabilityId));
     }
 
+    function renderRecentTasks(items) {
+      if (!items.length) {
+        el.recentTaskList.innerHTML = '<div class="empty">当前 Agent 暂无最近验证任务。</div>';
+        return;
+      }
+      el.recentTaskList.innerHTML = items.map(item => `
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">${escapeHtml(item.task_title || item.task_id)}</div>
+              <div class="subtle">${escapeHtml(item.task_id)}</div>
+            </div>
+            <div class="tags">
+              <span class="tag">${escapeHtml(item.status)}</span>
+              <span class="tag">${escapeHtml(item.current_stage || "-")}</span>
+            </div>
+          </div>
+          <div class="kv">
+            <div class="kv-item"><div class="kv-label">业务域</div><div class="kv-value">${escapeHtml(item.biz_domain)}</div></div>
+            <div class="kv-item"><div class="kv-label">开始时间</div><div class="kv-value">${escapeHtml(item.start_time)}</div></div>
+            <div class="kv-item"><div class="kv-label">最终输出</div><div class="kv-value">${escapeHtml(item.final_output_summary || "-")}</div></div>
+          </div>
+          <div class="actions">
+            <button data-open-task="${escapeHtml(item.task_id)}">打开任务</button>
+          </div>
+        </div>
+      `).join("");
+      el.recentTaskList.querySelectorAll("[data-open-task]").forEach(node => {
+        node.addEventListener("click", () => {
+          const taskId = node.getAttribute("data-open-task") || "";
+          if (!taskId) return;
+          window.location.href = `/ui/tasks?task_id=${encodeURIComponent(taskId)}`;
+        });
+      });
+    }
+
     function renderAgentList(items) {
       el.listMeta.textContent = `当前共 ${items.length} 个已注册外部 Agent`;
       if (!items.length) {
@@ -568,7 +612,7 @@
       `).join("");
 
       el.agentList.querySelectorAll("[data-edit-agent]").forEach(node => {
-        node.addEventListener("click", () => {
+        node.addEventListener("click", async () => {
           const capabilityId = node.getAttribute("data-edit-agent") || "";
           const target = items.find(item => item.capability_id === capabilityId);
           if (!target) {
@@ -577,11 +621,12 @@
           fillForm(target);
           setStatus(`已载入 ${capabilityId}，可以编辑后保存`, "success");
           showResult(target);
+          await loadRecentTasks(capabilityId);
         });
       });
 
       el.agentList.querySelectorAll("[data-use-agent]").forEach(node => {
-        node.addEventListener("click", () => {
+        node.addEventListener("click", async () => {
           const capabilityId = node.getAttribute("data-use-agent") || "";
           if (!capabilityId) {
             return;
@@ -590,6 +635,7 @@
           editingCapabilityId = capabilityId;
           setEditorMode(true);
           setStatus("已填入到验证区域", "success");
+          await loadRecentTasks(capabilityId);
         });
       });
 
@@ -640,11 +686,25 @@
             fillForm(target);
             setStatus(`已按 capability_id 载入 ${queryCapabilityId}`, "success");
             showResult(target);
+            await loadRecentTasks(queryCapabilityId);
           }
         }
       } catch (error) {
         el.listMeta.textContent = "加载失败";
         el.agentList.innerHTML = `<div class="empty">加载外部 Agent 列表失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function loadRecentTasks(capabilityId) {
+      if (!capabilityId) {
+        el.recentTaskList.innerHTML = '<div class="empty">请选择一个外部 Agent 查看最近验证任务...</div>';
+        return;
+      }
+      try {
+        const items = await requestJson(`/api/external-agents/${encodeURIComponent(capabilityId)}/recent-tasks?limit=10`);
+        renderRecentTasks(items);
+      } catch (error) {
+        el.recentTaskList.innerHTML = `<div class="empty">加载最近验证任务失败：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -673,6 +733,7 @@
         fillForm(result);
         showResult(result);
         setStatus("发现成功", "success");
+        await loadRecentTasks(result.capability_id);
       } catch (error) {
         setStatus("发现失败", "danger");
         showResult(error.message);
@@ -690,6 +751,7 @@
         fillForm(result);
         showResult(result);
         setStatus("添加成功", "success");
+        await loadRecentTasks(result.capability_id);
         await loadAgentList();
       } catch (error) {
         setStatus("添加失败", "danger");
@@ -713,6 +775,7 @@
         fillForm(result);
         showResult(result);
         setStatus("保存成功", "success");
+        await loadRecentTasks(result.capability_id);
         await loadAgentList();
       } catch (error) {
         setStatus("保存失败", "danger");
@@ -740,6 +803,7 @@
         });
         showResult(result);
         setStatus("验证成功", "success");
+        await loadRecentTasks(capabilityId);
       } catch (error) {
         setStatus("验证失败", "danger");
         showResult(error.message);
@@ -759,6 +823,7 @@
         });
         showResult(result);
         setStatus(`健康检查完成: ${result.health_status}`, result.health_status === "healthy" ? "success" : "danger");
+        await loadRecentTasks(capabilityId);
         await loadAgentList();
       } catch (error) {
         setStatus("健康检查失败", "danger");
@@ -786,6 +851,7 @@
     resetForm();
     loadHealthOverview();
     loadAgentList();
+    loadRecentTasks(getQueryCapabilityId());
   </script>
 </body>
 </html>
