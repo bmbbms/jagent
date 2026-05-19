@@ -400,6 +400,7 @@ def test_task_list_supports_extended_filters(client: TestClient) -> None:
             "status": "waiting_approval",
             "biz_domain": "operations",
             "selected_agent_id": "operations.quota_review",
+            "risk_level": "low",
             "current_stage": "approval",
             "start_date_from": "2026-01-01",
             "start_date_to": "2026-12-31",
@@ -421,6 +422,7 @@ def test_task_list_supports_extended_filters(client: TestClient) -> None:
         assert item["status"] == "waiting_approval"
         assert item["biz_domain"] == "operations"
         assert item["selected_agent_id"] == "operations.quota_review"
+        assert item["risk_level"] == "low"
         assert item["current_stage"] == "approval"
 
 
@@ -455,6 +457,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="approvalCenterBtn"' in response.text
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
+    assert 'id="riskFilter"' in response.text
     assert 'id="stageFilter"' in response.text
     assert 'id="approvalFilterInput"' in response.text
     assert 'id="structuredToolResults"' in response.text

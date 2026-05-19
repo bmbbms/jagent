@@ -354,6 +354,12 @@
           <option value="data_support">data_support</option>
         </select>
         <input id="agentFilter" placeholder="按 agent_id 过滤" />
+        <select id="riskFilter">
+          <option value="">全部风险</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
         <select id="stageFilter">
           <option value="">全部阶段</option>
           <option value="routing">routing</option>
@@ -508,6 +514,7 @@
         bizDomain: "",
         selectedAgentId: "",
         currentStage: "",
+        riskLevel: "",
         approvalId: "",
         startDateFrom: "",
         startDateTo: "",
@@ -536,6 +543,7 @@
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
       agentFilter: document.getElementById("agentFilter"),
+      riskFilter: document.getElementById("riskFilter"),
       stageFilter: document.getElementById("stageFilter"),
       approvalFilterInput: document.getElementById("approvalFilterInput"),
       startDateFrom: document.getElementById("startDateFrom"),
@@ -616,6 +624,7 @@
       state.filters.status = el.statusFilter.value;
       state.filters.bizDomain = el.domainFilter.value;
       state.filters.selectedAgentId = el.agentFilter.value.trim();
+      state.filters.riskLevel = el.riskFilter.value;
       state.filters.currentStage = el.stageFilter.value;
       state.filters.approvalId = el.approvalFilterInput.value.trim();
       state.filters.startDateFrom = el.startDateFrom.value;
@@ -629,6 +638,7 @@
       el.statusFilter.value = state.filters.status;
       el.domainFilter.value = state.filters.bizDomain;
       el.agentFilter.value = state.filters.selectedAgentId;
+      el.riskFilter.value = state.filters.riskLevel;
       el.stageFilter.value = state.filters.currentStage;
       el.approvalFilterInput.value = state.filters.approvalId;
       el.startDateFrom.value = state.filters.startDateFrom;
@@ -645,6 +655,7 @@
         status: state.filters.status,
         biz_domain: state.filters.bizDomain,
         selected_agent_id: state.filters.selectedAgentId,
+        risk_level: state.filters.riskLevel,
         current_stage: state.filters.currentStage,
         approval_id: state.filters.approvalId,
         start_date_from: state.filters.startDateFrom,
@@ -677,6 +688,7 @@
       state.filters.status = query.get("status") || "";
       state.filters.bizDomain = query.get("biz_domain") || "";
       state.filters.selectedAgentId = query.get("selected_agent_id") || "";
+      state.filters.riskLevel = query.get("risk_level") || "";
       state.filters.currentStage = query.get("current_stage") || "";
       state.filters.approvalId = query.get("approval_id") || "";
       state.filters.startDateFrom = query.get("start_date_from") || "";
@@ -695,6 +707,7 @@
       if (state.filters.status) query.set("status", state.filters.status);
       if (state.filters.bizDomain) query.set("biz_domain", state.filters.bizDomain);
       if (state.filters.selectedAgentId) query.set("selected_agent_id", state.filters.selectedAgentId);
+      if (state.filters.riskLevel) query.set("risk_level", state.filters.riskLevel);
       if (state.filters.currentStage) query.set("current_stage", state.filters.currentStage);
       if (state.filters.approvalId) query.set("approval_id", state.filters.approvalId);
       if (state.filters.startDateFrom) query.set("start_date_from", state.filters.startDateFrom);
@@ -1368,7 +1381,7 @@
       }
     });
 
-    [el.statusFilter, el.domainFilter, el.stageFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
+    [el.statusFilter, el.domainFilter, el.riskFilter, el.stageFilter, el.startDateFrom, el.startDateTo, el.pageSizeFilter, el.sortByFilter, el.sortOrderFilter].forEach(bindFilterChange);
 
     el.agentFilter.addEventListener("keydown", async event => {
       if (event.key === "Enter") {

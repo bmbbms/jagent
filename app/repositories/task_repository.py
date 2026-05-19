@@ -184,6 +184,7 @@ class TaskRepository:
         status: str | None = None,
         biz_domain: str | None = None,
         selected_agent_id: str | None = None,
+        risk_level: str | None = None,
         current_stage: str | None = None,
         approval_id: str | None = None,
         start_time_from: datetime | None = None,
@@ -198,6 +199,7 @@ class TaskRepository:
             status=status,
             biz_domain=biz_domain,
             selected_agent_id=selected_agent_id,
+            risk_level=risk_level,
             current_stage=current_stage,
             approval_id=approval_id,
             start_time_from=start_time_from,
@@ -218,6 +220,7 @@ class TaskRepository:
         status: str | None = None,
         biz_domain: str | None = None,
         selected_agent_id: str | None = None,
+        risk_level: str | None = None,
         current_stage: str | None = None,
         approval_id: str | None = None,
         start_time_from: datetime | None = None,
@@ -228,6 +231,7 @@ class TaskRepository:
             status=status,
             biz_domain=biz_domain,
             selected_agent_id=selected_agent_id,
+            risk_level=risk_level,
             current_stage=current_stage,
             approval_id=approval_id,
             start_time_from=start_time_from,
@@ -283,6 +287,7 @@ class TaskRepository:
         status: str | None,
         biz_domain: str | None,
         selected_agent_id: str | None,
+        risk_level: str | None,
         current_stage: str | None,
         approval_id: str | None,
         start_time_from: datetime | None,
@@ -294,6 +299,8 @@ class TaskRepository:
             query = query.filter(AgentTaskModel.biz_domain == biz_domain)
         if selected_agent_id:
             query = query.filter(AgentTaskModel.selected_agent_id == selected_agent_id)
+        if risk_level:
+            query = query.filter(AgentTaskModel.risk_level == risk_level)
         if current_stage:
             query = query.filter(AgentTaskModel.current_stage == current_stage)
         if approval_id:
