@@ -238,6 +238,12 @@
           <option value="http">http</option>
           <option value="a2a">a2a</option>
         </select>
+        <select id="healthFilter">
+          <option value="">全部 health</option>
+          <option value="healthy">healthy</option>
+          <option value="unhealthy">unhealthy</option>
+          <option value="unknown">unknown</option>
+        </select>
         <input id="skillFilterInput" placeholder="按 skill_id 反查 capability" />
         <input id="capabilityIdInput" placeholder="输入 capability_id 直接打开" />
         <button id="loadBtn">加载能力</button>
@@ -281,6 +287,7 @@
       riskFilter: document.getElementById("riskFilter"),
       approvalFilter: document.getElementById("approvalFilter"),
       transportFilter: document.getElementById("transportFilter"),
+      healthFilter: document.getElementById("healthFilter"),
       skillFilterInput: document.getElementById("skillFilterInput"),
       capabilityIdInput: document.getElementById("capabilityIdInput"),
       loadBtn: document.getElementById("loadBtn"),
@@ -316,6 +323,7 @@
         risk_level: el.riskFilter.value,
         requires_approval: el.approvalFilter.value,
         transport: el.transportFilter.value,
+        health_status: el.healthFilter.value,
         skill_id: el.skillFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
@@ -361,6 +369,7 @@
             <span class="tag">${escapeHtml(item.biz_domain)}</span>
             <span class="tag">${escapeHtml(item.capability_id)}</span>
             <span class="tag ${getCapabilitySource(item.capability_id) === "local" ? "success" : "warning"}">${escapeHtml(getCapabilitySource(item.capability_id))}</span>
+            ${item.health_status ? `<span class="tag ${item.health_status === "healthy" ? "success" : item.health_status === "unhealthy" ? "danger" : ""}">health:${escapeHtml(item.health_status)}</span>` : ""}
           </div>
           <div class="subtle">${escapeHtml(item.description || "暂无描述")}</div>
           <div class="subtle">priority ${escapeHtml(item.priority)} / risk ${escapeHtml(item.risk_level || "-")} / transport ${escapeHtml(item.transport || "-")}</div>
@@ -404,6 +413,9 @@
             <div class="detail-row"><div class="label">风险等级</div><div class="value">${escapeHtml(item.risk_level || "-")}</div></div>
             <div class="detail-row"><div class="label">需要审批</div><div class="value">${escapeHtml(item.requires_approval ? "true" : "false")}</div></div>
             <div class="detail-row"><div class="label">Transport</div><div class="value">${escapeHtml(item.transport || "-")}</div></div>
+            <div class="detail-row"><div class="label">Health</div><div class="value">${escapeHtml(item.health_status || "-")}</div></div>
+            <div class="detail-row"><div class="label">最近检查</div><div class="value">${escapeHtml(item.last_check_time || "-")}</div></div>
+            <div class="detail-row"><div class="label">最近延迟</div><div class="value">${escapeHtml(item.last_latency_ms ?? "-")}${item.last_latency_ms != null ? " ms" : ""}</div></div>
             <div class="detail-row"><div class="label">Skill 数</div><div class="value">${escapeHtml((item.skills || []).length)}</div></div>
             <div class="detail-row"><div class="label">Trigger 数</div><div class="value">${escapeHtml((item.triggers || []).length)}</div></div>
           </div>
@@ -500,6 +512,7 @@
       if (el.riskFilter.value) query.set("risk_level", el.riskFilter.value);
       if (el.approvalFilter.value) query.set("requires_approval", el.approvalFilter.value);
       if (el.transportFilter.value) query.set("transport", el.transportFilter.value);
+      if (el.healthFilter.value) query.set("health_status", el.healthFilter.value);
       if (el.skillFilterInput.value.trim()) query.set("skill_id", el.skillFilterInput.value.trim());
 
       const [capabilities, externalAgents] = await Promise.all([
@@ -544,6 +557,7 @@
       el.riskFilter.value = query.get("risk_level") || "";
       el.approvalFilter.value = query.get("requires_approval") || "";
       el.transportFilter.value = query.get("transport") || "";
+      el.healthFilter.value = query.get("health_status") || "";
       el.skillFilterInput.value = query.get("skill_id") || "";
       await loadCapabilities();
       if (state.capabilityId) {
@@ -567,7 +581,7 @@
     el.skillPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/skills";
     });
-    [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter].forEach(node => {
+    [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter, el.healthFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
     });
     el.skillFilterInput.addEventListener("keydown", async event => {

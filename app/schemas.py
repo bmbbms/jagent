@@ -133,6 +133,9 @@ class CapabilityInfo(BaseModel):
     service_port: Optional[int] = None
     service_path: str = "/api/chat"
     extras: Dict[str, str] = Field(default_factory=dict)
+    health_status: Optional[str] = None
+    last_check_time: Optional[str] = None
+    last_latency_ms: Optional[int] = None
 
 
 class ExternalAgentRegisterRequest(BaseModel):

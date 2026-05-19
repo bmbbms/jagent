@@ -14,6 +14,7 @@ def list_capabilities(
     risk_level: str | None = Query(default=None),
     requires_approval: bool | None = Query(default=None),
     transport: str | None = Query(default=None),
+    health_status: str | None = Query(default=None),
     skill_id: str | None = Query(default=None),
     registry: CapabilityResolver = Depends(get_capability_registry),
 ) -> list[CapabilityInfo]:
@@ -29,6 +30,10 @@ def list_capabilities(
         items = [item for item in items if item.requires_approval == requires_approval]
     if transport:
         items = [item for item in items if item.transport == transport]
+    if health_status:
+        items = [
+            item for item in items if (getattr(item, "health_status", None) or "unknown") == health_status
+        ]
     if skill_id:
         items = [item for item in items if skill_id in item.skills]
     return [
@@ -52,6 +57,11 @@ def list_capabilities(
             service_port=item.service_port,
             service_path=item.service_path,
             extras=item.extras,
+            health_status=getattr(item, "health_status", None),
+            last_check_time=item.last_check_time.isoformat()
+            if getattr(item, "last_check_time", None)
+            else None,
+            last_latency_ms=getattr(item, "last_latency_ms", None),
         )
         for item in items
     ]
@@ -88,4 +98,9 @@ def get_capability(
         service_port=item.service_port,
         service_path=item.service_path,
         extras=item.extras,
+        health_status=getattr(item, "health_status", None),
+        last_check_time=item.last_check_time.isoformat()
+        if getattr(item, "last_check_time", None)
+        else None,
+        last_latency_ms=getattr(item, "last_latency_ms", None),
     )

@@ -67,6 +67,16 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
     assert all(item["transport"] == "inproc" for item in filtered_body)
     assert all("quota_review" in item["skills"] for item in filtered_body)
 
+    health_filtered_response = client.get(
+        "/api/capabilities",
+        params={"source": "external", "health_status": "unknown"},
+    )
+    assert health_filtered_response.status_code == 200
+    health_filtered_body = health_filtered_response.json()
+    assert isinstance(health_filtered_body, list)
+    if health_filtered_body:
+        assert all("health_status" in item for item in health_filtered_body)
+
 
 def test_capability_detail(client: TestClient) -> None:
     response = client.get("/api/capabilities/merchant.qa")
@@ -76,6 +86,7 @@ def test_capability_detail(client: TestClient) -> None:
     assert body["source"] == "local"
     assert "tags" in body
     assert "extras" in body
+    assert "health_status" in body
 
 
 def test_skills(client: TestClient) -> None:
@@ -725,6 +736,7 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="riskFilter"' in response.text
     assert 'id="approvalFilter"' in response.text
     assert 'id="transportFilter"' in response.text
+    assert 'id="healthFilter"' in response.text
     assert 'id="skillFilterInput"' in response.text
     assert 'id="capabilityIdInput"' in response.text
 
