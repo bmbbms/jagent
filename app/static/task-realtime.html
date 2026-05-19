@@ -334,6 +334,7 @@
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
         <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
+        <button id="skillCenterBtn" class="secondary">Skill 中心</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
         <button id="approvalCenterBtn" class="secondary">审批中心</button>
         <button id="auditCenterBtn" class="secondary">审计中心</button>
@@ -425,6 +426,13 @@
         </section>
 
         <section class="panel">
+          <h2>Skill 视图</h2>
+          <div id="skillSnapshot" class="detail-list">
+            <div class="empty">当前任务还没有可展示的 Skill 运行信息。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>执行时间线</h2>
           <div id="timeline" class="timeline">
             <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
@@ -508,6 +516,7 @@
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
       workflowCenterBtn: document.getElementById("workflowCenterBtn"),
+      skillCenterBtn: document.getElementById("skillCenterBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
       approvalCenterBtn: document.getElementById("approvalCenterBtn"),
       auditCenterBtn: document.getElementById("auditCenterBtn"),
@@ -532,6 +541,7 @@
       summaryStats: document.getElementById("summaryStats"),
       structuredToolResults: document.getElementById("structuredToolResults"),
       workflowSnapshot: document.getElementById("workflowSnapshot"),
+      skillSnapshot: document.getElementById("skillSnapshot"),
       timeline: document.getElementById("timeline"),
       evaluation: document.getElementById("evaluation"),
       toolCalls: document.getElementById("toolCalls"),
@@ -881,6 +891,76 @@
       }
     }
 
+    function extractSkillSnapshot(task) {
+      const runtimeEvent = (task.events || []).find(item => item.event_type === "skill_bundle_loaded");
+      const thoughtEvent = [...(task.events || [])]
+        .reverse()
+        .find(item => item.event_type === "thought_generated");
+      const executionPlanEvent = (task.events || []).find(item => item.event_type === "execution_plan_created");
+      const payload = runtimeEvent?.event_payload || {};
+      const planPayload = executionPlanEvent?.event_payload || {};
+      const thoughtPayload = thoughtEvent?.event_payload || {};
+      const loadedSkills = Array.isArray(payload.skills) ? payload.skills : [];
+      const selectedSkillIds = Array.isArray(thoughtPayload.selected_skills)
+        ? thoughtPayload.selected_skills
+        : Array.isArray(planPayload.selected_skill_ids)
+          ? planPayload.selected_skill_ids
+          : [];
+      const loadedSkillIds = loadedSkills.map(item => item.skill_id).filter(Boolean);
+      if (!loadedSkills.length && !selectedSkillIds.length && !(planPayload.loaded_skill_ids || []).length) {
+        return null;
+      }
+      return {
+        runtime_session_id: payload.runtime_session_id || planPayload.runtime_session_id || thoughtPayload.runtime_session_id || "",
+        selected_skill_ids: selectedSkillIds,
+        loaded_skill_ids: loadedSkillIds.length ? loadedSkillIds : (planPayload.loaded_skill_ids || []),
+        required_inputs: planPayload.required_inputs || [],
+        loaded_skills: loadedSkills,
+      };
+    }
+
+    function renderSkillSnapshot(task) {
+      const skillSnapshot = extractSkillSnapshot(task);
+      if (!skillSnapshot) {
+        el.skillSnapshot.innerHTML = `<div class="empty">当前任务还没有可展示的 Skill 运行信息。</div>`;
+        return;
+      }
+
+      const loadedSkills = skillSnapshot.loaded_skills || [];
+      el.skillSnapshot.innerHTML = `
+        <div class="score-hero">
+          <div class="subtle">Runtime Session / ${escapeHtml(skillSnapshot.runtime_session_id || "-")}</div>
+          <div style="margin-top: 6px;"><strong>${escapeHtml(skillSnapshot.selected_skill_ids.length)}</strong></div>
+          <div class="subtle" style="margin-top: 8px;">当前任务声明并执行的 skill 信息来自 runtime preparation 事件与 thought 事件。</div>
+        </div>
+        <div class="detail-item"><div class="label">已选 Skill</div><div class="value">${renderTagItems(skillSnapshot.selected_skill_ids || [], "warning")}</div></div>
+        <div class="detail-item"><div class="label">已加载 Skill</div><div class="value">${renderTagItems(skillSnapshot.loaded_skill_ids || [])}</div></div>
+        <div class="detail-item"><div class="label">必填输入</div><div class="value">${renderTagItems(skillSnapshot.required_inputs || [])}</div></div>
+        ${loadedSkills.length ? loadedSkills.map(item => `
+          <div class="list-card">
+            <h3>${escapeHtml(item.skill_id || "-")}</h3>
+            <div class="subtle">${escapeHtml(item.purpose || "暂无 purpose 描述")}</div>
+            <div class="detail-item"><div class="label">允许工具</div><div class="value">${renderTagItems(item.allowed_tools || [], "success")}</div></div>
+            <div class="detail-item"><div class="label">必填输入</div><div class="value">${renderTagItems(item.required_inputs || [])}</div></div>
+          </div>
+        `).join("") : '<div class="empty">当前未记录 Skill 明细，仅保留了 Skill ID。</div>'}
+        <div style="margin-top: 12px;">
+          <button id="openSkillCenterBtn" class="secondary" type="button">打开 Skill 中心查看完整定义</button>
+        </div>
+      `;
+
+      const openSkillCenterBtn = document.getElementById("openSkillCenterBtn");
+      if (openSkillCenterBtn) {
+        openSkillCenterBtn.addEventListener("click", () => {
+          const firstSkillId = (skillSnapshot.selected_skill_ids || [])[0] || (skillSnapshot.loaded_skill_ids || [])[0] || "";
+          const target = firstSkillId
+            ? `/ui/skills?skill_id=${encodeURIComponent(firstSkillId)}`
+            : "/ui/skills";
+          window.location.href = target;
+        });
+      }
+    }
+
     function renderTimeline(events = []) {
       if (!events.length) {
         el.timeline.innerHTML = `<div class="empty">当前任务暂无时间线事件。</div>`;
@@ -1062,6 +1142,7 @@
       renderStats(task);
       renderStructuredToolResults(task.structured_tool_results || []);
       renderWorkflowSnapshot(task);
+      renderSkillSnapshot(task);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);
@@ -1177,6 +1258,14 @@
       const target = workflowCode
         ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`
         : "/ui/workflows";
+      window.location.href = target;
+    });
+    el.skillCenterBtn.addEventListener("click", () => {
+      const skillSnapshot = extractSkillSnapshot(state.task || {});
+      const skillId = (skillSnapshot?.selected_skill_ids || [])[0] || (skillSnapshot?.loaded_skill_ids || [])[0] || "";
+      const target = skillId
+        ? `/ui/skills?skill_id=${encodeURIComponent(skillId)}`
+        : "/ui/skills";
       window.location.href = target;
     });
     el.evaluationCenterBtn.addEventListener("click", () => {

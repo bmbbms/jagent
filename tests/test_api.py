@@ -382,12 +382,14 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert response.status_code == 200
     assert 'id="agentManagerBtn"' in response.text
     assert 'id="workflowCenterBtn"' in response.text
+    assert 'id="skillCenterBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
     assert 'id="approvalCenterBtn"' in response.text
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="workflowSnapshot"' in response.text
+    assert 'id="skillSnapshot"' in response.text
     assert 'id="observations"' in response.text
     assert 'id="runtimeSessions"' in response.text
     assert 'id="pageSizeFilter"' in response.text
