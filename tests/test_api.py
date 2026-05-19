@@ -476,7 +476,11 @@ def test_approvals_ui_page(client: TestClient) -> None:
     assert 'id="approvalIdInput"' in response.text
     assert 'id="statusFilter"' in response.text
     assert 'id="requestedByFilter"' in response.text
+    assert 'id="workflowPageBtn"' in response.text
+    assert 'id="capabilityPageBtn"' in response.text
     assert 'id="auditPageBtn"' in response.text
+    assert 'id="openWorkflowBtn"' in response.text or "openWorkflowBtn" in response.text
+    assert 'id="openCapabilityBtn"' in response.text or "openCapabilityBtn" in response.text
 
 
 def test_audit_ui_page(client: TestClient) -> None:

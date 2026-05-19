@@ -106,6 +106,7 @@
       padding: 14px;
       display: grid;
       gap: 10px;
+      cursor: pointer;
     }
     .card.active {
       border-color: var(--accent);
@@ -156,7 +157,7 @@
     }
     .label {
       color: var(--muted);
-      flex: 0 0 120px;
+      flex: 0 0 140px;
     }
     .value {
       flex: 1;
@@ -173,6 +174,14 @@
       border-radius: 14px;
       resize: vertical;
     }
+    pre.payload {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #fbf6ef;
+      border-radius: 14px;
+      padding: 12px;
+      margin: 0;
+    }
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -183,10 +192,12 @@
     <div class="header">
       <div>
         <h1>审批中心</h1>
-        <p>集中查看待审批与已处理审批单，支持按状态、业务域、申请人过滤，并直接执行通过或拒绝操作，便于联调高风险任务的 Workflow + Approval 闭环。</p>
+        <p>集中查看待审批与已处理审批单，支持按状态、业务域、申请人过滤，并联动任务、流程、能力与审计中心，方便跟踪高风险任务的完整闭环。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="workflowPageBtn" class="secondary">Workflow Center</button>
+        <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <button id="evaluationPageBtn" class="secondary">评估中心</button>
         <button id="auditPageBtn" class="secondary">审计中心</button>
         <input id="approvalIdInput" placeholder="输入 approval_id 直接打开" />
@@ -236,6 +247,8 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
+      workflowPageBtn: document.getElementById("workflowPageBtn"),
+      capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
       auditPageBtn: document.getElementById("auditPageBtn"),
       approvalIdInput: document.getElementById("approvalIdInput"),
@@ -323,6 +336,8 @@
           <div class="subtle">审批单号：${escapeHtml(item.approval_id)}</div>
           <div class="subtle">申请人：${escapeHtml(item.requested_by)}</div>
           <div class="subtle">任务：${escapeHtml(item.task_id || "-")}</div>
+          <div class="subtle">Workflow：${escapeHtml(item.workflow || "-")}</div>
+          <div class="subtle">Capability：${escapeHtml(item.capability_id || "-")}</div>
         </div>
       `).join("");
 
@@ -364,14 +379,17 @@
           <div class="detail-row"><div class="label">更新时间</div><div class="value">${escapeHtml(formatDate(item.update_time))}</div></div>
         </div>
         <h2 style="margin-top: 18px;">审批载荷</h2>
-        <pre class="subtle" style="white-space: pre-wrap; word-break: break-word; background: #fbf6ef; border-radius: 14px; padding: 12px;">${escapeHtml(payloadText)}</pre>
+        <pre class="subtle payload">${escapeHtml(payloadText)}</pre>
         <div class="decision-box">
           <input id="reviewerIdInput" placeholder="审批人 reviewer_id" value="reviewer-1" />
           <textarea id="decisionCommentInput" placeholder="审批意见">${canDecide ? "审批通过" : ""}</textarea>
           <div class="toolbar" style="justify-content: flex-start;">
             <button id="approveBtn" ${canDecide ? "" : "disabled"}>通过</button>
             <button id="rejectBtn" class="secondary" ${canDecide ? "" : "disabled"}>拒绝</button>
-            ${item.task_id ? `<button id="openTaskBtn" class="secondary">打开任务</button>` : ""}
+            ${item.task_id ? '<button id="openTaskBtn" class="secondary">打开任务</button>' : ""}
+            ${item.workflow ? '<button id="openWorkflowBtn" class="secondary">打开 Workflow</button>' : ""}
+            ${item.capability_id ? '<button id="openCapabilityBtn" class="secondary">打开 Capability</button>' : ""}
+            <button id="openAuditBtn" class="secondary">打开审计</button>
           </div>
         </div>
       `;
@@ -379,6 +397,9 @@
       const approveBtn = document.getElementById("approveBtn");
       const rejectBtn = document.getElementById("rejectBtn");
       const openTaskBtn = document.getElementById("openTaskBtn");
+      const openWorkflowBtn = document.getElementById("openWorkflowBtn");
+      const openCapabilityBtn = document.getElementById("openCapabilityBtn");
+      const openAuditBtn = document.getElementById("openAuditBtn");
 
       if (approveBtn) {
         approveBtn.addEventListener("click", async () => {
@@ -393,6 +414,21 @@
       if (openTaskBtn && item.task_id) {
         openTaskBtn.addEventListener("click", () => {
           window.location.href = `/ui/tasks?task_id=${encodeURIComponent(item.task_id)}`;
+        });
+      }
+      if (openWorkflowBtn && item.workflow) {
+        openWorkflowBtn.addEventListener("click", () => {
+          window.location.href = `/ui/workflows?workflow_code=${encodeURIComponent(item.workflow)}`;
+        });
+      }
+      if (openCapabilityBtn && item.capability_id) {
+        openCapabilityBtn.addEventListener("click", () => {
+          window.location.href = `/ui/capabilities?capability_id=${encodeURIComponent(item.capability_id)}`;
+        });
+      }
+      if (openAuditBtn) {
+        openAuditBtn.addEventListener("click", () => {
+          window.location.href = `/ui/audit?approval_id=${encodeURIComponent(item.approval_id)}`;
         });
       }
     }
@@ -454,6 +490,20 @@
 
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
+    });
+    el.workflowPageBtn.addEventListener("click", () => {
+      const workflowCode = state.currentApproval?.workflow || "";
+      const target = workflowCode
+        ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`
+        : "/ui/workflows";
+      window.location.href = target;
+    });
+    el.capabilityPageBtn.addEventListener("click", () => {
+      const capabilityId = state.currentApproval?.capability_id || "";
+      const target = capabilityId
+        ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`
+        : "/ui/capabilities";
+      window.location.href = target;
     });
     el.evaluationPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/evaluations";
