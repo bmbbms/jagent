@@ -333,6 +333,7 @@
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
         <button id="evaluationCenterBtn" class="secondary">评估中心</button>
         <button id="approvalCenterBtn" class="secondary">审批中心</button>
         <button id="auditCenterBtn" class="secondary">审计中心</button>
@@ -413,6 +414,13 @@
           <h2>结构化工具产出</h2>
           <div id="structuredToolResults" class="detail-list">
             <div class="empty">当前任务还没有可展示的结构化工具产出。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Workflow 视图</h2>
+          <div id="workflowSnapshot" class="detail-list">
+            <div class="empty">当前任务还没有命中可展示的 Workflow。</div>
           </div>
         </section>
 
@@ -499,6 +507,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      workflowCenterBtn: document.getElementById("workflowCenterBtn"),
       evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
       approvalCenterBtn: document.getElementById("approvalCenterBtn"),
       auditCenterBtn: document.getElementById("auditCenterBtn"),
@@ -522,6 +531,7 @@
       summaryMeta: document.getElementById("summaryMeta"),
       summaryStats: document.getElementById("summaryStats"),
       structuredToolResults: document.getElementById("structuredToolResults"),
+      workflowSnapshot: document.getElementById("workflowSnapshot"),
       timeline: document.getElementById("timeline"),
       evaluation: document.getElementById("evaluation"),
       toolCalls: document.getElementById("toolCalls"),
@@ -560,6 +570,13 @@
     function prettyJson(value) {
       if (!value || (typeof value === "object" && !Object.keys(value).length)) return "";
       return JSON.stringify(value, null, 2);
+    }
+
+    function renderTagItems(items = [], tone = "") {
+      if (!items.length) {
+        return '<div class="empty">暂无</div>';
+      }
+      return items.map(item => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("");
     }
 
     async function fetchJson(url) {
@@ -788,6 +805,82 @@
       `).join("");
     }
 
+    function extractWorkflowSnapshot(task) {
+      const workflowStarted = (task.events || []).find(item =>
+        item.event_type === "workflow_started" && item.event_payload?.workflow
+      );
+      if (workflowStarted?.event_payload?.workflow) {
+        return workflowStarted.event_payload.workflow;
+      }
+
+      const stepEvents = (task.events || []).filter(item => item.event_type === "workflow_step_registered");
+      if (!stepEvents.length) {
+        return null;
+      }
+
+      const firstStepPayload = stepEvents[0].event_payload || {};
+      const approvalCheckpoint = (task.events || []).find(item => item.event_type === "workflow_approval_checkpoint");
+      return {
+        workflow_code: firstStepPayload.workflow_code || "",
+        name: firstStepPayload.workflow_name || firstStepPayload.workflow_code || "workflow",
+        biz_domain: task.biz_domain || "",
+        purpose: "",
+        required_inputs: [],
+        required_tools: [],
+        approval_points: approvalCheckpoint?.event_payload?.approval_points || [],
+        fallback_rules: [],
+        audit_tags: [],
+        steps: stepEvents
+          .map(item => item.event_payload?.step)
+          .filter(Boolean),
+      };
+    }
+
+    function renderWorkflowSnapshot(task) {
+      const workflow = extractWorkflowSnapshot(task);
+      if (!workflow) {
+        el.workflowSnapshot.innerHTML = `<div class="empty">当前任务还没有命中可展示的 Workflow。</div>`;
+        return;
+      }
+
+      const steps = workflow.steps || [];
+      el.workflowSnapshot.innerHTML = `
+        <div class="score-hero">
+          <div class="subtle">${escapeHtml(workflow.biz_domain || task.biz_domain || "-")} / ${escapeHtml(workflow.workflow_code || "-")}</div>
+          <div style="margin-top: 6px;"><strong>${escapeHtml(workflow.name || workflow.workflow_code || "workflow")}</strong></div>
+          <div class="subtle" style="margin-top: 8px;">${escapeHtml(workflow.purpose || "当前任务已命中该 Workflow，以下内容来自流程定义与任务运行事件。")}</div>
+        </div>
+        <div class="detail-item"><div class="label">步骤数</div><div class="value">${escapeHtml(steps.length)}</div></div>
+        <div class="detail-item"><div class="label">必填输入</div><div class="value">${renderTagItems(workflow.required_inputs || [])}</div></div>
+        <div class="detail-item"><div class="label">工具依赖</div><div class="value">${renderTagItems(workflow.required_tools || [])}</div></div>
+        <div class="detail-item"><div class="label">审批点</div><div class="value">${renderTagItems(workflow.approval_points || [], "warning")}</div></div>
+        <div class="detail-item"><div class="label">Fallback</div><div class="value">${renderTagItems(workflow.fallback_rules || [])}</div></div>
+        <div class="detail-item"><div class="label">审计标签</div><div class="value">${renderTagItems(workflow.audit_tags || [], "success")}</div></div>
+        ${(steps || []).length ? steps.map((step, index) => `
+          <div class="list-card">
+            <h3>${escapeHtml(index + 1)}. ${escapeHtml(step.name || step.step_code || "step")}</h3>
+            <div class="subtle">${escapeHtml(step.step_type || "-")} / ${escapeHtml(step.step_code || "-")}</div>
+            <div>
+              ${step.approval_required ? '<span class="tag warning">approval required</span>' : '<span class="tag success">auto step</span>'}
+            </div>
+            <div class="detail-item"><div class="label">说明</div><div class="value">${escapeHtml(step.description || "-")}</div></div>
+            <div class="detail-item"><div class="label">工具</div><div class="value">${renderTagItems(step.required_tools || [])}</div></div>
+          </div>
+        `).join("") : '<div class="empty">当前 Workflow 暂无步骤明细。</div>'}
+        <div style="margin-top: 12px;">
+          <button id="openWorkflowCenterBtn" class="secondary" type="button">打开 Workflow 中心查看完整定义</button>
+        </div>
+      `;
+
+      const openWorkflowCenterBtn = document.getElementById("openWorkflowCenterBtn");
+      if (openWorkflowCenterBtn && workflow.workflow_code) {
+        openWorkflowCenterBtn.addEventListener("click", () => {
+          const target = `/ui/workflows?workflow_code=${encodeURIComponent(workflow.workflow_code)}`;
+          window.location.href = target;
+        });
+      }
+    }
+
     function renderTimeline(events = []) {
       if (!events.length) {
         el.timeline.innerHTML = `<div class="empty">当前任务暂无时间线事件。</div>`;
@@ -968,6 +1061,7 @@
       renderMeta(task);
       renderStats(task);
       renderStructuredToolResults(task.structured_tool_results || []);
+      renderWorkflowSnapshot(task);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);
@@ -1077,6 +1171,13 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.workflowCenterBtn.addEventListener("click", () => {
+      const workflowCode = extractWorkflowSnapshot(state.task || {})?.workflow_code || "";
+      const target = workflowCode
+        ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`
+        : "/ui/workflows";
+      window.location.href = target;
     });
     el.evaluationCenterBtn.addEventListener("click", () => {
       const evaluationId = state.task?.evaluation?.evaluation_id || "";
