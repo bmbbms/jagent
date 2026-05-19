@@ -8,8 +8,6 @@ Create Date: 2026-05-18 16:20:00
 from alembic import op
 from alembic import context
 import sqlalchemy as sa
-from sqlalchemy import inspect
-from sqlalchemy.exc import NoInspectionAvailable, SQLAlchemyError
 
 
 revision = "0003_add_internal_tool_business_tables"
@@ -43,209 +41,148 @@ def _run_step(step_name: str, operation) -> None:
         raise
 
 
-def _table_exists(table_name: str) -> bool:
-    if context.is_offline_mode():
-        return False
-    bind = op.get_bind()
-    try:
-        inspector = inspect(bind)
-        return table_name in inspector.get_table_names()
-    except (NoInspectionAvailable, SQLAlchemyError) as exc:
-        print(
-            f"[alembic 0003] table existence check failed for {table_name}: {exc!r}; continuing",
-            flush=True,
-        )
-        return False
+def _dialect_name() -> str:
+    return op.get_context().dialect.name
 
 
-def _index_exists(table_name: str, index_name: str) -> bool:
-    if context.is_offline_mode():
-        return False
-    bind = op.get_bind()
-    try:
-        inspector = inspect(bind)
-        if table_name not in inspector.get_table_names():
-            return False
-        return any(item["name"] == index_name for item in inspector.get_indexes(table_name))
-    except (NoInspectionAvailable, SQLAlchemyError) as exc:
-        print(
-            f"[alembic 0003] index existence check failed for {index_name}: {exc!r}; continuing",
-            flush=True,
-        )
-        return False
+def _execute_create_table(table_name: str, mysql_sql: str, sqlite_sql: str) -> None:
+    sql = mysql_sql if _dialect_name() == "mysql" else sqlite_sql
+    _run_step(f"create table {table_name}", lambda: op.execute(sql))
+
+
+def _create_index(index_name: str, table_name: str, columns: list[str]) -> None:
+    _run_step(
+        f"create index {index_name}",
+        lambda: op.create_index(index_name, table_name, columns, unique=False),
+    )
 
 
 def upgrade() -> None:
     print("[alembic 0003] starting internal tool business table migration", flush=True)
-    if not _table_exists("t_service_ticket"):
-        _run_step(
-            "create table t_service_ticket",
-            lambda: op.create_table(
-                "t_service_ticket",
-                sa.Column("ticket_id", sa.String(length=64), primary_key=True),
-                sa.Column("merchant_id", sa.String(length=64), nullable=True),
-                sa.Column("biz_domain", sa.String(length=64), nullable=False),
-                sa.Column("category", sa.String(length=64), nullable=False),
-                sa.Column("priority", sa.String(length=16), nullable=False),
-                sa.Column("title", sa.String(length=255), nullable=False),
-                sa.Column("description", sa.Text(), nullable=True),
-                sa.Column("status", sa.String(length=32), nullable=False),
-                sa.Column("requested_by", sa.String(length=64), nullable=False),
-                sa.Column("source", sa.String(length=32), nullable=False),
-                sa.Column("payload", sa.JSON(), nullable=True),
-                sa.Column("create_time", sa.DateTime(), nullable=False),
-                sa.Column("update_time", sa.DateTime(), nullable=False),
-            ),
+    _execute_create_table(
+        "t_service_ticket",
+        """
+        CREATE TABLE IF NOT EXISTS t_service_ticket (
+            ticket_id VARCHAR(64) NOT NULL,
+            merchant_id VARCHAR(64) NULL,
+            biz_domain VARCHAR(64) NOT NULL,
+            category VARCHAR(64) NOT NULL,
+            priority VARCHAR(16) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            status VARCHAR(32) NOT NULL,
+            requested_by VARCHAR(64) NOT NULL,
+            source VARCHAR(32) NOT NULL,
+            payload JSON NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL,
+            PRIMARY KEY (ticket_id)
         )
-    if not _index_exists("t_service_ticket", "ix_t_service_ticket_merchant_id"):
-        _run_step(
-            "create index ix_t_service_ticket_merchant_id",
-            lambda: op.create_index(
-                "ix_t_service_ticket_merchant_id",
-                "t_service_ticket",
-                ["merchant_id"],
-                unique=False,
-            ),
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS t_service_ticket (
+            ticket_id VARCHAR(64) NOT NULL,
+            merchant_id VARCHAR(64) NULL,
+            biz_domain VARCHAR(64) NOT NULL,
+            category VARCHAR(64) NOT NULL,
+            priority VARCHAR(16) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            status VARCHAR(32) NOT NULL,
+            requested_by VARCHAR(64) NOT NULL,
+            source VARCHAR(32) NOT NULL,
+            payload JSON NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL,
+            PRIMARY KEY (ticket_id)
         )
-    if not _index_exists("t_service_ticket", "ix_t_service_ticket_biz_domain"):
-        _run_step(
-            "create index ix_t_service_ticket_biz_domain",
-            lambda: op.create_index(
-                "ix_t_service_ticket_biz_domain",
-                "t_service_ticket",
-                ["biz_domain"],
-                unique=False,
-            ),
-        )
-    if not _index_exists("t_service_ticket", "ix_t_service_ticket_category"):
-        _run_step(
-            "create index ix_t_service_ticket_category",
-            lambda: op.create_index(
-                "ix_t_service_ticket_category",
-                "t_service_ticket",
-                ["category"],
-                unique=False,
-            ),
-        )
-    if not _index_exists("t_service_ticket", "ix_t_service_ticket_status"):
-        _run_step(
-            "create index ix_t_service_ticket_status",
-            lambda: op.create_index(
-                "ix_t_service_ticket_status",
-                "t_service_ticket",
-                ["status"],
-                unique=False,
-            ),
-        )
-    if not _index_exists("t_service_ticket", "ix_t_service_ticket_requested_by"):
-        _run_step(
-            "create index ix_t_service_ticket_requested_by",
-            lambda: op.create_index(
-                "ix_t_service_ticket_requested_by",
-                "t_service_ticket",
-                ["requested_by"],
-                unique=False,
-            ),
-        )
+        """,
+    )
+    _create_index("ix_t_service_ticket_merchant_id", "t_service_ticket", ["merchant_id"])
+    _create_index("ix_t_service_ticket_biz_domain", "t_service_ticket", ["biz_domain"])
+    _create_index("ix_t_service_ticket_category", "t_service_ticket", ["category"])
+    _create_index("ix_t_service_ticket_status", "t_service_ticket", ["status"])
+    _create_index("ix_t_service_ticket_requested_by", "t_service_ticket", ["requested_by"])
 
-    if not _table_exists("t_direct_sales_metric_daily"):
-        _run_step(
-            "create table t_direct_sales_metric_daily",
-            lambda: op.create_table(
-                "t_direct_sales_metric_daily",
-                sa.Column("id", AUTO_ID_TYPE, primary_key=True, autoincrement=True),
-                sa.Column("stat_date", sa.String(length=10), nullable=False),
-                sa.Column("region_code", sa.String(length=64), nullable=False),
-                sa.Column("sales_amount", sa.BigInteger(), nullable=False),
-                sa.Column("merchant_count", sa.Integer(), nullable=False),
-                sa.Column("conversion_rate", sa.Float(), nullable=False),
-                sa.Column("create_time", sa.DateTime(), nullable=False),
-                sa.Column("update_time", sa.DateTime(), nullable=False),
-            ),
+    _execute_create_table(
+        "t_direct_sales_metric_daily",
+        """
+        CREATE TABLE IF NOT EXISTS t_direct_sales_metric_daily (
+            id BIGINT NOT NULL AUTO_INCREMENT,
+            stat_date VARCHAR(10) NOT NULL,
+            region_code VARCHAR(64) NOT NULL,
+            sales_amount BIGINT NOT NULL,
+            merchant_count INTEGER NOT NULL,
+            conversion_rate FLOAT NOT NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL,
+            PRIMARY KEY (id)
         )
-    if not _index_exists(
-        "t_direct_sales_metric_daily", "ix_t_direct_sales_metric_daily_stat_date"
-    ):
-        _run_step(
-            "create index ix_t_direct_sales_metric_daily_stat_date",
-            lambda: op.create_index(
-                "ix_t_direct_sales_metric_daily_stat_date",
-                "t_direct_sales_metric_daily",
-                ["stat_date"],
-                unique=False,
-            ),
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS t_direct_sales_metric_daily (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            stat_date VARCHAR(10) NOT NULL,
+            region_code VARCHAR(64) NOT NULL,
+            sales_amount BIGINT NOT NULL,
+            merchant_count INTEGER NOT NULL,
+            conversion_rate FLOAT NOT NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL
         )
-    if not _index_exists(
-        "t_direct_sales_metric_daily", "ix_t_direct_sales_metric_daily_region_code"
-    ):
-        _run_step(
-            "create index ix_t_direct_sales_metric_daily_region_code",
-            lambda: op.create_index(
-                "ix_t_direct_sales_metric_daily_region_code",
-                "t_direct_sales_metric_daily",
-                ["region_code"],
-                unique=False,
-            ),
-        )
+        """,
+    )
+    _create_index(
+        "ix_t_direct_sales_metric_daily_stat_date",
+        "t_direct_sales_metric_daily",
+        ["stat_date"],
+    )
+    _create_index(
+        "ix_t_direct_sales_metric_daily_region_code",
+        "t_direct_sales_metric_daily",
+        ["region_code"],
+    )
 
-    if not _table_exists("t_report_export_job"):
-        _run_step(
-            "create table t_report_export_job",
-            lambda: op.create_table(
-                "t_report_export_job",
-                sa.Column("report_id", sa.String(length=64), primary_key=True),
-                sa.Column("report_type", sa.String(length=64), nullable=False),
-                sa.Column("biz_domain", sa.String(length=64), nullable=False),
-                sa.Column("format", sa.String(length=16), nullable=False),
-                sa.Column("status", sa.String(length=32), nullable=False),
-                sa.Column("requested_by", sa.String(length=64), nullable=False),
-                sa.Column("output_uri", sa.String(length=512), nullable=True),
-                sa.Column("request_params", sa.JSON(), nullable=True),
-                sa.Column("completed_time", sa.DateTime(), nullable=True),
-                sa.Column("create_time", sa.DateTime(), nullable=False),
-                sa.Column("update_time", sa.DateTime(), nullable=False),
-            ),
+    _execute_create_table(
+        "t_report_export_job",
+        """
+        CREATE TABLE IF NOT EXISTS t_report_export_job (
+            report_id VARCHAR(64) NOT NULL,
+            report_type VARCHAR(64) NOT NULL,
+            biz_domain VARCHAR(64) NOT NULL,
+            format VARCHAR(16) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            requested_by VARCHAR(64) NOT NULL,
+            output_uri VARCHAR(512) NULL,
+            request_params JSON NULL,
+            completed_time DATETIME NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL,
+            PRIMARY KEY (report_id)
         )
-    if not _index_exists("t_report_export_job", "ix_t_report_export_job_report_type"):
-        _run_step(
-            "create index ix_t_report_export_job_report_type",
-            lambda: op.create_index(
-                "ix_t_report_export_job_report_type",
-                "t_report_export_job",
-                ["report_type"],
-                unique=False,
-            ),
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS t_report_export_job (
+            report_id VARCHAR(64) NOT NULL,
+            report_type VARCHAR(64) NOT NULL,
+            biz_domain VARCHAR(64) NOT NULL,
+            format VARCHAR(16) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            requested_by VARCHAR(64) NOT NULL,
+            output_uri VARCHAR(512) NULL,
+            request_params JSON NULL,
+            completed_time DATETIME NULL,
+            create_time DATETIME NOT NULL,
+            update_time DATETIME NOT NULL,
+            PRIMARY KEY (report_id)
         )
-    if not _index_exists("t_report_export_job", "ix_t_report_export_job_biz_domain"):
-        _run_step(
-            "create index ix_t_report_export_job_biz_domain",
-            lambda: op.create_index(
-                "ix_t_report_export_job_biz_domain",
-                "t_report_export_job",
-                ["biz_domain"],
-                unique=False,
-            ),
-        )
-    if not _index_exists("t_report_export_job", "ix_t_report_export_job_status"):
-        _run_step(
-            "create index ix_t_report_export_job_status",
-            lambda: op.create_index(
-                "ix_t_report_export_job_status",
-                "t_report_export_job",
-                ["status"],
-                unique=False,
-            ),
-        )
-    if not _index_exists("t_report_export_job", "ix_t_report_export_job_requested_by"):
-        _run_step(
-            "create index ix_t_report_export_job_requested_by",
-            lambda: op.create_index(
-                "ix_t_report_export_job_requested_by",
-                "t_report_export_job",
-                ["requested_by"],
-                unique=False,
-            ),
-        )
+        """,
+    )
+    _create_index("ix_t_report_export_job_report_type", "t_report_export_job", ["report_type"])
+    _create_index("ix_t_report_export_job_biz_domain", "t_report_export_job", ["biz_domain"])
+    _create_index("ix_t_report_export_job_status", "t_report_export_job", ["status"])
+    _create_index("ix_t_report_export_job_requested_by", "t_report_export_job", ["requested_by"])
+    print("[alembic 0003] completed internal tool business table migration", flush=True)
 
 
 def downgrade() -> None:
