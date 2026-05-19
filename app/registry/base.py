@@ -28,6 +28,7 @@ class CapabilityMetadata:
     service_port: Optional[int] = None
     service_path: str = "/api/chat"
     extras: Dict[str, str] = field(default_factory=dict)
+    source: str = "local"
 
 
 @dataclass(frozen=True)
@@ -88,4 +89,5 @@ class CapabilityResolver(ABC):
             priority=agent.definition.priority,
             triggers=agent.definition.triggers,
             skills=agent.definition.skills,
+            source="local",
         )

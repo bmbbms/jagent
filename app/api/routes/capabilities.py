@@ -21,6 +21,7 @@ def list_capabilities(
             priority=item.priority,
             triggers=item.triggers,
             skills=item.skills,
+            source=item.source,
         )
         for item in registry.describe_capabilities(biz_domain)
     ]

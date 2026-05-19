@@ -121,6 +121,7 @@ class CapabilityInfo(BaseModel):
     priority: int
     triggers: List[str] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
+    source: str = "local"
 
 
 class ExternalAgentRegisterRequest(BaseModel):

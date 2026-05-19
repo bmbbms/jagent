@@ -97,4 +97,5 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             priority=agent.definition.priority,
             triggers=agent.definition.triggers,
             skills=agent.definition.skills,
+            source="local",
         )

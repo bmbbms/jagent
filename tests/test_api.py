@@ -33,6 +33,7 @@ def test_capabilities(client: TestClient) -> None:
     body = response.json()
     merchant_qa = next(item for item in body if item["capability_id"] == "merchant.qa")
     assert "merchant_qa" in merchant_qa["skills"]
+    assert merchant_qa["source"] == "local"
 
 
 def test_skills(client: TestClient) -> None:
