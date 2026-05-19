@@ -625,6 +625,12 @@
               ${item.ticket_id ? "disabled" : ""}
             >${item.ticket_id ? "已转工单" : "转为工单"}</button>
             ${item.ticket_id ? `<button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
+            <button
+              class="secondary"
+              type="button"
+              data-open-audit="${escapeHtml(item.suggestion_id)}"
+              data-open-audit-ticket="${escapeHtml(item.ticket_id || "")}"
+            >打开审计</button>
           </div>
         </div>
       `).join("");
@@ -691,6 +697,20 @@
           const ticketId = node.getAttribute("data-open-ticket") || "";
           if (!ticketId) return;
           window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+        });
+      });
+      el.suggestionList.querySelectorAll("[data-open-audit]").forEach(node => {
+        node.addEventListener("click", event => {
+          event.stopPropagation();
+          const ticketId = node.getAttribute("data-open-audit-ticket") || "";
+          const suggestionId = node.getAttribute("data-open-audit") || "";
+          if (ticketId) {
+            window.location.href = `/ui/audit?ticket_id=${encodeURIComponent(ticketId)}`;
+            return;
+          }
+          if (suggestionId) {
+            window.location.href = `/ui/audit?suggestion_id=${encodeURIComponent(suggestionId)}`;
+          }
         });
       });
     }

@@ -589,6 +589,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="suggestionList"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
+    assert "openAudit" in response.text or "/ui/audit?" in response.text
 
 
 def test_approvals_ui_page(client: TestClient) -> None:
