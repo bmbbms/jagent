@@ -57,6 +57,36 @@ class AgentToolBindingModel(Base):
     create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class ExternalCapabilityRegistryModel(Base):
+    __tablename__ = "t_external_capability_registry"
+
+    capability_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    capability_name: Mapped[str] = mapped_column(String(128))
+    biz_domain: Mapped[str] = mapped_column(String(64), index=True)
+    description: Mapped[str] = mapped_column(String(1024), default="")
+    priority: Mapped[int] = mapped_column(Integer, default=100)
+    triggers: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    skills: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    version: Mapped[str] = mapped_column(String(32), default="v1")
+    risk_level: Mapped[str] = mapped_column(String(16), default="low")
+    requires_approval: Mapped[bool] = mapped_column(default=False)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    transport: Mapped[str] = mapped_column(String(32), default="http")
+    endpoint: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    service_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    service_host: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    service_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    service_path: Mapped[str] = mapped_column(String(255), default="/api/chat")
+    extras: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+
 class ContactModel(Base):
     __tablename__ = "t_contact_list"
 

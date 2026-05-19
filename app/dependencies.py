@@ -16,6 +16,7 @@ from app.repositories.approval_repository import ApprovalRepository
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
+from app.repositories.external_capability_repository import ExternalCapabilityRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.task_repository import TaskRepository
 from app.repositories.tool_execution_repository import ToolExecutionRepository
@@ -26,6 +27,9 @@ from app.services.approval_service import ApprovalService
 from app.services.audit_service import AuditService
 from app.services.chat_service import ChatService
 from app.services.evaluation_service import EvaluationService
+from app.services.external_capability_persistence_service import (
+    ExternalCapabilityPersistenceService,
+)
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
 from app.services.internal_tool_registry import build_default_internal_tool_registry
 from app.services.internal_tool_http_provider import HttpInternalToolProvider
@@ -165,6 +169,15 @@ def get_evaluation_service() -> EvaluationService:
 @lru_cache
 def get_external_agent_discovery_service() -> ExternalAgentDiscoveryService:
     return ExternalAgentDiscoveryService()
+
+
+@lru_cache
+def get_external_capability_persistence_service() -> ExternalCapabilityPersistenceService:
+    return ExternalCapabilityPersistenceService(
+        session_factory=get_session_factory(),
+        repository=ExternalCapabilityRepository(),
+        registry=get_manual_remote_registry(),
+    )
 
 
 @lru_cache

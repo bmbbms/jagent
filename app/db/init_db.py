@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
 from app.config import Settings
@@ -13,7 +14,13 @@ from app.db import models  # noqa: F401
 
 
 def init_db(engine: Engine) -> None:
-    Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    missing_tables = [
+        table for table in Base.metadata.sorted_tables if table.name not in existing_tables
+    ]
+    if missing_tables:
+        Base.metadata.create_all(bind=engine, tables=missing_tables)
 
 
 def _load_installed_alembic(project_root: Path) -> tuple[ModuleType, ModuleType]:

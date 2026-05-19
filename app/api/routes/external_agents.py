@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.dependencies import (
+    get_external_capability_persistence_service,
     get_external_agent_discovery_service,
     get_manual_remote_registry,
 )
@@ -13,6 +14,9 @@ from app.schemas import (
     ExternalAgentUpdateRequest,
 )
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
+from app.services.external_capability_persistence_service import (
+    ExternalCapabilityPersistenceService,
+)
 
 router = APIRouter(prefix="/external-agents", tags=["external-agents"])
 
@@ -21,6 +25,9 @@ router = APIRouter(prefix="/external-agents", tags=["external-agents"])
 def register_external_agent(
     request: ExternalAgentRegisterRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
 ) -> ExternalAgentInfo:
     try:
         metadata = registry.register_remote(
@@ -45,6 +52,7 @@ def register_external_agent(
                 extras=request.extras,
             )
         )
+        persistence_service.save(metadata)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -74,6 +82,9 @@ def discover_external_agent(
 def add_external_agent(
     request: ExternalAgentAddRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
     discovery_service: ExternalAgentDiscoveryService = Depends(
         get_external_agent_discovery_service
     ),
@@ -81,6 +92,7 @@ def add_external_agent(
     try:
         metadata = discovery_service.discover(request)
         metadata = registry.register_remote(metadata)
+        persistence_service.save(metadata)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -101,6 +113,9 @@ def update_external_agent(
     capability_id: str,
     request: ExternalAgentUpdateRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
 ) -> ExternalAgentInfo:
     try:
         metadata = registry.update_remote(
@@ -126,6 +141,7 @@ def update_external_agent(
                 extras=request.extras,
             ),
         )
+        persistence_service.save(metadata)
     except KeyError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -143,6 +159,9 @@ def update_external_agent(
 def delete_external_agent(
     capability_id: str,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
 ) -> None:
     deleted = registry.unregister(capability_id)
     if not deleted:
@@ -150,6 +169,7 @@ def delete_external_agent(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"External agent not found: {capability_id}",
         )
+    persistence_service.delete(capability_id)
 
 
 def _to_response(metadata: CapabilityMetadata) -> ExternalAgentInfo:

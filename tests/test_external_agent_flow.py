@@ -7,7 +7,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_manual_remote_registry
+from app.dependencies import (
+    get_external_capability_persistence_service,
+    get_manual_remote_registry,
+)
 from app.main import app
 
 
@@ -390,3 +393,40 @@ def test_update_registered_external_agent(
     )
     assert updated_item["capability_name"] == "External Stub Agent Updated"
     assert updated_item["biz_domain"] == "operations"
+
+
+def test_external_agent_can_restore_from_persistent_store(
+    client: TestClient,
+    external_agent_server: str,
+) -> None:
+    register_response = client.post(
+        "/api/external-agents/register",
+        json={
+            "capability_id": "external.persisted.agent",
+            "capability_name": "External Persisted Agent",
+            "biz_domain": "merchant",
+            "description": "Persisted external agent integration verification",
+            "priority": 3,
+            "triggers": ["persisted", "restore"],
+            "skills": ["external_task_execution"],
+            "endpoint": external_agent_server,
+            "service_path": "/api/chat",
+            "tags": ["persisted"],
+        },
+    )
+    assert register_response.status_code == 200
+
+    registry = get_manual_remote_registry()
+    registry.clear()
+    assert registry.describe_capabilities() == []
+
+    restored_count = get_external_capability_persistence_service().restore_into_registry()
+    assert restored_count >= 1
+
+    external_agents_response = client.get("/api/external-agents")
+    assert external_agents_response.status_code == 200
+    external_agents = external_agents_response.json()
+    assert any(
+        item["capability_id"] == "external.persisted.agent"
+        for item in external_agents
+    )

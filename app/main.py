@@ -17,7 +17,12 @@ from app.api.routes.tasks import router as tasks_router
 from app.api.routes.ui import router as ui_router
 from app.api.routes.workflows import router as workflows_router
 from app.config import get_settings
-from app.dependencies import get_approval_service, get_capability_registry, get_engine
+from app.dependencies import (
+    get_approval_service,
+    get_capability_registry,
+    get_engine,
+    get_external_capability_persistence_service,
+)
 
 settings = get_settings()
 
@@ -25,6 +30,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     get_engine()
     get_capability_registry()
+    get_external_capability_persistence_service().restore_into_registry()
     get_approval_service()
     yield
 
