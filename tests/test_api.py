@@ -84,6 +84,19 @@ def test_skills(client: TestClient) -> None:
     assert "merchant_qa" in skill_ids
     assert "merchant_ops_analysis" in skill_ids
 
+    filtered_response = client.get(
+        "/api/skills",
+        params={
+            "allowed_tool": "merchant_profile_query",
+            "has_human_escalation": True,
+        },
+    )
+    assert filtered_response.status_code == 200
+    filtered_body = filtered_response.json()
+    assert filtered_body
+    filtered_ids = {item["skill_id"] for item in filtered_body}
+    assert "quota_review" in filtered_ids
+
 
 def test_skill_detail(client: TestClient) -> None:
     response = client.get("/api/skills/merchant_qa")
@@ -527,6 +540,8 @@ def test_skills_ui_page(client: TestClient) -> None:
     assert 'id="skillList"' in response.text
     assert 'id="skillDetail"' in response.text
     assert 'id="domainFilter"' in response.text
+    assert 'id="toolFilterInput"' in response.text
+    assert 'id="escalationFilter"' in response.text
     assert 'id="skillIdInput"' in response.text
     assert 'id="loadBtn"' in response.text
 

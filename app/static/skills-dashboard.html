@@ -25,13 +25,11 @@
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
-
     .page {
       max-width: 1480px;
       margin: 0 auto;
       padding: 24px;
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -40,26 +38,22 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
-
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
-
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
       max-width: 880px;
     }
-
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
-
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -71,7 +65,6 @@
       color: var(--text);
       font: inherit;
     }
-
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -79,18 +72,15 @@
       cursor: pointer;
       font-weight: 700;
     }
-
     .toolbar button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
-
     .layout {
       display: grid;
       grid-template-columns: 420px minmax(0, 1fr);
       gap: 20px;
     }
-
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -98,18 +88,16 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
-
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
-
     .list,
-    .stack {
+    .stack,
+    .detail-grid {
       display: grid;
       gap: 10px;
     }
-
     .skill-card,
     .detail-card,
     .capability-card {
@@ -120,29 +108,24 @@
       display: grid;
       gap: 10px;
     }
-
     .skill-card {
       cursor: pointer;
     }
-
     .skill-card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
     }
-
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
-
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
-
     .tag {
       display: inline-flex;
       align-items: center;
@@ -155,24 +138,20 @@
       margin-right: 6px;
       margin-bottom: 6px;
     }
-
     .tag.success {
       background: rgba(31, 122, 77, 0.12);
       color: var(--success);
     }
-
     .tag.warning {
       background: rgba(168, 116, 29, 0.14);
       color: var(--warning);
     }
-
     .hero {
       padding: 16px;
       border-radius: 16px;
       background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
       border: 1px solid #eadcca;
     }
-
     .hero strong {
       display: block;
       margin-top: 8px;
@@ -180,12 +159,6 @@
       color: var(--accent);
       line-height: 1;
     }
-
-    .detail-grid {
-      display: grid;
-      gap: 10px;
-    }
-
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -194,35 +167,29 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
-
     .detail-row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
-
     .label {
       color: var(--muted);
-      flex: 0 0 140px;
+      flex: 0 0 150px;
     }
-
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
-
     .section-split {
       margin-top: 20px;
       padding-top: 18px;
       border-top: 1px solid #eadcca;
     }
-
     .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
-
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -233,7 +200,7 @@
     <div class="header">
       <div>
         <h1>Skill Center</h1>
-        <p>集中查看 AgentScope runtime 下的 skill 能力定义，支持按业务域和 skill_id 过滤，并联动展示哪些 Agent 已声明依赖该 skill，方便我们规划注册式业务能力和后续 skill 扩展。</p>
+        <p>集中查看 AgentScope runtime 下的 skill 定义，支持按业务域、允许工具和人工升级要求过滤，并联动展示哪些 Agent 已声明依赖该 skill。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -245,6 +212,12 @@
           <option value="operations">operations</option>
           <option value="data_support">data_support</option>
           <option value="partner">partner</option>
+        </select>
+        <input id="toolFilterInput" placeholder="按 allowed_tool 过滤" />
+        <select id="escalationFilter">
+          <option value="">全部升级要求</option>
+          <option value="true">has_human_escalation=true</option>
+          <option value="false">has_human_escalation=false</option>
         </select>
         <input id="skillIdInput" placeholder="输入 skill_id 直接打开" />
         <button id="loadBtn">加载 Skill</button>
@@ -283,6 +256,8 @@
       agentPageBtn: document.getElementById("agentPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
+      toolFilterInput: document.getElementById("toolFilterInput"),
+      escalationFilter: document.getElementById("escalationFilter"),
       skillIdInput: document.getElementById("skillIdInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -310,16 +285,19 @@
 
     function updateQuery() {
       const url = new URL(window.location.href);
-      if (state.skillId) {
-        url.searchParams.set("skill_id", state.skillId);
-      } else {
-        url.searchParams.delete("skill_id");
-      }
-      if (el.domainFilter.value) {
-        url.searchParams.set("biz_domain", el.domainFilter.value);
-      } else {
-        url.searchParams.delete("biz_domain");
-      }
+      const pairs = {
+        skill_id: state.skillId,
+        biz_domain: el.domainFilter.value,
+        allowed_tool: el.toolFilterInput.value.trim(),
+        has_human_escalation: el.escalationFilter.value,
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
       window.history.replaceState({}, "", url);
     }
 
@@ -407,11 +385,13 @@
 
         <div class="section-split">
           <h2>Steps</h2>
-          ${(item.steps || []).length ? `<div class="stack">${(item.steps || []).map((step, index) => `
-            <div class="detail-card">
-              <div class="title">${escapeHtml(index + 1)}. ${escapeHtml(step)}</div>
-            </div>
-          `).join("")}</div>` : '<div class="empty">暂无步骤定义。</div>'}
+          ${(item.steps || []).length
+            ? `<div class="stack">${(item.steps || []).map((step, index) => `
+              <div class="detail-card">
+                <div class="title">${escapeHtml(index + 1)}. ${escapeHtml(step)}</div>
+              </div>
+            `).join("")}</div>`
+            : '<div class="empty">暂无步骤定义。</div>'}
         </div>
 
         <div class="section-split">
@@ -426,28 +406,41 @@
 
         <div class="section-split">
           <h2>Bound Agents</h2>
-          ${boundCapabilities.length ? `<div class="stack">${boundCapabilities.map(capability => `
-            <div class="capability-card">
-              <div class="title">${escapeHtml(capability.capability_name)}</div>
-              <div>
-                <span class="tag">${escapeHtml(capability.capability_id)}</span>
-                <span class="tag success">${escapeHtml(capability.biz_domain)}</span>
-                <span class="tag">priority:${escapeHtml(capability.priority)}</span>
+          ${boundCapabilities.length
+            ? `<div class="stack">${boundCapabilities.map(capability => `
+              <div class="capability-card">
+                <div class="title">${escapeHtml(capability.capability_name)}</div>
+                <div>
+                  <span class="tag">${escapeHtml(capability.capability_id)}</span>
+                  <span class="tag success">${escapeHtml(capability.biz_domain)}</span>
+                  <span class="tag">priority:${escapeHtml(capability.priority)}</span>
+                </div>
+                <div class="subtle">${escapeHtml(capability.description || "-")}</div>
+                <div class="subtle">Triggers: ${escapeHtml((capability.triggers || []).join(", ") || "-")}</div>
               </div>
-              <div class="subtle">${escapeHtml(capability.description || "-")}</div>
-              <div class="subtle">Triggers: ${escapeHtml((capability.triggers || []).join(", ") || "-")}</div>
-            </div>
-          `).join("")}</div>` : '<div class="empty">当前还没有 Agent 声明依赖这个 Skill。</div>'}
+            `).join("")}</div>`
+            : '<div class="empty">当前还没有 Agent 声明依赖这个 Skill。</div>'}
         </div>
       `;
     }
 
     async function loadSkills() {
-      const query = new URLSearchParams();
-      if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      const skillQuery = new URLSearchParams();
+      const capabilityQuery = new URLSearchParams();
+      if (el.domainFilter.value) {
+        skillQuery.set("biz_domain", el.domainFilter.value);
+        capabilityQuery.set("biz_domain", el.domainFilter.value);
+      }
+      if (el.toolFilterInput.value.trim()) {
+        skillQuery.set("allowed_tool", el.toolFilterInput.value.trim());
+      }
+      if (el.escalationFilter.value) {
+        skillQuery.set("has_human_escalation", el.escalationFilter.value);
+      }
+
       const [skills, capabilities] = await Promise.all([
-        fetchJson(`/api/skills?${query.toString()}`),
-        fetchJson(`/api/capabilities?${query.toString()}`),
+        fetchJson(`/api/skills?${skillQuery.toString()}`),
+        fetchJson(`/api/capabilities?${capabilityQuery.toString()}`),
       ]);
       state.skills = skills;
       state.capabilities = capabilities;
@@ -483,6 +476,8 @@
       state.skillId = query.get("skill_id") || "";
       el.skillIdInput.value = state.skillId;
       el.domainFilter.value = query.get("biz_domain") || "";
+      el.toolFilterInput.value = query.get("allowed_tool") || "";
+      el.escalationFilter.value = query.get("has_human_escalation") || "";
       await loadSkills();
       if (state.skillId) {
         loadSkillDetail();
@@ -503,10 +498,14 @@
       window.location.href = "/ui/workflows";
     });
     el.domainFilter.addEventListener("change", bootstrap);
+    el.escalationFilter.addEventListener("change", bootstrap);
     el.loadBtn.addEventListener("click", loadSkillDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
     el.skillIdInput.addEventListener("keydown", event => {
       if (event.key === "Enter") loadSkillDetail();
+    });
+    el.toolFilterInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
     });
 
     bootstrap();

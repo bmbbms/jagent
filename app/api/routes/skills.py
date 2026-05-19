@@ -10,9 +10,15 @@ router = APIRouter(prefix="/skills", tags=["skills"])
 @router.get("", response_model=list[SkillInfo])
 def list_skills(
     biz_domain: BizDomain | None = Query(default=None),
+    allowed_tool: str | None = Query(default=None),
+    has_human_escalation: bool | None = Query(default=None),
     registry: SkillRegistry = Depends(get_skill_registry),
 ) -> list[SkillInfo]:
-    return registry.describe_skills(biz_domain)
+    return registry.describe_skills(
+        biz_domain,
+        allowed_tool=allowed_tool,
+        has_human_escalation=has_human_escalation,
+    )
 
 
 @router.get("/{skill_id}", response_model=SkillDetailInfo)

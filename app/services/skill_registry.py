@@ -118,10 +118,26 @@ class SkillRegistry:
                 items.append(spec)
         return items
 
-    def describe_skills(self, biz_domain: BizDomain | None = None) -> List[SkillInfo]:
+    def describe_skills(
+        self,
+        biz_domain: BizDomain | None = None,
+        *,
+        allowed_tool: str | None = None,
+        has_human_escalation: bool | None = None,
+    ) -> List[SkillInfo]:
+        specs = list(self._runtime_specs.values())
         if biz_domain is not None:
-            return list(self._skills.get(biz_domain, []))
-        return [skill for items in self._skills.values() for skill in items]
+            specs = [item for item in specs if item.biz_domain == biz_domain]
+        if allowed_tool:
+            specs = [item for item in specs if allowed_tool in item.allowed_tools]
+        if has_human_escalation is not None:
+            specs = [
+                item
+                for item in specs
+                if bool(item.human_escalation) == has_human_escalation
+            ]
+        specs.sort(key=lambda item: item.skill_id)
+        return [item.to_skill_info() for item in specs]
 
     def describe_skill(self, skill_id: str) -> SkillDetailInfo | None:
         spec = self._runtime_specs.get(skill_id)
