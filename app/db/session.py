@@ -13,7 +13,7 @@ from app.config import Settings
 def create_db_engine(settings: Settings) -> Engine:
     connect_args = {}
     if settings.database_url.startswith("sqlite"):
-        connect_args = {"check_same_thread": False}
+        connect_args = {"check_same_thread": False, "timeout": 30}
     return create_engine(
         settings.database_url,
         echo=settings.database_echo,

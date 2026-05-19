@@ -30,6 +30,7 @@ from app.services.evaluation_service import EvaluationService
 from app.services.external_capability_persistence_service import (
     ExternalCapabilityPersistenceService,
 )
+from app.services.external_agent_health_service import ExternalAgentHealthService
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
 from app.services.internal_tool_registry import build_default_internal_tool_registry
 from app.services.internal_tool_http_provider import HttpInternalToolProvider
@@ -177,6 +178,13 @@ def get_external_capability_persistence_service() -> ExternalCapabilityPersisten
         session_factory=get_session_factory(),
         repository=ExternalCapabilityRepository(),
         registry=get_manual_remote_registry(),
+    )
+
+
+@lru_cache
+def get_external_agent_health_service() -> ExternalAgentHealthService:
+    return ExternalAgentHealthService(
+        persistence_service=get_external_capability_persistence_service(),
     )
 
 

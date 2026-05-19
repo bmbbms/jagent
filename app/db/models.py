@@ -78,6 +78,13 @@ class ExternalCapabilityRegistryModel(Base):
     service_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
     service_path: Mapped[str] = mapped_column(String(255), default="/api/chat")
     extras: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    health_status: Mapped[str] = mapped_column(String(32), default="unknown")
+    last_check_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_success_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_failure_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
+    last_latency_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     enabled: Mapped[bool] = mapped_column(default=True)
     create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     update_time: Mapped[datetime] = mapped_column(

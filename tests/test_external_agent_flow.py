@@ -208,6 +208,11 @@ def test_register_and_route_external_agent(
     assert external_agents_response.status_code == 200
     external_agents = external_agents_response.json()
     assert any(item["capability_id"] == "external.stub.agent" for item in external_agents)
+    registered_item = next(
+        item for item in external_agents if item["capability_id"] == "external.stub.agent"
+    )
+    assert registered_item["health_status"] in {"unknown", "healthy"}
+    assert registered_item["consecutive_failures"] == 0
 
     filtered_response = client.get(
         "/api/external-agents",
@@ -246,6 +251,17 @@ def test_register_and_route_external_agent(
     task_detail = task_detail_response.json()
     assert task_detail["selected_agent_id"] == "external.stub.agent"
     assert "External agent processed" in task_detail["final_output_summary"]
+    event_types = [item["event_type"] for item in task_detail["events"]]
+    assert "external_agent_call_started" in event_types
+    assert "external_agent_call_finished" in event_types
+
+    health_response = client.get("/api/external-agents/external.stub.agent/health")
+    assert health_response.status_code == 200
+    health = health_response.json()
+    assert health["health_status"] == "healthy"
+    assert health["last_success_time"] is not None
+    assert health["last_latency_ms"] is not None
+    assert health["consecutive_failures"] == 0
 
 
 def test_register_and_route_a2a_external_agent(
@@ -449,3 +465,38 @@ def test_external_agent_can_restore_from_persistent_store(
         item["capability_id"] == "external.persisted.agent"
         for item in external_agents
     )
+
+
+def test_external_agent_health_check_api(
+    client: TestClient,
+    external_agent_server: str,
+) -> None:
+    register_response = client.post(
+        "/api/external-agents/register",
+        json={
+            "capability_id": "external.health.agent",
+            "capability_name": "External Health Agent",
+            "biz_domain": "merchant",
+            "description": "External health check verification",
+            "priority": 2,
+            "triggers": ["health"],
+            "skills": ["external_task_execution"],
+            "endpoint": external_agent_server,
+            "service_path": "/api/chat",
+            "tags": ["health"],
+        },
+    )
+    assert register_response.status_code == 200
+
+    check_response = client.post("/api/external-agents/external.health.agent/health-check")
+    assert check_response.status_code == 200
+    health = check_response.json()
+    assert health["capability_id"] == "external.health.agent"
+    assert health["health_status"] == "healthy"
+    assert health["last_check_time"] is not None
+    assert health["last_success_time"] is not None
+    assert health["last_latency_ms"] is not None
+
+    get_response = client.get("/api/external-agents/external.health.agent/health")
+    assert get_response.status_code == 200
+    assert get_response.json()["health_status"] == "healthy"

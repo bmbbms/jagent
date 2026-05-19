@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
+from time import perf_counter
 import uuid
 from typing import Any, Dict, List
 from urllib.error import HTTPError, URLError
@@ -22,10 +24,88 @@ class RemoteCapabilityProxy(CapabilityAgent):
         payload = request.model_dump(mode="python")
         payload["metadata"] = self._sanitize_metadata(payload.get("metadata") or {})
         url = f"{base_url}{endpoint}"
+        runtime_context = request.metadata.get("_runtime_context", {})
+        emit_event = runtime_context.get("emit_event")
+        task_id = str(runtime_context.get("task_id") or "")
+        started_at = datetime.utcnow()
+        started_perf = perf_counter()
+        self._emit_event(
+            emit_event=emit_event,
+            task_id=task_id,
+            event_type="external_agent_call_started",
+            title="外部 Agent 开始执行",
+            content=f"{self._metadata.capability_name} -> {url}",
+            event_status="running",
+            event_payload={
+                "capability_id": self._metadata.capability_id,
+                "capability_name": self._metadata.capability_name,
+                "transport": self._metadata.transport,
+                "endpoint": base_url,
+                "service_path": endpoint,
+                "url": url,
+            },
+        )
         if self._metadata.transport in {"a2a", "a2a_jsonrpc"}:
-            return self._run_a2a(url, request, payload["metadata"])
-        response = self._post_json(url, payload)
-        return ChatResponse.model_validate(response)
+            runner = lambda: self._run_a2a(url, request, payload["metadata"])
+        else:
+            runner = lambda: ChatResponse.model_validate(self._post_json(url, payload))
+
+        try:
+            response = runner()
+        except Exception as exc:
+            latency_ms = max(0, int((perf_counter() - started_perf) * 1000))
+            self._update_health(
+                health_status="unhealthy",
+                checked_at=started_at,
+                latency_ms=latency_ms,
+                error=str(exc),
+            )
+            self._emit_event(
+                emit_event=emit_event,
+                task_id=task_id,
+                event_type="external_agent_call_failed",
+                title="外部 Agent 执行失败",
+                content=str(exc),
+                event_status="failed",
+                event_payload={
+                    "capability_id": self._metadata.capability_id,
+                    "transport": self._metadata.transport,
+                    "endpoint": base_url,
+                    "service_path": endpoint,
+                    "url": url,
+                    "latency_ms": latency_ms,
+                    "error": str(exc),
+                },
+            )
+            raise
+
+        latency_ms = max(0, int((perf_counter() - started_perf) * 1000))
+        self._update_health(
+            health_status="healthy",
+            checked_at=started_at,
+            latency_ms=latency_ms,
+        )
+        response.audit_tags.append("external_agent")
+        response.audit_tags.append(f"external_transport:{self._metadata.transport}")
+        self._emit_event(
+            emit_event=emit_event,
+            task_id=task_id,
+            event_type="external_agent_call_finished",
+            title="外部 Agent 执行完成",
+            content=response.summary,
+            event_status="success",
+            event_payload={
+                "capability_id": self._metadata.capability_id,
+                "capability_name": self._metadata.capability_name,
+                "transport": self._metadata.transport,
+                "endpoint": base_url,
+                "service_path": endpoint,
+                "url": url,
+                "latency_ms": latency_ms,
+                "references": response.references,
+            },
+        )
+        return response
 
     def _remote_base_url(self) -> str:
         if self._metadata.endpoint:
@@ -128,6 +208,52 @@ class RemoteCapabilityProxy(CapabilityAgent):
                 f"transport:{self._metadata.transport}",
                 "external_agent",
             ],
+        )
+
+    def _update_health(
+        self,
+        *,
+        health_status: str,
+        checked_at: datetime,
+        latency_ms: int | None,
+        error: str | None = None,
+    ) -> None:
+        try:
+            from app.dependencies import get_external_capability_persistence_service
+
+            get_external_capability_persistence_service().update_health(
+                capability_id=self._metadata.capability_id,
+                health_status=health_status,
+                checked_at=checked_at,
+                latency_ms=latency_ms,
+                error=error,
+            )
+        except Exception:
+            return
+
+    def _emit_event(
+        self,
+        *,
+        emit_event,
+        task_id: str,
+        event_type: str,
+        title: str,
+        content: str,
+        event_status: str,
+        event_payload: Dict[str, Any],
+    ) -> None:
+        if not emit_event or not task_id:
+            return
+        emit_event(
+            task_id=task_id,
+            event_type=event_type,
+            title=title,
+            content=content,
+            event_status=event_status,
+            agent_id=self._metadata.capability_id,
+            event_payload=event_payload,
+            current_stage="executing",
+            task_status="running" if event_status == "running" else None,
         )
 
     @staticmethod

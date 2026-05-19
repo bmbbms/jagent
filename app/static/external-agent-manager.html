@@ -263,6 +263,7 @@
               <button id="discoverBtn" class="primary">先发现</button>
               <button id="addBtn" class="primary">直接添加</button>
               <button id="updateBtn" class="secondary">保存编辑</button>
+              <button id="healthCheckBtn" class="secondary">健康检查</button>
               <button id="refreshBtn">刷新列表</button>
             </div>
             <div id="pageStatus" class="status">待操作</div>
@@ -371,6 +372,7 @@
       refreshBtn: document.getElementById("refreshBtn"),
       resetFormBtn: document.getElementById("resetFormBtn"),
       verifyBtn: document.getElementById("verifyBtn"),
+      healthCheckBtn: document.getElementById("healthCheckBtn"),
       listDomainFilter: document.getElementById("listDomainFilter"),
       listSourceFilter: document.getElementById("listSourceFilter"),
       listRiskFilter: document.getElementById("listRiskFilter"),
@@ -536,11 +538,18 @@
             <span class="tag">${escapeHtml(item.transport)}</span>
             <span class="tag">${escapeHtml(item.source || "manual_remote")}</span>
             <span class="tag">priority:${escapeHtml(item.priority)}</span>
+            <span class="tag ${item.health_status === "healthy" ? "success" : item.health_status === "unhealthy" ? "danger" : ""}">health:${escapeHtml(item.health_status || "unknown")}</span>
           </div>
           <div class="kv">
             <div class="kv-item"><div class="kv-label">描述</div><div class="kv-value">${escapeHtml(item.description || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Endpoint</div><div class="kv-value">${escapeHtml(item.endpoint || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Service Path</div><div class="kv-value">${escapeHtml(item.service_path || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">最近检查</div><div class="kv-value">${escapeHtml(item.last_check_time || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">最近成功</div><div class="kv-value">${escapeHtml(item.last_success_time || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">最近失败</div><div class="kv-value">${escapeHtml(item.last_failure_time || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">最近延迟</div><div class="kv-value">${escapeHtml(item.last_latency_ms ?? "-")} ms</div></div>
+            <div class="kv-item"><div class="kv-label">失败次数</div><div class="kv-value">${escapeHtml(item.consecutive_failures ?? 0)}</div></div>
+            <div class="kv-item"><div class="kv-label">最近错误</div><div class="kv-value">${escapeHtml(item.last_error || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Skills</div><div class="kv-value">${escapeHtml((item.skills || []).join(", ") || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Triggers</div><div class="kv-value">${escapeHtml((item.triggers || []).join(", ") || "-")}</div></div>
           </div>
@@ -711,6 +720,26 @@
       }
     }
 
+    async function healthCheckAgent() {
+      const capabilityId = (editingCapabilityId || el.capabilityIdInput.value || "").trim();
+      if (!capabilityId) {
+        setStatus("请先选择一个 capability_id", "warning");
+        return;
+      }
+      try {
+        setStatus("健康检查中...");
+        const result = await requestJson(`/api/external-agents/${encodeURIComponent(capabilityId)}/health-check`, {
+          method: "POST",
+        });
+        showResult(result);
+        setStatus(`健康检查完成: ${result.health_status}`, result.health_status === "healthy" ? "success" : "danger");
+        await loadAgentList();
+      } catch (error) {
+        setStatus("健康检查失败", "danger");
+        showResult(error.message);
+      }
+    }
+
     el.discoverBtn.addEventListener("click", discoverAgent);
     el.addBtn.addEventListener("click", addAgent);
     el.updateBtn.addEventListener("click", updateAgent);
@@ -720,6 +749,7 @@
       setStatus("已重置表单", "success");
     });
     el.verifyBtn.addEventListener("click", verifyAgent);
+    el.healthCheckBtn.addEventListener("click", healthCheckAgent);
     [el.listDomainFilter, el.listSourceFilter, el.listRiskFilter, el.listApprovalFilter, el.listTransportFilter].forEach(node => {
       node.addEventListener("change", loadAgentList);
     });

@@ -214,6 +214,24 @@ class ExternalAgentInfo(BaseModel):
     service_path: str = "/api/chat"
     extras: Dict[str, str] = Field(default_factory=dict)
     source: str = "manual_remote"
+    health_status: str = "unknown"
+    last_check_time: Optional[str] = None
+    last_success_time: Optional[str] = None
+    last_failure_time: Optional[str] = None
+    last_error: Optional[str] = None
+    consecutive_failures: int = 0
+    last_latency_ms: Optional[int] = None
+
+
+class ExternalAgentHealthResponse(BaseModel):
+    capability_id: str
+    health_status: str = "unknown"
+    last_check_time: Optional[str] = None
+    last_success_time: Optional[str] = None
+    last_failure_time: Optional[str] = None
+    last_error: Optional[str] = None
+    consecutive_failures: int = 0
+    last_latency_ms: Optional[int] = None
 
 
 class SkillInfo(BaseModel):

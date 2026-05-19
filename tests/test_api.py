@@ -521,6 +521,7 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="discoverBtn"' in response.text
     assert 'id="addBtn"' in response.text
     assert 'id="updateBtn"' in response.text
+    assert 'id="healthCheckBtn"' in response.text
     assert 'id="verifyBtn"' in response.text
     assert 'id="agentList"' in response.text
 

@@ -3,16 +3,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dependencies import (
     get_external_capability_persistence_service,
     get_external_agent_discovery_service,
+    get_external_agent_health_service,
     get_manual_remote_registry,
 )
 from app.registry.base import CapabilityMetadata
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.schemas import (
     ExternalAgentAddRequest,
+    ExternalAgentHealthResponse,
     ExternalAgentInfo,
     ExternalAgentRegisterRequest,
     ExternalAgentUpdateRequest,
 )
+from app.services.external_agent_health_service import ExternalAgentHealthService
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
 from app.services.external_capability_persistence_service import (
     ExternalCapabilityPersistenceService,
@@ -111,8 +114,18 @@ def list_external_agents(
     requires_approval: bool | None = Query(default=None),
     transport: str | None = Query(default=None),
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
 ) -> list[ExternalAgentInfo]:
-    items = [_to_response(item) for item in registry.describe_capabilities()]
+    health_map = {
+        item.capability_id: item
+        for item in persistence_service.list_items()
+    }
+    items = [
+        _to_response(item, health_item=health_map.get(item.capability_id))
+        for item in registry.describe_capabilities()
+    ]
     if biz_domain:
         items = [item for item in items if item.biz_domain.value == biz_domain]
     if source:
@@ -193,7 +206,39 @@ def delete_external_agent(
     persistence_service.delete(capability_id)
 
 
-def _to_response(metadata: CapabilityMetadata) -> ExternalAgentInfo:
+@router.get("/{capability_id}/health", response_model=ExternalAgentHealthResponse)
+def get_external_agent_health(
+    capability_id: str,
+    health_service: ExternalAgentHealthService = Depends(get_external_agent_health_service),
+) -> ExternalAgentHealthResponse:
+    health = health_service.get_health(capability_id)
+    if health is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"External agent not found: {capability_id}",
+        )
+    return health
+
+
+@router.post("/{capability_id}/health-check", response_model=ExternalAgentHealthResponse)
+def check_external_agent_health(
+    capability_id: str,
+    health_service: ExternalAgentHealthService = Depends(get_external_agent_health_service),
+) -> ExternalAgentHealthResponse:
+    health = health_service.check_health(capability_id)
+    if health is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"External agent not found: {capability_id}",
+        )
+    return health
+
+
+def _to_response(
+    metadata: CapabilityMetadata,
+    *,
+    health_item=None,
+) -> ExternalAgentInfo:
     return ExternalAgentInfo(
         capability_id=metadata.capability_id,
         capability_name=metadata.capability_name,
@@ -214,4 +259,17 @@ def _to_response(metadata: CapabilityMetadata) -> ExternalAgentInfo:
         service_path=metadata.service_path,
         extras=metadata.extras,
         source=metadata.source,
+        health_status=getattr(health_item, "health_status", "unknown") or "unknown",
+        last_check_time=getattr(health_item, "last_check_time", None).isoformat()
+        if getattr(health_item, "last_check_time", None)
+        else None,
+        last_success_time=getattr(health_item, "last_success_time", None).isoformat()
+        if getattr(health_item, "last_success_time", None)
+        else None,
+        last_failure_time=getattr(health_item, "last_failure_time", None).isoformat()
+        if getattr(health_item, "last_failure_time", None)
+        else None,
+        last_error=getattr(health_item, "last_error", None),
+        consecutive_failures=int(getattr(health_item, "consecutive_failures", 0) or 0),
+        last_latency_ms=getattr(health_item, "last_latency_ms", None),
     )

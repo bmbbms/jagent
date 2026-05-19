@@ -6,6 +6,7 @@ from pathlib import Path
 from types import ModuleType
 
 from sqlalchemy import inspect
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from app.config import Settings
@@ -21,6 +22,54 @@ def init_db(engine: Engine) -> None:
     ]
     if missing_tables:
         Base.metadata.create_all(bind=engine, tables=missing_tables)
+    _upgrade_external_capability_registry_columns(engine)
+
+
+def _upgrade_external_capability_registry_columns(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "t_external_capability_registry" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("t_external_capability_registry")
+    }
+    required_sql = {
+        "health_status": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN health_status VARCHAR(32) NOT NULL DEFAULT 'unknown'"
+        ),
+        "last_check_time": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN last_check_time DATETIME NULL"
+        ),
+        "last_success_time": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN last_success_time DATETIME NULL"
+        ),
+        "last_failure_time": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN last_failure_time DATETIME NULL"
+        ),
+        "last_error": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN last_error VARCHAR(1024) NULL"
+        ),
+        "consecutive_failures": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN consecutive_failures INTEGER NOT NULL DEFAULT 0"
+        ),
+        "last_latency_ms": (
+            "ALTER TABLE t_external_capability_registry "
+            "ADD COLUMN last_latency_ms BIGINT NULL"
+        ),
+    }
+
+    with engine.begin() as connection:
+        for column_name, ddl in required_sql.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(text(ddl))
 
 
 def _load_installed_alembic(project_root: Path) -> tuple[ModuleType, ModuleType]:
