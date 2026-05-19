@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow Center</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #241b15;
+      --muted: #726657;
+      --accent: #a15428;
+      --accent-soft: #f3e2d2;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --radius: 18px;
+      --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar button,
+    .toolbar input,
+    .toolbar select {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .list,
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .workflow-card,
+    .detail-card,
+    .step-card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .workflow-card {
+      cursor: pointer;
+    }
+
+    .workflow-card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .tag.success {
+      background: rgba(31, 122, 77, 0.12);
+      color: var(--success);
+    }
+
+    .tag.warning {
+      background: rgba(168, 116, 29, 0.14);
+      color: var(--warning);
+    }
+
+    .hero {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+    }
+
+    .hero strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 30px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      flex: 0 0 130px;
+    }
+
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .section-split {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid #eadcca;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Workflow Center</h1>
+        <p>集中查看平台内置业务 Workflow 的定义、步骤拆解、审批检查点、工具依赖和 fallback 规则，方便我们在接入外部 Agent、设计高风险流程和排查执行路径时快速对齐。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="approvalPageBtn" class="secondary">审批中心</button>
+        <button id="evaluationPageBtn" class="secondary">评估中心</button>
+        <select id="domainFilter">
+          <option value="">全部业务域</option>
+          <option value="merchant">merchant</option>
+          <option value="operations">operations</option>
+          <option value="data_support">data_support</option>
+          <option value="partner">partner</option>
+        </select>
+        <input id="workflowCodeInput" placeholder="输入 workflow_code 直接打开" />
+        <button id="loadBtn">加载 Workflow</button>
+        <button id="refreshBtn" class="secondary">刷新列表</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>Workflow 列表</h2>
+        <div id="workflowListMeta" class="subtle">正在加载 Workflow 列表...</div>
+        <div id="workflowList" class="list" style="margin-top: 12px;">
+          <div class="empty">正在加载 Workflow 列表...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Workflow 详情</h2>
+        <div id="workflowDetail">
+          <div class="empty">请选择左侧 Workflow 查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      workflows: [],
+      workflowCode: "",
+      selectedWorkflow: null,
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      approvalPageBtn: document.getElementById("approvalPageBtn"),
+      evaluationPageBtn: document.getElementById("evaluationPageBtn"),
+      domainFilter: document.getElementById("domainFilter"),
+      workflowCodeInput: document.getElementById("workflowCodeInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      workflowListMeta: document.getElementById("workflowListMeta"),
+      workflowList: document.getElementById("workflowList"),
+      workflowDetail: document.getElementById("workflowDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(body?.detail || `HTTP ${response.status}`);
+      }
+      return body;
+    }
+
+    function updateQuery() {
+      const url = new URL(window.location.href);
+      if (state.workflowCode) {
+        url.searchParams.set("workflow_code", state.workflowCode);
+      } else {
+        url.searchParams.delete("workflow_code");
+      }
+      if (el.domainFilter.value) {
+        url.searchParams.set("biz_domain", el.domainFilter.value);
+      } else {
+        url.searchParams.delete("biz_domain");
+      }
+      window.history.replaceState({}, "", url);
+    }
+
+    function renderWorkflowList() {
+      el.workflowListMeta.textContent = `当前共 ${state.workflows.length} 个 Workflow`;
+      if (!state.workflows.length) {
+        el.workflowList.innerHTML = '<div class="empty">当前筛选条件下没有 Workflow。</div>';
+        return;
+      }
+
+      el.workflowList.innerHTML = state.workflows.map(item => `
+        <div class="workflow-card ${item.workflow_code === state.workflowCode ? "active" : ""}" data-workflow-code="${escapeHtml(item.workflow_code)}">
+          <div class="title">${escapeHtml(item.name)}</div>
+          <div>
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            <span class="tag">${escapeHtml(item.workflow_code)}</span>
+          </div>
+          <div class="subtle">${escapeHtml(item.purpose)}</div>
+          <div class="subtle">步骤 ${escapeHtml(item.steps.length)} / 审批点 ${escapeHtml(item.approval_points.length)} / 工具 ${escapeHtml(item.required_tools.length)}</div>
+        </div>
+      `).join("");
+
+      el.workflowList.querySelectorAll("[data-workflow-code]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const workflowCode = node.getAttribute("data-workflow-code") || "";
+          state.workflowCode = workflowCode;
+          el.workflowCodeInput.value = workflowCode;
+          await loadWorkflowDetail();
+        });
+      });
+    }
+
+    function renderTagList(items, tone = "") {
+      if (!items.length) {
+        return '<div class="empty">暂无</div>';
+      }
+      return `<div class="chips">${items.map(item => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("")}</div>`;
+    }
+
+    function renderSteps(steps) {
+      if (!steps.length) {
+        return '<div class="empty">暂无步骤定义。</div>';
+      }
+
+      return `
+        <div class="stack">
+          ${steps.map((step, index) => `
+            <div class="step-card">
+              <div class="title">${escapeHtml(index + 1)}. ${escapeHtml(step.name)}</div>
+              <div>
+                <span class="tag">${escapeHtml(step.step_code)}</span>
+                <span class="tag">${escapeHtml(step.step_type)}</span>
+                ${step.approval_required ? '<span class="tag warning">approval required</span>' : '<span class="tag success">auto step</span>'}
+              </div>
+              <div class="subtle">${escapeHtml(step.description)}</div>
+              <div class="subtle">工具依赖</div>
+              ${renderTagList(step.required_tools)}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderWorkflowDetail(item) {
+      if (!item) {
+        el.workflowDetail.innerHTML = '<div class="empty">请选择左侧 Workflow 查看详情。</div>';
+        return;
+      }
+
+      el.workflowDetail.innerHTML = `
+        <div class="hero">
+          <div class="subtle">${escapeHtml(item.biz_domain)} / ${escapeHtml(item.workflow_code)}</div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <div class="subtle" style="margin-top: 10px;">${escapeHtml(item.purpose)}</div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-row"><div class="label">步骤数</div><div class="value">${escapeHtml(item.steps.length)}</div></div>
+            <div class="detail-row"><div class="label">必填输入</div><div class="value">${escapeHtml(item.required_inputs.length)}</div></div>
+            <div class="detail-row"><div class="label">工具依赖</div><div class="value">${escapeHtml(item.required_tools.length)}</div></div>
+            <div class="detail-row"><div class="label">审批点</div><div class="value">${escapeHtml(item.approval_points.length)}</div></div>
+            <div class="detail-row"><div class="label">审计标签</div><div class="value">${escapeHtml(item.audit_tags.length)}</div></div>
+          </div>
+        </div>
+
+        <div class="section-split">
+          <h2>Required Inputs</h2>
+          ${renderTagList(item.required_inputs)}
+        </div>
+
+        <div class="section-split">
+          <h2>Required Tools</h2>
+          ${renderTagList(item.required_tools)}
+        </div>
+
+        <div class="section-split">
+          <h2>Approval Points</h2>
+          ${renderTagList(item.approval_points, "warning")}
+        </div>
+
+        <div class="section-split">
+          <h2>Fallback Rules</h2>
+          ${renderTagList(item.fallback_rules)}
+        </div>
+
+        <div class="section-split">
+          <h2>Audit Tags</h2>
+          ${renderTagList(item.audit_tags, "success")}
+        </div>
+
+        <div class="section-split">
+          <h2>Steps</h2>
+          ${renderSteps(item.steps || [])}
+        </div>
+      `;
+    }
+
+    async function loadWorkflowList() {
+      const query = new URLSearchParams();
+      if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      state.workflows = await fetchJson(`/api/workflows?${query.toString()}`);
+      renderWorkflowList();
+      updateQuery();
+
+      if (!state.workflowCode && state.workflows[0]?.workflow_code) {
+        state.workflowCode = state.workflows[0].workflow_code;
+        el.workflowCodeInput.value = state.workflowCode;
+      }
+    }
+
+    async function loadWorkflowDetail() {
+      const workflowCode = el.workflowCodeInput.value.trim() || state.workflowCode;
+      if (!workflowCode) return;
+      state.workflowCode = workflowCode;
+      state.selectedWorkflow = await fetchJson(`/api/workflows/${encodeURIComponent(workflowCode)}`);
+      renderWorkflowList();
+      renderWorkflowDetail(state.selectedWorkflow);
+      updateQuery();
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      state.workflowCode = query.get("workflow_code") || "";
+      el.workflowCodeInput.value = state.workflowCode;
+      el.domainFilter.value = query.get("biz_domain") || "";
+      await loadWorkflowList();
+      if (state.workflowCode) {
+        await loadWorkflowDetail();
+      } else if (state.workflows[0]?.workflow_code) {
+        state.workflowCode = state.workflows[0].workflow_code;
+        el.workflowCodeInput.value = state.workflowCode;
+        await loadWorkflowDetail();
+      }
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.approvalPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/approvals";
+    });
+    el.evaluationPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/evaluations";
+    });
+    el.domainFilter.addEventListener("change", bootstrap);
+    el.loadBtn.addEventListener("click", loadWorkflowDetail);
+    el.refreshBtn.addEventListener("click", bootstrap);
+    el.workflowCodeInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadWorkflowDetail();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

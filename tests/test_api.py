@@ -440,6 +440,16 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'id="actorFilterInput"' in response.text
 
 
+def test_workflows_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/workflows")
+    assert response.status_code == 200
+    assert 'id="workflowList"' in response.text
+    assert 'id="workflowDetail"' in response.text
+    assert 'id="domainFilter"' in response.text
+    assert 'id="workflowCodeInput"' in response.text
+    assert 'id="loadBtn"' in response.text
+
+
 def test_evaluation_analytics_api(client: TestClient) -> None:
     client.post(
         "/api/chat",
