@@ -317,12 +317,16 @@
         el.auditOverview.innerHTML = '<div class="empty">暂无审计治理概览。</div>';
         return;
       }
+      const linkedContextText = Object.entries(overview.linked_context_counts || {})
+        .map(([key, value]) => `${key}:${value}`)
+        .join(", ") || "-";
       el.auditOverview.innerHTML = `
         <div class="detail-row"><div class="label">总事件数</div><div class="value">${escapeHtml(overview.total)}</div></div>
         <div class="detail-row"><div class="label">成功 / 失败 / 未完成</div><div class="value">${escapeHtml(overview.success_count)} / ${escapeHtml(overview.failed_count)} / ${escapeHtml(overview.pending_count)}</div></div>
         <div class="detail-row"><div class="label">来源分布</div><div class="value">${escapeHtml(Object.entries(overview.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
         <div class="detail-row"><div class="label">事件类型分布</div><div class="value">${escapeHtml(Object.entries(overview.event_type_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
         <div class="detail-row"><div class="label">动作分布</div><div class="value">${escapeHtml(Object.entries(overview.action_counts || {}).slice(0, 6).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+        <div class="detail-row"><div class="label">联动上下文分布</div><div class="value">${escapeHtml(linkedContextText)}</div></div>
       `;
     }
 

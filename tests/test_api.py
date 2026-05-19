@@ -387,6 +387,7 @@ def test_audit_overview_api(client: TestClient) -> None:
     assert "source_counts" in body
     assert "event_type_counts" in body
     assert "action_counts" in body
+    assert "linked_context_counts" in body
 
 
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
@@ -842,6 +843,7 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'id="auditOverview"' in response.text
     assert 'id="auditList"' in response.text
     assert 'id="auditDetail"' in response.text
+    assert "linked_context_counts" in response.text or "联动上下文分布" in response.text
     assert 'id="actionFilterInput"' in response.text
     assert 'id="actorFilterInput"' in response.text
     assert 'id="sourceFilterInput"' in response.text

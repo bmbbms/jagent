@@ -363,6 +363,7 @@ class AuditOverviewResponse(BaseModel):
     source_counts: Dict[str, int] = Field(default_factory=dict)
     event_type_counts: Dict[str, int] = Field(default_factory=dict)
     action_counts: Dict[str, int] = Field(default_factory=dict)
+    linked_context_counts: Dict[str, int] = Field(default_factory=dict)
 
 
 class AgentTaskEventResponse(BaseModel):

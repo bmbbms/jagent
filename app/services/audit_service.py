@@ -65,6 +65,15 @@ class AuditService:
         source_counts: dict[str, int] = {}
         event_type_counts: dict[str, int] = {}
         action_counts: dict[str, int] = {}
+        linked_context_counts = {
+            "task": 0,
+            "approval": 0,
+            "capability": 0,
+            "workflow": 0,
+            "ticket": 0,
+            "suggestion": 0,
+            "evaluation": 0,
+        }
         success_count = 0
         failed_count = 0
         pending_count = 0
@@ -76,6 +85,21 @@ class AuditService:
             source_counts[source_key] = source_counts.get(source_key, 0) + 1
             event_type_counts[event_type_key] = event_type_counts.get(event_type_key, 0) + 1
             action_counts[action_key] = action_counts.get(action_key, 0) + 1
+
+            if item.task_id:
+                linked_context_counts["task"] += 1
+            if item.approval_id:
+                linked_context_counts["approval"] += 1
+            if item.capability_id:
+                linked_context_counts["capability"] += 1
+            if item.workflow:
+                linked_context_counts["workflow"] += 1
+            if item.ticket_id:
+                linked_context_counts["ticket"] += 1
+            if item.suggestion_id is not None:
+                linked_context_counts["suggestion"] += 1
+            if item.evaluation_id:
+                linked_context_counts["evaluation"] += 1
 
             if item.outcome == 1:
                 success_count += 1
@@ -92,4 +116,5 @@ class AuditService:
             source_counts=source_counts,
             event_type_counts=event_type_counts,
             action_counts=action_counts,
+            linked_context_counts=linked_context_counts,
         )
