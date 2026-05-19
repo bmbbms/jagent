@@ -740,6 +740,20 @@ class AgentEvaluationDimensionAnalyticsResponse(BaseModel):
     improvement_hint: str = ""
 
 
+class AgentEvaluationRootCauseAnalyticsResponse(BaseModel):
+    root_cause_code: str
+    root_cause_name: str
+    evaluation_count: int = 0
+    low_score_count: int = 0
+    average_score: float = 0.0
+    related_suggestion_count: int = 0
+    high_priority_suggestion_count: int = 0
+    backlog_suggestion_count: int = 0
+    attention_level: str = "normal"
+    impact_summary: str = ""
+    recommended_action: str = ""
+
+
 class AgentEvaluationTrendPointResponse(BaseModel):
     evaluation_id: str
     task_id: str

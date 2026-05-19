@@ -15,6 +15,7 @@ from app.schemas import (
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationFocusAgentResponse,
     AgentEvaluationDetailResponse,
+    AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
     AgentEvaluationTrendPointResponse,
@@ -372,6 +373,85 @@ class EvaluationService:
             ),
         )
 
+    def summarize_root_causes(self) -> list[AgentEvaluationRootCauseAnalyticsResponse]:
+        with self._session_factory() as session:
+            details = self._repository.list_all_details(session)
+
+        suggestions = self.list_optimization_suggestions()
+        suggestion_groups: dict[str, list[AgentOptimizationSuggestionResponse]] = {}
+        for item in suggestions:
+            if not item.source_ref:
+                continue
+            suggestion_groups.setdefault(item.source_ref, []).append(item)
+
+        grouped: dict[str, list] = {}
+        for item in details:
+            grouped.setdefault(item.dimension_code, []).append(item)
+
+        root_cause_names = {
+            "completion": "任务收口不足",
+            "tool_usage": "工具编排不稳",
+            "efficiency": "执行效率波动",
+            "compliance": "合规控制薄弱",
+        }
+
+        results: list[AgentEvaluationRootCauseAnalyticsResponse] = []
+        for root_cause_code, items in grouped.items():
+            total = len(items)
+            if total == 0:
+                continue
+            average_score = round(sum(item.score for item in items) / total, 2)
+            low_score_count = sum(1 for item in items if item.score < 80)
+            related_suggestions = suggestion_groups.get(root_cause_code, [])
+            high_priority_suggestion_count = sum(
+                1 for item in related_suggestions if item.priority == "high"
+            )
+            backlog_suggestion_count = sum(
+                1 for item in related_suggestions if item.status != "completed"
+            )
+            attention_level = (
+                "high"
+                if average_score < 80
+                or low_score_count >= 2
+                or high_priority_suggestion_count > 0
+                else "normal"
+            )
+            results.append(
+                AgentEvaluationRootCauseAnalyticsResponse(
+                    root_cause_code=root_cause_code,
+                    root_cause_name=root_cause_names.get(root_cause_code, root_cause_code),
+                    evaluation_count=total,
+                    low_score_count=low_score_count,
+                    average_score=average_score,
+                    related_suggestion_count=len(related_suggestions),
+                    high_priority_suggestion_count=high_priority_suggestion_count,
+                    backlog_suggestion_count=backlog_suggestion_count,
+                    attention_level=attention_level,
+                    impact_summary=self._build_root_cause_impact_summary(
+                        root_cause_code=root_cause_code,
+                        average_score=average_score,
+                        low_score_count=low_score_count,
+                        evaluation_count=total,
+                    ),
+                    recommended_action=self._build_root_cause_recommended_action(
+                        root_cause_code=root_cause_code,
+                        backlog_suggestion_count=backlog_suggestion_count,
+                        high_priority_suggestion_count=high_priority_suggestion_count,
+                    ),
+                )
+            )
+
+        return sorted(
+            results,
+            key=lambda item: (
+                0 if item.attention_level == "high" else 1,
+                -item.high_priority_suggestion_count,
+                -item.backlog_suggestion_count,
+                item.average_score,
+                item.root_cause_code,
+            ),
+        )
+
     def build_evaluation_trend(
         self,
         *,
@@ -460,6 +540,59 @@ class EvaluationService:
         if fallback_related_count > 0:
             reasons.append(f"fallback 关联 {fallback_related_count}")
         return " / ".join(reasons) if reasons else "运行平稳"
+
+    @staticmethod
+    def _build_root_cause_impact_summary(
+        *,
+        root_cause_code: str,
+        average_score: float,
+        low_score_count: int,
+        evaluation_count: int,
+    ) -> str:
+        if root_cause_code == "tool_usage":
+            return (
+                f"该类问题覆盖 {evaluation_count} 条评估，平均分 {average_score}，"
+                f"其中 {low_score_count} 条出现工具使用低分，直接影响执行稳定性。"
+            )
+        if root_cause_code == "efficiency":
+            return (
+                f"该类问题覆盖 {evaluation_count} 条评估，平均分 {average_score}，"
+                f"其中 {low_score_count} 条存在效率低分，主要影响端到端响应时延。"
+            )
+        if root_cause_code == "compliance":
+            return (
+                f"该类问题覆盖 {evaluation_count} 条评估，平均分 {average_score}，"
+                f"其中 {low_score_count} 条存在合规低分，影响高风险流程可追溯性。"
+            )
+        if root_cause_code == "completion":
+            return (
+                f"该类问题覆盖 {evaluation_count} 条评估，平均分 {average_score}，"
+                f"其中 {low_score_count} 条出现任务收口不足，影响结果交付质量。"
+            )
+        return (
+            f"该类问题覆盖 {evaluation_count} 条评估，平均分 {average_score}，"
+            f"其中 {low_score_count} 条为低分样本。"
+        )
+
+    @staticmethod
+    def _build_root_cause_recommended_action(
+        *,
+        root_cause_code: str,
+        backlog_suggestion_count: int,
+        high_priority_suggestion_count: int,
+    ) -> str:
+        base_map = {
+            "completion": "优先补强结果模板、输出约束和任务收口策略。",
+            "tool_usage": "优先收敛工具清单、补充工具选择规则和降级策略。",
+            "efficiency": "优先压缩执行链路、减少中间阶段和 fallback 触发。",
+            "compliance": "优先补审批绑定、审计留痕和敏感访问控制。",
+        }
+        base = base_map.get(root_cause_code, "优先排查该维度高频低分样本并补齐治理动作。")
+        if high_priority_suggestion_count > 0:
+            return f"{base} 当前已有 {high_priority_suggestion_count} 条高优先建议待推进。"
+        if backlog_suggestion_count > 0:
+            return f"{base} 当前仍有 {backlog_suggestion_count} 条未闭环建议。"
+        return f"{base} 当前建议存量较轻，可继续观察趋势。"
 
     def get_evaluation(self, evaluation_id: str) -> AgentEvaluationResponse | None:
         with self._session_factory() as session:

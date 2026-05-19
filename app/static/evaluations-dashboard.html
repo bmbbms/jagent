@@ -313,6 +313,11 @@
           <div class="empty">正在加载评估维度治理...</div>
         </div>
 
+        <h2>根因归因分析</h2>
+        <div id="rootCauseAnalyticsList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">正在加载根因归因分析...</div>
+        </div>
+
         <h2>评估趋势</h2>
         <div id="trendPanel" class="card" style="margin-bottom: 18px;">
           <div class="empty">正在加载评估趋势...</div>
@@ -368,6 +373,7 @@
       analytics: [],
       focusAgents: [],
       dimensionAnalytics: [],
+      rootCauseAnalytics: [],
       overview: null,
       trend: null,
       suggestions: [],
@@ -397,6 +403,7 @@
       analyticsList: document.getElementById("analyticsList"),
       focusAgentList: document.getElementById("focusAgentList"),
       dimensionAnalyticsList: document.getElementById("dimensionAnalyticsList"),
+      rootCauseAnalyticsList: document.getElementById("rootCauseAnalyticsList"),
       trendPanel: document.getElementById("trendPanel"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
@@ -715,6 +722,26 @@
       `).join("");
     }
 
+    function renderRootCauseAnalytics() {
+      if (!state.rootCauseAnalytics.length) {
+        el.rootCauseAnalyticsList.innerHTML = '<div class="empty">暂无根因归因分析数据。</div>';
+        return;
+      }
+      el.rootCauseAnalyticsList.innerHTML = state.rootCauseAnalytics.map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.root_cause_name)} / ${escapeHtml(item.root_cause_code)}</div>
+          <div>
+            <span class="tag ${toneByScore(item.average_score)}">${escapeHtml(item.average_score)}</span>
+            <span class="tag ${toneByAttention(item.attention_level)}">${escapeHtml(item.attention_level)}</span>
+          </div>
+          <div class="subtle">评估数：${escapeHtml(item.evaluation_count)} / 低分次数：${escapeHtml(item.low_score_count)}</div>
+          <div class="subtle">关联建议：${escapeHtml(item.related_suggestion_count)} / 高优建议：${escapeHtml(item.high_priority_suggestion_count)} / 积压：${escapeHtml(item.backlog_suggestion_count)}</div>
+          <div class="subtle">${escapeHtml(item.impact_summary || "-")}</div>
+          <div class="subtle">${escapeHtml(item.recommended_action || "-")}</div>
+        </div>
+      `).join("");
+    }
+
     function renderEvaluationList() {
       if (!state.evaluations.length) {
         el.evaluationList.innerHTML = '<div class="empty">暂无评估记录。</div>';
@@ -980,6 +1007,11 @@
       renderDimensionAnalytics();
     }
 
+    async function loadRootCauseAnalytics() {
+      state.rootCauseAnalytics = await fetchJson("/api/evaluations/analytics/root-causes");
+      renderRootCauseAnalytics();
+    }
+
     async function loadOverview() {
       state.overview = await fetchJson("/api/evaluations/analytics/overview");
       renderOverview();
@@ -1058,6 +1090,7 @@
       await loadAnalytics();
       await loadFocusAgents();
       await loadDimensionAnalytics();
+      await loadRootCauseAnalytics();
       await loadTrend();
       await loadEvaluationList();
       await loadSuggestionOverview();

@@ -809,6 +809,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="trendPanel"' in response.text
     assert 'id="focusAgentList"' in response.text
     assert 'id="dimensionAnalyticsList"' in response.text
+    assert 'id="rootCauseAnalyticsList"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
@@ -1040,6 +1041,26 @@ def test_evaluation_dimension_analytics_api(client: TestClient) -> None:
     assert "low_score_rate" in first
     assert "related_suggestion_count" in first
     assert "improvement_hint" in first
+
+
+def test_evaluation_root_cause_analytics_api(client: TestClient) -> None:
+    response = client.get("/api/evaluations/analytics/root-causes")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert body
+    first = body[0]
+    assert "root_cause_code" in first
+    assert "root_cause_name" in first
+    assert "evaluation_count" in first
+    assert "low_score_count" in first
+    assert "average_score" in first
+    assert "related_suggestion_count" in first
+    assert "high_priority_suggestion_count" in first
+    assert "backlog_suggestion_count" in first
+    assert "attention_level" in first
+    assert "impact_summary" in first
+    assert "recommended_action" in first
 
 
 def test_evaluation_analytics_trend_api(client: TestClient) -> None:

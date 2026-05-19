@@ -8,6 +8,7 @@ from app.schemas import (
     AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationFocusAgentResponse,
+    AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationTrendResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
@@ -78,6 +79,16 @@ def list_evaluation_dimension_analytics(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> list[AgentEvaluationDimensionAnalyticsResponse]:
     return evaluation_service.summarize_dimensions()
+
+
+@router.get(
+    "/analytics/root-causes",
+    response_model=list[AgentEvaluationRootCauseAnalyticsResponse],
+)
+def list_evaluation_root_cause_analytics(
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> list[AgentEvaluationRootCauseAnalyticsResponse]:
+    return evaluation_service.summarize_root_causes()
 
 
 @router.get("/analytics/trend", response_model=AgentEvaluationTrendResponse)
