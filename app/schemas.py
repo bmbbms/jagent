@@ -278,6 +278,9 @@ class AuditEventResponse(BaseModel):
     actor_id: str
     payload: Dict[str, Any]
     created_at: str
+    source: Optional[str] = None
+    event_type: Optional[str] = None
+    outcome: Optional[int] = None
     task_id: Optional[str] = None
     approval_id: Optional[str] = None
     capability_id: Optional[str] = None

@@ -11,6 +11,9 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 def list_audit_events(
     action: str | None = None,
     actor_id: str | None = None,
+    source: str | None = None,
+    event_type: str | None = None,
+    outcome: int | None = None,
     task_id: str | None = None,
     approval_id: str | None = None,
     capability_id: str | None = None,
@@ -23,6 +26,9 @@ def list_audit_events(
     return audit_service.list_events(
         action=action,
         actor_id=actor_id,
+        source=source,
+        event_type=event_type,
+        outcome=outcome,
         task_id=task_id,
         approval_id=approval_id,
         capability_id=capability_id,

@@ -56,10 +56,16 @@ def create_approval(
         action="approval.create",
         actor_id=request.requested_by,
         payload={
+            "source": "approval",
+            "event_type": "approval",
+            "outcome": 1,
             "approval_id": task.approval_id,
+            "task_id": (request.payload or {}).get("task_id"),
             "biz_domain": task.biz_domain.value,
             "capability_id": task.capability_id,
             "workflow": task.workflow,
+            "request_summary": request.title,
+            "response_summary": f"approval created: {task.approval_id}",
         },
     )
     return task
@@ -82,9 +88,14 @@ def decide_approval(
         action="approval.decision",
         actor_id=request.reviewer_id,
         payload={
+            "source": "approval",
+            "event_type": "approval",
+            "outcome": 1,
             "approval_id": approval_id,
             "decision": request.decision.value,
             "comment": request.comment,
+            "request_summary": request.decision.value,
+            "response_summary": f"approval decision recorded: {approval_id}",
         },
     )
     task_service.resolve_approval_task(

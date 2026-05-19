@@ -189,6 +189,9 @@
         <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <input id="actionFilterInput" placeholder="按 action 过滤" />
         <input id="actorFilterInput" placeholder="按 actor_id 过滤" />
+        <input id="sourceFilterInput" placeholder="按 source 过滤" />
+        <input id="eventTypeFilterInput" placeholder="按 event_type 过滤" />
+        <input id="outcomeFilterInput" placeholder="按 outcome 过滤" />
         <input id="taskFilterInput" placeholder="按 task_id 过滤" />
         <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
         <input id="capabilityFilterInput" placeholder="按 capability_id 过滤" />
@@ -228,6 +231,9 @@
       capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       actionFilterInput: document.getElementById("actionFilterInput"),
       actorFilterInput: document.getElementById("actorFilterInput"),
+      sourceFilterInput: document.getElementById("sourceFilterInput"),
+      eventTypeFilterInput: document.getElementById("eventTypeFilterInput"),
+      outcomeFilterInput: document.getElementById("outcomeFilterInput"),
       taskFilterInput: document.getElementById("taskFilterInput"),
       approvalFilterInput: document.getElementById("approvalFilterInput"),
       capabilityFilterInput: document.getElementById("capabilityFilterInput"),
@@ -266,6 +272,9 @@
       const pairs = {
         action: el.actionFilterInput.value.trim(),
         actor_id: el.actorFilterInput.value.trim(),
+        source: el.sourceFilterInput.value.trim(),
+        event_type: el.eventTypeFilterInput.value.trim(),
+        outcome: el.outcomeFilterInput.value.trim(),
         task_id: el.taskFilterInput.value.trim(),
         approval_id: el.approvalFilterInput.value.trim(),
         capability_id: el.capabilityFilterInput.value.trim(),
@@ -285,6 +294,9 @@
       const query = new URLSearchParams();
       if (el.actionFilterInput.value.trim()) query.set("action", el.actionFilterInput.value.trim());
       if (el.actorFilterInput.value.trim()) query.set("actor_id", el.actorFilterInput.value.trim());
+      if (el.sourceFilterInput.value.trim()) query.set("source", el.sourceFilterInput.value.trim());
+      if (el.eventTypeFilterInput.value.trim()) query.set("event_type", el.eventTypeFilterInput.value.trim());
+      if (el.outcomeFilterInput.value.trim()) query.set("outcome", el.outcomeFilterInput.value.trim());
       if (el.taskFilterInput.value.trim()) query.set("task_id", el.taskFilterInput.value.trim());
       if (el.approvalFilterInput.value.trim()) query.set("approval_id", el.approvalFilterInput.value.trim());
       if (el.capabilityFilterInput.value.trim()) query.set("capability_id", el.capabilityFilterInput.value.trim());
@@ -305,6 +317,8 @@
           <div class="card ${index === state.selectedIndex ? "active" : ""}" data-index="${index}">
             <div class="title">${escapeHtml(item.action)}</div>
             <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
+            <div class="subtle">source / event_type：${escapeHtml(item.source || "-")} / ${escapeHtml(item.event_type || "-")}</div>
+            <div class="subtle">outcome：${escapeHtml(item.outcome ?? "-")}</div>
             <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
             <div class="subtle">task_id：${escapeHtml(payload.task_id || "-")}</div>
             <div class="subtle">approval_id：${escapeHtml(payload.approval_id || "-")}</div>
@@ -332,11 +346,16 @@
       const approvalId = payload.approval_id || "";
       const capabilityId = payload.capability_id || "";
       const workflowCode = payload.workflow || "";
+      const source = item.source || "";
+      const eventType = item.event_type || "";
+      const outcome = item.outcome;
 
       el.auditDetail.innerHTML = `
         <div class="hero">
           <div class="title">${escapeHtml(item.action)}</div>
           <div class="subtle" style="margin-top: 8px;">actor_id：${escapeHtml(item.actor_id)}</div>
+          <div class="subtle">source / event_type：${escapeHtml(source || "-")} / ${escapeHtml(eventType || "-")}</div>
+          <div class="subtle">outcome：${escapeHtml(outcome ?? "-")}</div>
           <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
           <div class="chip-row">
             ${taskId ? `<span class="chip">task:${escapeHtml(taskId)}</span>` : ""}
@@ -346,6 +365,9 @@
           </div>
         </div>
         <div class="detail-list">
+          <div class="detail-row"><div class="label">source</div><div class="value">${escapeHtml(source || "-")}</div></div>
+          <div class="detail-row"><div class="label">event_type</div><div class="value">${escapeHtml(eventType || "-")}</div></div>
+          <div class="detail-row"><div class="label">outcome</div><div class="value">${escapeHtml(outcome ?? "-")}</div></div>
           <div class="detail-row"><div class="label">task_id</div><div class="value">${escapeHtml(taskId || "-")}</div></div>
           <div class="detail-row"><div class="label">approval_id</div><div class="value">${escapeHtml(approvalId || "-")}</div></div>
           <div class="detail-row"><div class="label">capability_id</div><div class="value">${escapeHtml(capabilityId || "-")}</div></div>
@@ -401,6 +423,9 @@
       const query = new URLSearchParams(window.location.search);
       el.actionFilterInput.value = query.get("action") || "";
       el.actorFilterInput.value = query.get("actor_id") || "";
+      el.sourceFilterInput.value = query.get("source") || "";
+      el.eventTypeFilterInput.value = query.get("event_type") || "";
+      el.outcomeFilterInput.value = query.get("outcome") || "";
       el.taskFilterInput.value = query.get("task_id") || "";
       el.approvalFilterInput.value = query.get("approval_id") || "";
       el.capabilityFilterInput.value = query.get("capability_id") || "";
@@ -520,11 +545,11 @@
       window.location.href = target;
     });
     el.loadBtn.addEventListener("click", loadAudit);
-    [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput, el.capabilityFilterInput, el.workflowFilterInput].forEach(node => {
-      node.addEventListener("keydown", async event => {
-        if (event.key === "Enter") await loadAudit();
+      [el.actionFilterInput, el.actorFilterInput, el.sourceFilterInput, el.eventTypeFilterInput, el.outcomeFilterInput, el.taskFilterInput, el.approvalFilterInput, el.capabilityFilterInput, el.workflowFilterInput].forEach(node => {
+        node.addEventListener("keydown", async event => {
+          if (event.key === "Enter") await loadAudit();
+        });
       });
-    });
     [ticketFilterInput, suggestionFilterInput, evaluationFilterInput].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await loadAudit();

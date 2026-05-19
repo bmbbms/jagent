@@ -285,6 +285,21 @@ def test_audit_events_support_filters(client: TestClient) -> None:
     )
     assert all(item["payload"].get("workflow") == "quota_review" for item in governance_body)
 
+    extended_response = client.get(
+        "/api/audit",
+        params={
+            "source": "approval",
+            "event_type": "approval",
+            "outcome": 1,
+        },
+    )
+    assert extended_response.status_code == 200
+    extended_body = extended_response.json()
+    assert extended_body
+    assert all(item["source"] == "approval" for item in extended_body)
+    assert all(item["event_type"] == "approval" for item in extended_body)
+    assert all(item["outcome"] == 1 for item in extended_body)
+
 
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
@@ -636,6 +651,9 @@ def test_audit_ui_page(client: TestClient) -> None:
     assert 'id="auditDetail"' in response.text
     assert 'id="actionFilterInput"' in response.text
     assert 'id="actorFilterInput"' in response.text
+    assert 'id="sourceFilterInput"' in response.text
+    assert 'id="eventTypeFilterInput"' in response.text
+    assert 'id="outcomeFilterInput"' in response.text
     assert 'id="capabilityFilterInput"' in response.text
     assert 'id="workflowFilterInput"' in response.text
     assert 'ticketFilterInput' in response.text or 'ticket_id' in response.text

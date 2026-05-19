@@ -57,6 +57,9 @@ class AuditRepository:
         *,
         action: str | None = None,
         actor_id: str | None = None,
+        source: str | None = None,
+        event_type: str | None = None,
+        outcome: int | None = None,
         task_id: str | None = None,
         approval_id: str | None = None,
         capability_id: str | None = None,
@@ -70,6 +73,12 @@ class AuditRepository:
             query = query.filter(AuditLogModel.op_type == action)
         if actor_id:
             query = query.filter(AuditLogModel.user_id == actor_id)
+        if source:
+            query = query.filter(AuditLogModel.source == source)
+        if event_type:
+            query = query.filter(AuditLogModel.event_type == event_type)
+        if outcome is not None:
+            query = query.filter(AuditLogModel.outcome == outcome)
         if task_id:
             query = query.filter(AuditLogModel.task_id == task_id)
         if approval_id:
@@ -95,6 +104,9 @@ class AuditRepository:
                 actor_id=item.user_id,
                 payload=item.payload or {},
                 created_at=item.create_time.isoformat(),
+                source=item.source,
+                event_type=item.event_type,
+                outcome=item.outcome,
                 task_id=item.task_id,
                 approval_id=item.approval_id,
                 capability_id=item.capability_id,
