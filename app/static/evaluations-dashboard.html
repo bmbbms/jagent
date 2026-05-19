@@ -20,20 +20,17 @@
     }
 
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
-
     .page {
       max-width: 1500px;
       margin: 0 auto;
       padding: 24px;
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -42,26 +39,22 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
-
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
-
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
       max-width: 860px;
     }
-
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
-
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -72,7 +65,6 @@
       padding: 10px 14px;
       color: var(--text);
     }
-
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -80,18 +72,15 @@
       cursor: pointer;
       font-weight: 700;
     }
-
     .toolbar button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
-
     .layout {
       display: grid;
       grid-template-columns: 420px minmax(0, 1fr);
       gap: 20px;
     }
-
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -99,17 +88,34 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
-
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
-
-    .list {
+    .list,
+    .overview-grid,
+    .stats,
+    .details {
       display: grid;
       gap: 10px;
     }
-
+    .overview-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+    .overview-card {
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .overview-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      color: var(--accent);
+      line-height: 1;
+    }
     .card {
       background: var(--panel);
       border: 1px solid #eadcca;
@@ -118,25 +124,21 @@
       display: grid;
       gap: 10px;
     }
-
     .card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(154, 79, 37, 0.14);
     }
-
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
-
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
-
     .tag {
       display: inline-flex;
       align-items: center;
@@ -147,38 +149,9 @@
       background: #f2e4d5;
       color: #6d563f;
     }
-
     .success { background: rgba(29, 122, 74, 0.12); color: var(--success); }
     .warning { background: rgba(155, 109, 31, 0.14); color: var(--warning); }
     .danger { background: rgba(181, 63, 53, 0.12); color: var(--danger); }
-
-    .stats,
-    .details,
-    .overview-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .overview-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-bottom: 18px;
-    }
-
-    .overview-card {
-      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
-      border: 1px solid #eadcca;
-      border-radius: 14px;
-      padding: 14px;
-    }
-
-    .overview-card strong {
-      display: block;
-      margin-top: 8px;
-      font-size: 26px;
-      color: var(--accent);
-      line-height: 1;
-    }
-
     .row {
       display: flex;
       justify-content: space-between;
@@ -187,23 +160,19 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
-
     .row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
-
     .label {
       color: var(--muted);
       flex: 0 0 140px;
     }
-
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
-
     .hero {
       padding: 14px 16px;
       border-radius: 16px;
@@ -211,13 +180,40 @@
       border: 1px solid #eadcca;
       margin-bottom: 14px;
     }
-
     .hero strong {
       font-size: 34px;
       color: var(--accent);
       line-height: 1;
     }
-
+    .section-split {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid #eadcca;
+    }
+    .inline-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .inline-form input,
+    .inline-form select,
+    .inline-form button {
+      min-height: 36px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      font: inherit;
+      background: var(--panel);
+      color: var(--text);
+    }
+    .inline-form button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
       .overview-grid { grid-template-columns: 1fr; }
@@ -229,7 +225,7 @@
     <div class="header">
       <div>
         <h1>Agent 评估中心</h1>
-        <p>集中查看任务级评估结果、维度得分与优化建议，帮助我们快速识别哪些 Agent、哪些运行链路需要优先优化。</p>
+        <p>集中查看任务级评估结果、维度得分与优化建议，并把评估建议转成可跟踪的优化工作项，帮助我们持续评估和优化各类 Agent 的运行质量。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -265,6 +261,28 @@
         <div id="evaluationList" class="list">
           <div class="empty">正在加载评估列表...</div>
         </div>
+
+        <div class="section-split">
+          <h2>优化建议概览</h2>
+          <div id="suggestionOverviewGrid" class="overview-grid">
+            <div class="empty">正在加载优化建议概览...</div>
+          </div>
+
+          <div class="inline-form" style="margin-bottom: 12px;">
+            <select id="suggestionStatusFilter">
+              <option value="">全部状态</option>
+              <option value="new">new</option>
+              <option value="in_progress">in_progress</option>
+              <option value="completed">completed</option>
+            </select>
+            <input id="suggestionOwnerFilter" placeholder="按 owner 过滤建议" />
+            <button id="loadSuggestionsBtn">加载建议</button>
+          </div>
+
+          <div id="suggestionList" class="list">
+            <div class="empty">正在加载优化建议列表...</div>
+          </div>
+        </div>
       </section>
 
       <section class="panel">
@@ -282,6 +300,8 @@
       evaluations: [],
       analytics: [],
       overview: null,
+      suggestions: [],
+      suggestionOverview: null,
       selectedAnalyticsAgentId: "",
     };
 
@@ -300,6 +320,11 @@
       analyticsList: document.getElementById("analyticsList"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
+      suggestionOverviewGrid: document.getElementById("suggestionOverviewGrid"),
+      suggestionStatusFilter: document.getElementById("suggestionStatusFilter"),
+      suggestionOwnerFilter: document.getElementById("suggestionOwnerFilter"),
+      loadSuggestionsBtn: document.getElementById("loadSuggestionsBtn"),
+      suggestionList: document.getElementById("suggestionList"),
     };
 
     function escapeHtml(value) {
@@ -319,6 +344,12 @@
       return level === "high" ? "danger" : "success";
     }
 
+    function toneByStatus(status) {
+      if (status === "completed") return "success";
+      if (status === "in_progress") return "warning";
+      return "";
+    }
+
     function formatDate(value) {
       if (!value) return "-";
       const date = new Date(value);
@@ -326,10 +357,14 @@
       return date.toLocaleString("zh-CN", { hour12: false });
     }
 
-    async function fetchJson(url) {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(body?.detail || `HTTP ${response.status}`);
+      }
+      return body;
     }
 
     function syncQuery() {
@@ -342,6 +377,8 @@
         attention_level: el.attentionFilter.value,
         start_date_from: el.startDateFrom.value,
         start_date_to: el.startDateTo.value,
+        suggestion_status: el.suggestionStatusFilter.value,
+        suggestion_owner: el.suggestionOwnerFilter.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -367,6 +404,26 @@
         ["平均效率分", state.overview.average_efficiency_score],
       ];
       el.overviewGrid.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderSuggestionOverview() {
+      if (!state.suggestionOverview) {
+        el.suggestionOverviewGrid.innerHTML = '<div class="empty">暂无优化建议概览。</div>';
+        return;
+      }
+      const cards = [
+        ["建议总数", state.suggestionOverview.total],
+        ["新建", state.suggestionOverview.new_count],
+        ["进行中", state.suggestionOverview.in_progress_count],
+        ["已完成", state.suggestionOverview.completed_count],
+        ["高优先级", state.suggestionOverview.high_priority_count],
+      ];
+      el.suggestionOverviewGrid.innerHTML = cards.map(([label, value]) => `
         <div class="overview-card">
           <div class="subtle">${escapeHtml(label)}</div>
           <strong>${escapeHtml(value)}</strong>
@@ -400,6 +457,8 @@
           state.selectedAnalyticsAgentId = agentId;
           el.agentFilterInput.value = agentId;
           await loadEvaluationList();
+          await loadSuggestionOverview();
+          await loadSuggestions();
           renderAnalyticsList();
         });
       });
@@ -442,8 +501,13 @@
         ? detail.suggestions.map(item => `
           <div class="card">
             <div class="title">${escapeHtml(item.optimization_type)}</div>
-            <div class="subtle">优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
+            <div>
+              <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+              <span class="tag">${escapeHtml(item.priority)}</span>
+              <span class="tag">${escapeHtml(item.owner || "unassigned")}</span>
+            </div>
             <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+            <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
           </div>
         `).join("")
         : '<div class="empty">暂无优化建议。</div>';
@@ -470,6 +534,63 @@
       `;
     }
 
+    function renderSuggestionList() {
+      if (!state.suggestions.length) {
+        el.suggestionList.innerHTML = '<div class="empty">暂无优化建议工作项。</div>';
+        return;
+      }
+
+      el.suggestionList.innerHTML = state.suggestions.map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.optimization_type)} / ${escapeHtml(item.target_ref || "-")}</div>
+          <div>
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.priority)}</span>
+            <span class="tag">${escapeHtml(item.owner || "unassigned")}</span>
+          </div>
+          <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+          <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
+          <div class="inline-form">
+            <input data-owner-input="${escapeHtml(item.suggestion_id)}" placeholder="owner" value="${escapeHtml(item.owner || "")}" />
+            <select data-status-input="${escapeHtml(item.suggestion_id)}">
+              <option value="new" ${item.status === "new" ? "selected" : ""}>new</option>
+              <option value="in_progress" ${item.status === "in_progress" ? "selected" : ""}>in_progress</option>
+              <option value="completed" ${item.status === "completed" ? "selected" : ""}>completed</option>
+            </select>
+            <select data-priority-input="${escapeHtml(item.suggestion_id)}">
+              <option value="high" ${item.priority === "high" ? "selected" : ""}>high</option>
+              <option value="medium" ${item.priority === "medium" ? "selected" : ""}>medium</option>
+              <option value="low" ${item.priority === "low" ? "selected" : ""}>low</option>
+            </select>
+            <button data-save-suggestion="${escapeHtml(item.suggestion_id)}">保存</button>
+          </div>
+        </div>
+      `).join("");
+
+      el.suggestionList.querySelectorAll("[data-save-suggestion]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const suggestionId = node.getAttribute("data-save-suggestion");
+          const ownerNode = document.querySelector(`[data-owner-input="${suggestionId}"]`);
+          const statusNode = document.querySelector(`[data-status-input="${suggestionId}"]`);
+          const priorityNode = document.querySelector(`[data-priority-input="${suggestionId}"]`);
+          await fetchJson(`/api/evaluations/suggestions/${encodeURIComponent(suggestionId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              owner: ownerNode?.value.trim() || null,
+              status: statusNode?.value || null,
+              priority: priorityNode?.value || null,
+            }),
+          });
+          await loadSuggestionOverview();
+          await loadSuggestions();
+          if (state.evaluationId) {
+            await loadEvaluationDetail();
+          }
+        });
+      });
+    }
+
     function buildEvaluationListQuery() {
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
@@ -478,6 +599,14 @@
       if (el.attentionFilter.value) query.set("attention_level", el.attentionFilter.value);
       if (el.startDateFrom.value) query.set("start_date_from", el.startDateFrom.value);
       if (el.startDateTo.value) query.set("start_date_to", el.startDateTo.value);
+      return query;
+    }
+
+    function buildSuggestionQuery() {
+      const query = new URLSearchParams();
+      if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      if (el.suggestionStatusFilter.value) query.set("status", el.suggestionStatusFilter.value);
+      if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
       return query;
     }
 
@@ -503,6 +632,21 @@
       renderOverview();
     }
 
+    async function loadSuggestionOverview() {
+      const query = new URLSearchParams();
+      if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
+      state.suggestionOverview = await fetchJson(`/api/evaluations/suggestions/overview?${query.toString()}`);
+      renderSuggestionOverview();
+    }
+
+    async function loadSuggestions() {
+      const query = buildSuggestionQuery();
+      state.suggestions = await fetchJson(`/api/evaluations/suggestions?${query.toString()}`);
+      renderSuggestionList();
+      syncQuery();
+    }
+
     async function loadEvaluationDetail() {
       const evaluationId = el.evaluationIdInput.value.trim() || state.evaluationId;
       if (!evaluationId) return;
@@ -523,10 +667,14 @@
       el.attentionFilter.value = query.get("attention_level") || "";
       el.startDateFrom.value = query.get("start_date_from") || "";
       el.startDateTo.value = query.get("start_date_to") || "";
+      el.suggestionStatusFilter.value = query.get("suggestion_status") || "";
+      el.suggestionOwnerFilter.value = query.get("suggestion_owner") || "";
       el.evaluationIdInput.value = state.evaluationId;
       await loadOverview();
       await loadAnalytics();
       await loadEvaluationList();
+      await loadSuggestionOverview();
+      await loadSuggestions();
       if (state.evaluationId) {
         await loadEvaluationDetail();
       } else if (state.evaluations[0]?.evaluation_id) {
@@ -541,12 +689,16 @@
     });
     el.loadBtn.addEventListener("click", loadEvaluationDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
-    [el.agentFilterInput, el.resultFilterInput, el.minScoreInput].forEach(node => {
+    el.loadSuggestionsBtn.addEventListener("click", async () => {
+      await loadSuggestionOverview();
+      await loadSuggestions();
+    });
+    [el.agentFilterInput, el.resultFilterInput, el.minScoreInput, el.suggestionOwnerFilter].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await bootstrap();
       });
     });
-    [el.attentionFilter, el.startDateFrom, el.startDateTo].forEach(node => {
+    [el.attentionFilter, el.startDateFrom, el.startDateTo, el.suggestionStatusFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
     });
     el.evaluationIdInput.addEventListener("keydown", async event => {

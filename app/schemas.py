@@ -412,6 +412,7 @@ class AgentEvaluationDetailResponse(BaseModel):
 
 
 class AgentOptimizationSuggestionResponse(BaseModel):
+    suggestion_id: int
     optimization_type: str
     target_ref: Optional[str] = None
     current_value_summary: str = ""
@@ -419,6 +420,22 @@ class AgentOptimizationSuggestionResponse(BaseModel):
     priority: str
     status: str
     owner: Optional[str] = None
+    create_time: str = ""
+    update_time: str = ""
+
+
+class AgentOptimizationSuggestionUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+
+
+class AgentOptimizationSuggestionOverviewResponse(BaseModel):
+    total: int = 0
+    new_count: int = 0
+    in_progress_count: int = 0
+    completed_count: int = 0
+    high_priority_count: int = 0
 
 
 class AgentEvaluationSummaryResponse(BaseModel):

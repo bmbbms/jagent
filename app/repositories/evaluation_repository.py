@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Iterable, List
 from uuid import uuid4
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -63,13 +62,10 @@ class EvaluationRepository:
         evaluation_id: str,
         details: Iterable[dict],
     ) -> None:
-        next_id = (
-            session.query(func.max(AgentEvaluationDetailModel.id)).scalar() or 0
-        ) + 1
         for detail in details:
             session.add(
                 AgentEvaluationDetailModel(
-                    id=next_id,
+                    id=self._new_numeric_id(),
                     evaluation_id=evaluation_id,
                     dimension_code=detail["dimension_code"],
                     dimension_name=detail["dimension_name"],
@@ -80,7 +76,6 @@ class EvaluationRepository:
                     severity=detail.get("severity"),
                 )
             )
-            next_id += 1
         session.flush()
 
     def add_suggestions(
@@ -91,13 +86,10 @@ class EvaluationRepository:
         agent_id: str,
         suggestions: Iterable[dict],
     ) -> None:
-        next_id = (
-            session.query(func.max(AgentOptimizationSuggestionModel.id)).scalar() or 0
-        ) + 1
         for suggestion in suggestions:
             session.add(
                 AgentOptimizationSuggestionModel(
-                    id=next_id,
+                    id=self._new_numeric_id(),
                     evaluation_id=evaluation_id,
                     agent_id=agent_id,
                     optimization_type=suggestion["optimization_type"],
@@ -109,7 +101,6 @@ class EvaluationRepository:
                     owner=suggestion.get("owner"),
                 )
             )
-            next_id += 1
         session.flush()
 
     def list_evaluations(self, session: Session, limit: int = 50) -> List[AgentEvaluationModel]:
@@ -154,6 +145,58 @@ class EvaluationRepository:
             .all()
         )
 
+    def list_all_suggestions(
+        self,
+        session: Session,
+        *,
+        agent_id: str | None = None,
+        status: str | None = None,
+        owner: str | None = None,
+    ) -> List[AgentOptimizationSuggestionModel]:
+        query = session.query(AgentOptimizationSuggestionModel).order_by(
+            AgentOptimizationSuggestionModel.create_time.desc(),
+            AgentOptimizationSuggestionModel.id.desc(),
+        )
+        if agent_id:
+            query = query.filter(AgentOptimizationSuggestionModel.agent_id == agent_id)
+        if status:
+            query = query.filter(AgentOptimizationSuggestionModel.status == status)
+        if owner:
+            query = query.filter(AgentOptimizationSuggestionModel.owner == owner)
+        return query.all()
+
+    def get_suggestion(
+        self,
+        session: Session,
+        suggestion_id: int,
+    ) -> AgentOptimizationSuggestionModel | None:
+        return session.get(AgentOptimizationSuggestionModel, suggestion_id)
+
+    def update_suggestion(
+        self,
+        session: Session,
+        *,
+        suggestion_id: int,
+        status: str | None = None,
+        owner: str | None = None,
+        priority: str | None = None,
+    ) -> AgentOptimizationSuggestionModel | None:
+        item = session.get(AgentOptimizationSuggestionModel, suggestion_id)
+        if item is None:
+            return None
+        if status is not None:
+            item.status = status
+        if owner is not None:
+            item.owner = owner
+        if priority is not None:
+            item.priority = priority
+        session.flush()
+        return item
+
     @staticmethod
     def _new_id(prefix: str) -> str:
         return f"{prefix}_{uuid4().hex[:24]}"
+
+    @staticmethod
+    def _new_numeric_id() -> int:
+        return uuid4().int & ((1 << 63) - 1)

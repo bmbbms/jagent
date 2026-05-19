@@ -349,6 +349,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="analyticsList"' in response.text
     assert 'id="agentFilterInput"' in response.text
     assert 'id="resultFilterInput"' in response.text
+    assert 'id="suggestionList"' in response.text
+    assert 'id="loadSuggestionsBtn"' in response.text
 
 
 def test_evaluation_analytics_api(client: TestClient) -> None:
@@ -398,6 +400,52 @@ def test_evaluation_list_supports_extended_filters(client: TestClient) -> None:
     assert isinstance(body, list)
     for item in body:
         assert item["overall_score"] >= 70
+
+
+def test_evaluation_suggestion_apis(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-eval-suggestion",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    agent_id = chat_response.json()["capability_id"]
+
+    list_response = client.get("/api/evaluations/suggestions", params={"agent_id": agent_id})
+    assert list_response.status_code == 200
+    suggestions = list_response.json()
+    assert isinstance(suggestions, list)
+    assert suggestions
+    first = suggestions[0]
+    assert "suggestion_id" in first
+    assert "status" in first
+    assert "priority" in first
+
+    overview_response = client.get(
+        "/api/evaluations/suggestions/overview",
+        params={"agent_id": agent_id},
+    )
+    assert overview_response.status_code == 200
+    overview = overview_response.json()
+    assert "total" in overview
+    assert overview["total"] >= 1
+
+    update_response = client.put(
+        f"/api/evaluations/suggestions/{first['suggestion_id']}",
+        json={
+            "status": "in_progress",
+            "owner": "agent-ops",
+            "priority": "high",
+        },
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["status"] == "in_progress"
+    assert updated["owner"] == "agent-ops"
+    assert updated["priority"] == "high"
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

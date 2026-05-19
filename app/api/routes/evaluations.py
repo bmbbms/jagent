@@ -6,6 +6,9 @@ from app.dependencies import get_evaluation_service
 from app.schemas import (
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationAnalyticsItemResponse,
+    AgentOptimizationSuggestionOverviewResponse,
+    AgentOptimizationSuggestionResponse,
+    AgentOptimizationSuggestionUpdateRequest,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
 )
@@ -52,6 +55,53 @@ def get_evaluation_analytics_overview(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> AgentEvaluationAnalyticsOverviewResponse:
     return evaluation_service.build_analytics_overview()
+
+
+@router.get(
+    "/suggestions",
+    response_model=list[AgentOptimizationSuggestionResponse],
+)
+def list_optimization_suggestions(
+    agent_id: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    owner: str | None = Query(default=None),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> list[AgentOptimizationSuggestionResponse]:
+    return evaluation_service.list_optimization_suggestions(
+        agent_id=agent_id,
+        status=status,
+        owner=owner,
+    )
+
+
+@router.get(
+    "/suggestions/overview",
+    response_model=AgentOptimizationSuggestionOverviewResponse,
+)
+def get_optimization_suggestion_overview(
+    agent_id: str | None = Query(default=None),
+    owner: str | None = Query(default=None),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentOptimizationSuggestionOverviewResponse:
+    return evaluation_service.build_optimization_suggestion_overview(
+        agent_id=agent_id,
+        owner=owner,
+    )
+
+
+@router.put(
+    "/suggestions/{suggestion_id}",
+    response_model=AgentOptimizationSuggestionResponse,
+)
+def update_optimization_suggestion(
+    suggestion_id: int,
+    request: AgentOptimizationSuggestionUpdateRequest,
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentOptimizationSuggestionResponse:
+    item = evaluation_service.update_optimization_suggestion(suggestion_id, request)
+    if item is None:
+        raise HTTPException(status_code=404, detail="optimization suggestion not found")
+    return item
 
 
 @router.get("/{evaluation_id}", response_model=AgentEvaluationResponse)

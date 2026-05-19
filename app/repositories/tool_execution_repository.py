@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import DataAccessLogModel, ToolCallLogModel
@@ -73,10 +73,9 @@ class ToolExecutionRepository:
         operator_id: str | None,
         create_time: datetime,
     ) -> None:
-        next_id = self._next_data_access_log_id(session)
         session.add(
             DataAccessLogModel(
-                id=next_id,
+                id=self._new_data_access_log_id(),
                 task_id=task_id,
                 agent_id=agent_id,
                 tool_call_id=tool_call_id,
@@ -95,9 +94,8 @@ class ToolExecutionRepository:
         session.flush()
 
     @staticmethod
-    def _next_data_access_log_id(session: Session) -> int:
-        current_max = session.query(func.max(DataAccessLogModel.id)).scalar()
-        return int(current_max or 0) + 1
+    def _new_data_access_log_id() -> int:
+        return uuid4().int & ((1 << 63) - 1)
 
     def list_tool_call_logs(
         self,

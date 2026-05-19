@@ -14,7 +14,9 @@ from app.schemas import (
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
     AgentObservationLogResponse,
+    AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
+    AgentOptimizationSuggestionUpdateRequest,
     ChatRequest,
     ChatResponse,
     DataAccessLogResponse,
@@ -111,41 +113,6 @@ class EvaluationService:
                 suggestions=suggestions,
             )
             return item.evaluation_id
-
-    def _collect_runtime_facts(self, *, task_id: str) -> EvaluationRuntimeFacts:
-        observations = (
-            self._observation_service.list_observations(task_id=task_id)
-            if self._observation_service is not None
-            else []
-        )
-        tool_calls = (
-            self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
-            if self._tool_execution_log_service is not None
-            else []
-        )
-        data_access_logs = (
-            self._tool_execution_log_service.list_data_access_logs(task_id=task_id)
-            if self._tool_execution_log_service is not None
-            else []
-        )
-        fallback_count = sum(1 for item in observations if item.fallback_used)
-        total_latency_ms = sum(item.latency_ms or 0 for item in observations)
-        sensitive_access_count = sum(
-            1 for item in data_access_logs if item.sensitive_level in {"high", "medium"}
-        )
-        approved_access_count = sum(1 for item in data_access_logs if item.approved)
-        phase_set = {item.phase for item in observations if item.phase}
-        return EvaluationRuntimeFacts(
-            observations=observations,
-            tool_calls=tool_calls,
-            data_access_logs=data_access_logs,
-            fallback_count=fallback_count,
-            total_latency_ms=total_latency_ms,
-            sensitive_access_count=sensitive_access_count,
-            approved_access_count=approved_access_count,
-            planner_observed="planner" in phase_set,
-            executor_observed="executor" in phase_set,
-        )
 
     def list_evaluations(self) -> list[AgentEvaluationSummaryResponse]:
         with self._session_factory() as session:
@@ -282,6 +249,91 @@ class EvaluationService:
                 item=item,
             )
 
+    def list_optimization_suggestions(
+        self,
+        *,
+        agent_id: str | None = None,
+        status: str | None = None,
+        owner: str | None = None,
+    ) -> list[AgentOptimizationSuggestionResponse]:
+        with self._session_factory() as session:
+            items = self._repository.list_all_suggestions(
+                session,
+                agent_id=agent_id,
+                status=status,
+                owner=owner,
+            )
+            return [self._to_suggestion(item) for item in items]
+
+    def build_optimization_suggestion_overview(
+        self,
+        *,
+        agent_id: str | None = None,
+        owner: str | None = None,
+    ) -> AgentOptimizationSuggestionOverviewResponse:
+        items = self.list_optimization_suggestions(agent_id=agent_id, owner=owner)
+        return AgentOptimizationSuggestionOverviewResponse(
+            total=len(items),
+            new_count=sum(1 for item in items if item.status == "new"),
+            in_progress_count=sum(1 for item in items if item.status == "in_progress"),
+            completed_count=sum(1 for item in items if item.status == "completed"),
+            high_priority_count=sum(1 for item in items if item.priority == "high"),
+        )
+
+    def update_optimization_suggestion(
+        self,
+        suggestion_id: int,
+        request: AgentOptimizationSuggestionUpdateRequest,
+    ) -> AgentOptimizationSuggestionResponse | None:
+        with self._session_factory() as session:
+            item = self._repository.update_suggestion(
+                session,
+                suggestion_id=suggestion_id,
+                status=request.status,
+                owner=request.owner,
+                priority=request.priority,
+            )
+            if item is None:
+                return None
+            session.commit()
+            session.refresh(item)
+            return self._to_suggestion(item)
+
+    def _collect_runtime_facts(self, *, task_id: str) -> EvaluationRuntimeFacts:
+        observations = (
+            self._observation_service.list_observations(task_id=task_id)
+            if self._observation_service is not None
+            else []
+        )
+        tool_calls = (
+            self._tool_execution_log_service.list_tool_call_logs(task_id=task_id)
+            if self._tool_execution_log_service is not None
+            else []
+        )
+        data_access_logs = (
+            self._tool_execution_log_service.list_data_access_logs(task_id=task_id)
+            if self._tool_execution_log_service is not None
+            else []
+        )
+        fallback_count = sum(1 for item in observations if item.fallback_used)
+        total_latency_ms = sum(item.latency_ms or 0 for item in observations)
+        sensitive_access_count = sum(
+            1 for item in data_access_logs if item.sensitive_level in {"high", "medium"}
+        )
+        approved_access_count = sum(1 for item in data_access_logs if item.approved)
+        phase_set = {item.phase for item in observations if item.phase}
+        return EvaluationRuntimeFacts(
+            observations=observations,
+            tool_calls=tool_calls,
+            data_access_logs=data_access_logs,
+            fallback_count=fallback_count,
+            total_latency_ms=total_latency_ms,
+            sensitive_access_count=sensitive_access_count,
+            approved_access_count=approved_access_count,
+            planner_observed="planner" in phase_set,
+            executor_observed="executor" in phase_set,
+        )
+
     def _build_evaluation_response(
         self,
         *,
@@ -406,7 +458,7 @@ class EvaluationService:
                 "dimension_name": "任务完成度",
                 "score": scores["completion"],
                 "evidence": response.summary,
-                "suggestion": "继续补强结果结构化输出，让任务结论更容易复核和回放。",
+                "suggestion": "继续补强结果结构化输出，让任务结论更容易复核和回收。",
             },
             {
                 "dimension_code": "tool_usage",
@@ -453,7 +505,7 @@ class EvaluationService:
                 "optimization_type": "prompt",
                 "target_ref": response.capability_id,
                 "current_value_summary": response.summary[:200],
-                "suggested_change": "增加任务目标、输出格式和边界条件描述，提升回复稳定性与一致性。",
+                "suggested_change": "增加任务目标、输出格式和边界条件描述，提升回答稳定性与一致性。",
                 "priority": "medium",
             }
         ]
@@ -536,6 +588,7 @@ class EvaluationService:
     @staticmethod
     def _to_suggestion(item) -> AgentOptimizationSuggestionResponse:
         return AgentOptimizationSuggestionResponse(
+            suggestion_id=item.id,
             optimization_type=item.optimization_type,
             target_ref=item.target_ref,
             current_value_summary=item.current_value_summary or "",
@@ -543,4 +596,6 @@ class EvaluationService:
             priority=item.priority,
             status=item.status,
             owner=item.owner,
+            create_time=item.create_time.isoformat() if item.create_time else "",
+            update_time=item.update_time.isoformat() if item.update_time else "",
         )

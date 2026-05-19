@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import AgentObservationLogModel
@@ -38,6 +38,7 @@ class ObservationRepository:
         end_time: datetime | None,
     ) -> None:
         payload = dict(
+            id=self._new_id(),
             task_id=task_id,
             trace_id=trace_id,
             session_id=session_id,
@@ -61,8 +62,6 @@ class ObservationRepository:
             start_time=start_time,
             end_time=end_time,
         )
-        if session.bind is not None and session.bind.dialect.name == "sqlite":
-            payload["id"] = self._next_id(session)
         session.add(
             AgentObservationLogModel(
                 **payload,
@@ -84,6 +83,5 @@ class ObservationRepository:
         )
 
     @staticmethod
-    def _next_id(session: Session) -> int:
-        current_max = session.query(func.max(AgentObservationLogModel.id)).scalar()
-        return int(current_max or 0) + 1
+    def _new_id() -> int:
+        return uuid4().int & ((1 << 63) - 1)
