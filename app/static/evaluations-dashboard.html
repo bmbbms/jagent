@@ -109,6 +109,13 @@
       border-radius: 14px;
       padding: 14px;
     }
+    .overview-card.interactive {
+      cursor: pointer;
+    }
+    .overview-card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(154, 79, 37, 0.14);
+    }
     .overview-card strong {
       display: block;
       margin-top: 8px;
@@ -429,18 +436,40 @@
         return;
       }
       const cards = [
-        ["建议总数", state.suggestionOverview.total],
-        ["新建", state.suggestionOverview.new_count],
-        ["进行中", state.suggestionOverview.in_progress_count],
-        ["已完成", state.suggestionOverview.completed_count],
-        ["高优先级", state.suggestionOverview.high_priority_count],
+        { label: "建议总数", value: state.suggestionOverview.total, status: "", priority: "" },
+        { label: "新建", value: state.suggestionOverview.new_count, status: "new", priority: "" },
+        { label: "进行中", value: state.suggestionOverview.in_progress_count, status: "in_progress", priority: "" },
+        { label: "已完成", value: state.suggestionOverview.completed_count, status: "completed", priority: "" },
+        { label: "高优先级", value: state.suggestionOverview.high_priority_count, status: "", priority: "high" },
       ];
-      el.suggestionOverviewGrid.innerHTML = cards.map(([label, value]) => `
-        <div class="overview-card">
-          <div class="subtle">${escapeHtml(label)}</div>
-          <strong>${escapeHtml(value)}</strong>
+      el.suggestionOverviewGrid.innerHTML = cards.map(item => `
+        <div
+          class="overview-card interactive ${isSuggestionOverviewCardActive(item) ? "active" : ""}"
+          data-suggestion-overview-status="${escapeHtml(item.status)}"
+          data-suggestion-overview-priority="${escapeHtml(item.priority)}"
+        >
+          <div class="subtle">${escapeHtml(item.label)}</div>
+          <strong>${escapeHtml(item.value)}</strong>
         </div>
       `).join("");
+      el.suggestionOverviewGrid
+        .querySelectorAll("[data-suggestion-overview-status], [data-suggestion-overview-priority]")
+        .forEach(node => {
+          node.addEventListener("click", async () => {
+            el.suggestionStatusFilter.value =
+              node.getAttribute("data-suggestion-overview-status") || "";
+            el.suggestionPriorityFilter.value =
+              node.getAttribute("data-suggestion-overview-priority") || "";
+            await loadSuggestionOverview();
+            await loadSuggestions();
+          });
+        });
+    }
+
+    function isSuggestionOverviewCardActive(item) {
+      const currentStatus = el.suggestionStatusFilter.value || "";
+      const currentPriority = el.suggestionPriorityFilter.value || "";
+      return currentStatus === item.status && currentPriority === item.priority;
     }
 
     function renderAnalyticsList() {
@@ -655,6 +684,7 @@
     async function loadSuggestionOverview() {
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      if (el.suggestionStatusFilter.value) query.set("status", el.suggestionStatusFilter.value);
       if (el.suggestionOwnerFilter.value.trim()) query.set("owner", el.suggestionOwnerFilter.value.trim());
       if (el.suggestionPriorityFilter.value) query.set("priority", el.suggestionPriorityFilter.value);
       state.suggestionOverview = await fetchJson(`/api/evaluations/suggestions/overview?${query.toString()}`);

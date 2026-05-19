@@ -271,11 +271,13 @@ class EvaluationService:
         self,
         *,
         agent_id: str | None = None,
+        status: str | None = None,
         owner: str | None = None,
         priority: str | None = None,
     ) -> AgentOptimizationSuggestionOverviewResponse:
         items = self.list_optimization_suggestions(
             agent_id=agent_id,
+            status=status,
             owner=owner,
             priority=priority,
         )

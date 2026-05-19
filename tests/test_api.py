@@ -690,6 +690,20 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert priority_filtered
     assert all(item["priority"] == "high" for item in priority_filtered)
 
+    status_overview_response = client.get(
+        "/api/evaluations/suggestions/overview",
+        params={
+            "agent_id": agent_id,
+            "status": "in_progress",
+            "priority": "high",
+            "owner": "agent-ops",
+        },
+    )
+    assert status_overview_response.status_code == 200
+    status_overview = status_overview_response.json()
+    assert status_overview["total"] >= 1
+    assert status_overview["in_progress_count"] == status_overview["total"]
+
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     list_response = client.get("/api/workflows", params={"biz_domain": "operations"})
