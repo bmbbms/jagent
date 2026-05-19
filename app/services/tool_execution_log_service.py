@@ -85,27 +85,24 @@ class ToolExecutionLogService:
     def list_tool_call_logs(self, *, task_id: str) -> list[ToolCallLogResponse]:
         with self._session_factory() as session:
             return [
-                ToolCallLogResponse(
-                    tool_call_id=item.tool_call_id,
-                    task_id=item.task_id,
-                    event_id=item.event_id,
-                    agent_id=item.agent_id,
-                    runtime_session_id=self._extract_runtime_session_id(item.request_args),
-                    tool_id=item.tool_id,
-                    tool_name=item.tool_name,
-                    tool_type=item.tool_type,
-                    provider=item.provider,
-                    request_args=item.request_args or {},
-                    response_summary=item.response_summary or "",
-                    status=item.status,
-                    error_code=item.error_code,
-                    error_msg=item.error_msg,
-                    sensitive_hit=item.sensitive_hit,
-                    duration_ms=item.duration_ms,
-                    start_time=item.start_time.isoformat(),
-                    end_time=item.end_time.isoformat() if item.end_time else None,
-                )
+                self._to_tool_call_response(item)
                 for item in self._repository.list_tool_call_logs(session, task_id=task_id)
+            ]
+
+    def list_tool_call_logs_by_tool_id(
+        self,
+        *,
+        tool_id: str,
+        limit: int = 20,
+    ) -> list[ToolCallLogResponse]:
+        with self._session_factory() as session:
+            return [
+                self._to_tool_call_response(item)
+                for item in self._repository.list_tool_call_logs_by_tool_id(
+                    session,
+                    tool_id=tool_id,
+                    limit=limit,
+                )
             ]
 
     def list_data_access_logs(self, *, task_id: str) -> list[DataAccessLogResponse]:
@@ -145,3 +142,25 @@ class ToolExecutionLogService:
             return None
         runtime_session_id = request_context.get("runtime_session_id")
         return runtime_session_id if isinstance(runtime_session_id, str) and runtime_session_id else None
+
+    def _to_tool_call_response(self, item) -> ToolCallLogResponse:
+        return ToolCallLogResponse(
+            tool_call_id=item.tool_call_id,
+            task_id=item.task_id,
+            event_id=item.event_id,
+            agent_id=item.agent_id,
+            runtime_session_id=self._extract_runtime_session_id(item.request_args),
+            tool_id=item.tool_id,
+            tool_name=item.tool_name,
+            tool_type=item.tool_type,
+            provider=item.provider,
+            request_args=item.request_args or {},
+            response_summary=item.response_summary or "",
+            status=item.status,
+            error_code=item.error_code,
+            error_msg=item.error_msg,
+            sensitive_hit=item.sensitive_hit,
+            duration_ms=item.duration_ms,
+            start_time=item.start_time.isoformat(),
+            end_time=item.end_time.isoformat() if item.end_time else None,
+        )

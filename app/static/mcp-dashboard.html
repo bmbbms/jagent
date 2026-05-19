@@ -185,6 +185,13 @@
         <div class="empty">点击右侧某个 MCP 工具查看详情。</div>
       </div>
     </section>
+
+    <section class="panel" style="margin-top: 20px;">
+      <h2>最近调用任务</h2>
+      <div id="recentCalls" class="list">
+        <div class="empty">选择某个 MCP 工具后查看最近调用任务。</div>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -203,6 +210,7 @@
       overview: document.getElementById("overview"),
       toolList: document.getElementById("toolList"),
       toolDetail: document.getElementById("toolDetail"),
+      recentCalls: document.getElementById("recentCalls"),
     };
 
     function escapeHtml(value) {
@@ -270,6 +278,7 @@
     function renderToolDetail(item) {
       if (!item) {
         el.toolDetail.innerHTML = '<div class="empty">点击右侧某个 MCP 工具查看详情。</div>';
+        el.recentCalls.innerHTML = '<div class="empty">选择某个 MCP 工具后查看最近调用任务。</div>';
         return;
       }
       el.toolDetail.innerHTML = `
@@ -289,6 +298,27 @@
           <div class="kv-item"><div class="kv-label">原始 args</div><div class="kv-value"><pre>${escapeHtml(JSON.stringify(item.args || [], null, 2))}</pre></div></div>
         </div>
       `;
+      loadRecentCalls(item.tool_id);
+    }
+
+    function renderRecentCalls(items = []) {
+      if (!items.length) {
+        el.recentCalls.innerHTML = '<div class="empty">当前工具还没有调用记录。</div>';
+        return;
+      }
+      el.recentCalls.innerHTML = items.map(item => `
+        <div class="card">
+          <div class="card-title">${escapeHtml(item.tool_call_id)}</div>
+          <div class="subtle">task_id: <a href="/ui/tasks?task_id=${encodeURIComponent(item.task_id)}">${escapeHtml(item.task_id)}</a></div>
+          <div class="tags">
+            <span class="tag">${escapeHtml(item.provider || "-")}</span>
+            <span class="tag ${item.status === "success" ? "success" : "danger"}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.runtime_session_id || "-")}</span>
+          </div>
+          <div class="subtle">开始时间 ${escapeHtml(item.start_time)} / 耗时 ${escapeHtml(item.duration_ms ?? "-")}${item.duration_ms != null ? " ms" : ""}</div>
+          <div class="subtle">${escapeHtml(item.response_summary || "-")}</div>
+        </div>
+      `).join("");
     }
 
     function rebuildProviderOptions() {
@@ -323,6 +353,15 @@
       renderOverview(overview);
       renderToolList();
       renderToolDetail(tools.find(item => item.tool_id === state.selectedToolId) || null);
+    }
+
+    async function loadRecentCalls(toolId) {
+      if (!toolId) {
+        el.recentCalls.innerHTML = '<div class="empty">选择某个 MCP 工具后查看最近调用任务。</div>';
+        return;
+      }
+      const items = await fetchJson(`/api/mcp/tools/${encodeURIComponent(toolId)}/recent-calls`);
+      renderRecentCalls(items);
     }
 
     el.loadBtn.addEventListener("click", loadPage);

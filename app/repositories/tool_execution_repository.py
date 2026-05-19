@@ -123,6 +123,21 @@ class ToolExecutionRepository:
             .all()
         )
 
+    def list_tool_call_logs_by_tool_id(
+        self,
+        session: Session,
+        *,
+        tool_id: str,
+        limit: int = 20,
+    ) -> list[ToolCallLogModel]:
+        return (
+            session.query(ToolCallLogModel)
+            .filter(ToolCallLogModel.tool_id == tool_id)
+            .order_by(ToolCallLogModel.start_time.desc())
+            .limit(limit)
+            .all()
+        )
+
     def list_data_access_logs(
         self,
         session: Session,

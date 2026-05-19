@@ -57,6 +57,13 @@ def test_mcp_tools_api_and_overview(client: TestClient) -> None:
     assert "providers" in overview
     assert "transports" in overview
 
+    recent_calls_response = client.get(
+        f"/api/mcp/tools/{first['tool_id']}/recent-calls",
+    )
+    assert recent_calls_response.status_code == 200
+    recent_calls = recent_calls_response.json()
+    assert isinstance(recent_calls, list)
+
 
 def test_capabilities(client: TestClient) -> None:
     response = client.get("/api/capabilities")
@@ -788,6 +795,7 @@ def test_mcp_ui_page(client: TestClient) -> None:
     assert 'id="overview"' in response.text
     assert 'id="toolList"' in response.text
     assert 'id="toolDetail"' in response.text
+    assert 'id="recentCalls"' in response.text
     assert "/api/mcp/tools" in response.text
 
 
