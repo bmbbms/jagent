@@ -533,6 +533,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="prevPageBtn"' in response.text
     assert 'id="nextPageBtn"' in response.text
     assert 'data-open-suggestion=' in response.text or 'openEvaluationCenterBtn' in response.text
+    assert 'data-open-ticket=' in response.text or 'ticketCenterBtn' in response.text
 
 
 def test_external_agent_manager_ui_page(client: TestClient) -> None:

@@ -1260,6 +1260,77 @@
       }
     }
 
+    function renderEvaluation(evaluation) {
+      if (!evaluation) {
+        el.evaluation.innerHTML = `<div class="empty">当前任务暂无评估结果。</div>`;
+        return;
+      }
+
+      const details = (evaluation.details || []).map(item => `
+        <div class="score-item">
+          <div class="label">${escapeHtml(item.dimension_name)}</div>
+          <div class="value">${escapeHtml(item.score)}</div>
+        </div>
+      `).join("");
+
+      const suggestions = (evaluation.suggestions || []).length
+        ? `
+          <div class="suggestion-list">
+            ${evaluation.suggestions.map(item => `
+              <div class="list-card">
+                <h3>${escapeHtml(item.optimization_type)}</h3>
+                <div class="subtle">建议 ID: ${escapeHtml(item.suggestion_id || "-")} / 优先级: ${escapeHtml(item.priority)} / 状态: ${escapeHtml(item.status)}</div>
+                <div class="subtle">负责人: ${escapeHtml(item.owner || "unassigned")}</div>
+                <div class="subtle">工单: ${escapeHtml(item.ticket_id || "未绑定")} / ${escapeHtml(item.ticket_status || "-")}</div>
+                <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="secondary" type="button" data-open-suggestion="${escapeHtml(item.suggestion_id || "")}">打开建议</button>
+                  ${item.ticket_id ? `<button class="secondary" type="button" data-open-ticket="${escapeHtml(item.ticket_id)}">打开工单</button>` : ""}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `
+        : `<div class="empty">暂无优化建议。</div>`;
+
+      el.evaluation.innerHTML = `
+        <div class="score-hero">
+          <div class="subtle">总体评分 / ${escapeHtml(evaluation.result_label)}</div>
+          <div style="margin-top: 6px;"><strong>${escapeHtml(evaluation.overall_score)}</strong></div>
+          <div class="subtle" style="margin-top: 8px;">${escapeHtml(evaluation.summary || "-")}</div>
+          <div class="subtle" style="margin-top: 8px;">evaluation_id: ${escapeHtml(evaluation.evaluation_id || "-")}</div>
+        </div>
+        <div class="score-list">${details || '<div class="empty">暂无维度明细。</div>'}</div>
+        <h2 style="margin-top: 18px;">优化建议</h2>
+        ${suggestions}
+        <div style="margin-top: 12px;">
+          <button id="openEvaluationCenterBtn" class="secondary" type="button">打开评估中心</button>
+        </div>
+      `;
+
+      const openEvaluationCenterBtn = document.getElementById("openEvaluationCenterBtn");
+      if (openEvaluationCenterBtn && evaluation.evaluation_id) {
+        openEvaluationCenterBtn.addEventListener("click", () => {
+          const target = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluation.evaluation_id)}`;
+          window.location.href = target;
+        });
+      }
+      el.evaluation.querySelectorAll("[data-open-suggestion]").forEach(node => {
+        node.addEventListener("click", () => {
+          const suggestionId = node.getAttribute("data-open-suggestion") || "";
+          const target = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluation.evaluation_id || "")}&suggestion_id=${encodeURIComponent(suggestionId)}`;
+          window.location.href = target;
+        });
+      });
+      el.evaluation.querySelectorAll("[data-open-ticket]").forEach(node => {
+        node.addEventListener("click", () => {
+          const ticketId = node.getAttribute("data-open-ticket") || "";
+          const target = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+          window.location.href = target;
+        });
+      });
+    }
+
     function closeStream() {
       if (state.eventSource) {
         state.eventSource.close();
