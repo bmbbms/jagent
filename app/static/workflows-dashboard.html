@@ -12,7 +12,6 @@
       --text: #241b15;
       --muted: #726657;
       --accent: #a15428;
-      --accent-soft: #f3e2d2;
       --success: #1f7a4d;
       --warning: #a8741d;
       --radius: 18px;
@@ -20,20 +19,17 @@
     }
 
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
-
     .page {
       max-width: 1480px;
       margin: 0 auto;
       padding: 24px;
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -42,26 +38,22 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
-
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
-
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
       max-width: 860px;
     }
-
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
-
     .toolbar button,
     .toolbar input,
     .toolbar select {
@@ -73,7 +65,6 @@
       color: var(--text);
       font: inherit;
     }
-
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -81,18 +72,15 @@
       cursor: pointer;
       font-weight: 700;
     }
-
     .toolbar button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
-
     .layout {
       display: grid;
       grid-template-columns: 420px minmax(0, 1fr);
       gap: 20px;
     }
-
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -100,25 +88,22 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
-
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
-
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
-
     .list,
-    .stack {
+    .stack,
+    .detail-grid {
       display: grid;
       gap: 10px;
     }
-
     .workflow-card,
     .detail-card,
     .step-card {
@@ -129,22 +114,18 @@
       display: grid;
       gap: 10px;
     }
-
     .workflow-card {
       cursor: pointer;
     }
-
     .workflow-card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
     }
-
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
-
     .tag {
       display: inline-flex;
       align-items: center;
@@ -157,24 +138,20 @@
       margin-right: 6px;
       margin-bottom: 6px;
     }
-
     .tag.success {
       background: rgba(31, 122, 77, 0.12);
       color: var(--success);
     }
-
     .tag.warning {
       background: rgba(168, 116, 29, 0.14);
       color: var(--warning);
     }
-
     .hero {
       padding: 16px;
       border-radius: 16px;
       background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
       border: 1px solid #eadcca;
     }
-
     .hero strong {
       display: block;
       margin-top: 8px;
@@ -182,12 +159,6 @@
       color: var(--accent);
       line-height: 1;
     }
-
-    .detail-grid {
-      display: grid;
-      gap: 10px;
-    }
-
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -196,35 +167,29 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
-
     .detail-row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
-
     .label {
       color: var(--muted);
-      flex: 0 0 130px;
+      flex: 0 0 140px;
     }
-
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
-
     .section-split {
       margin-top: 20px;
       padding-top: 18px;
       border-top: 1px solid #eadcca;
     }
-
     .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
-
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -235,7 +200,7 @@
     <div class="header">
       <div>
         <h1>Workflow Center</h1>
-        <p>集中查看平台内置业务 Workflow 的定义、步骤拆解、审批检查点、工具依赖和 fallback 规则，方便我们在接入外部 Agent、设计高风险流程和排查执行路径时快速对齐。</p>
+        <p>集中查看平台内置业务 Workflow 的定义、步骤拆解、审批检查点、工具依赖和 fallback 规则，并支持按工具和审批要求做治理筛选。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -247,6 +212,12 @@
           <option value="operations">operations</option>
           <option value="data_support">data_support</option>
           <option value="partner">partner</option>
+        </select>
+        <input id="requiredToolInput" placeholder="按 required_tool 过滤" />
+        <select id="approvalFilter">
+          <option value="">全部审批要求</option>
+          <option value="true">has_approval_points=true</option>
+          <option value="false">has_approval_points=false</option>
         </select>
         <input id="workflowCodeInput" placeholder="输入 workflow_code 直接打开" />
         <button id="loadBtn">加载 Workflow</button>
@@ -284,6 +255,8 @@
       approvalPageBtn: document.getElementById("approvalPageBtn"),
       evaluationPageBtn: document.getElementById("evaluationPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
+      requiredToolInput: document.getElementById("requiredToolInput"),
+      approvalFilter: document.getElementById("approvalFilter"),
       workflowCodeInput: document.getElementById("workflowCodeInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -311,16 +284,19 @@
 
     function updateQuery() {
       const url = new URL(window.location.href);
-      if (state.workflowCode) {
-        url.searchParams.set("workflow_code", state.workflowCode);
-      } else {
-        url.searchParams.delete("workflow_code");
-      }
-      if (el.domainFilter.value) {
-        url.searchParams.set("biz_domain", el.domainFilter.value);
-      } else {
-        url.searchParams.delete("biz_domain");
-      }
+      const pairs = {
+        workflow_code: state.workflowCode,
+        biz_domain: el.domainFilter.value,
+        required_tool: el.requiredToolInput.value.trim(),
+        has_approval_points: el.approvalFilter.value,
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
       window.history.replaceState({}, "", url);
     }
 
@@ -443,6 +419,8 @@
       const query = new URLSearchParams();
       if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
       if (el.workflowCodeInput.value.trim()) query.set("workflow_code", el.workflowCodeInput.value.trim());
+      if (el.requiredToolInput.value.trim()) query.set("required_tool", el.requiredToolInput.value.trim());
+      if (el.approvalFilter.value) query.set("has_approval_points", el.approvalFilter.value);
       state.workflows = await fetchJson(`/api/workflows?${query.toString()}`);
       renderWorkflowList();
       updateQuery();
@@ -468,6 +446,8 @@
       state.workflowCode = query.get("workflow_code") || "";
       el.workflowCodeInput.value = state.workflowCode;
       el.domainFilter.value = query.get("biz_domain") || "";
+      el.requiredToolInput.value = query.get("required_tool") || "";
+      el.approvalFilter.value = query.get("has_approval_points") || "";
       await loadWorkflowList();
       if (state.workflowCode) {
         await loadWorkflowDetail();
@@ -488,10 +468,14 @@
       window.location.href = "/ui/evaluations";
     });
     el.domainFilter.addEventListener("change", bootstrap);
+    el.approvalFilter.addEventListener("change", bootstrap);
     el.loadBtn.addEventListener("click", loadWorkflowDetail);
     el.refreshBtn.addEventListener("click", bootstrap);
     el.workflowCodeInput.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadWorkflowDetail();
+    });
+    el.requiredToolInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
     });
 
     bootstrap();

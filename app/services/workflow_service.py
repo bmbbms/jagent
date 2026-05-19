@@ -21,10 +21,20 @@ class WorkflowService:
         self,
         biz_domain: BizDomain | None = None,
         workflow_code: str | None = None,
+        required_tool: str | None = None,
+        has_approval_points: bool | None = None,
     ) -> list[WorkflowDefinitionResponse]:
         items = self._registry.list(biz_domain)
         if workflow_code:
             items = [item for item in items if item.workflow_code == workflow_code]
+        if required_tool:
+            items = [item for item in items if required_tool in item.required_tools]
+        if has_approval_points is not None:
+            items = [
+                item
+                for item in items
+                if bool(item.approval_points) == has_approval_points
+            ]
         return [self._to_response(item) for item in items]
 
     def get_workflow(self, workflow_code: str) -> WorkflowDefinitionResponse | None:

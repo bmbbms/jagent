@@ -530,6 +530,8 @@ def test_workflows_ui_page(client: TestClient) -> None:
     assert 'id="workflowList"' in response.text
     assert 'id="workflowDetail"' in response.text
     assert 'id="domainFilter"' in response.text
+    assert 'id="requiredToolInput"' in response.text
+    assert 'id="approvalFilter"' in response.text
     assert 'id="workflowCodeInput"' in response.text
     assert 'id="loadBtn"' in response.text
 
@@ -673,6 +675,19 @@ def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:
     filtered_items = filtered_response.json()
     assert len(filtered_items) == 1
     assert filtered_items[0]["workflow_code"] == "quota_review"
+
+    governance_filtered_response = client.get(
+        "/api/workflows",
+        params={
+            "required_tool": "quota_approval_submit",
+            "has_approval_points": True,
+        },
+    )
+    assert governance_filtered_response.status_code == 200
+    governance_items = governance_filtered_response.json()
+    assert governance_items
+    assert all("quota_approval_submit" in item["required_tools"] for item in governance_items)
+    assert all(item["approval_points"] for item in governance_items)
 
     chat_response = client.post(
         "/api/chat",
