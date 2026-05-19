@@ -343,6 +343,16 @@ class AuditEventResponse(BaseModel):
     evaluation_id: Optional[str] = None
 
 
+class AuditOverviewResponse(BaseModel):
+    total: int = 0
+    success_count: int = 0
+    failed_count: int = 0
+    pending_count: int = 0
+    source_counts: Dict[str, int] = Field(default_factory=dict)
+    event_type_counts: Dict[str, int] = Field(default_factory=dict)
+    action_counts: Dict[str, int] = Field(default_factory=dict)
+
+
 class AgentTaskEventResponse(BaseModel):
     event_id: str
     event_type: str

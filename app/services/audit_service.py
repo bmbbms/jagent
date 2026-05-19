@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from app.db.session import session_scope
 from app.repositories.audit_repository import AuditRepository
-from app.schemas import AuditEventResponse
+from app.schemas import AuditEventResponse, AuditOverviewResponse
 
 
 class AuditService:
@@ -59,3 +59,37 @@ class AuditService:
                 suggestion_id=suggestion_id,
                 evaluation_id=evaluation_id,
             )
+
+    def build_overview(self) -> AuditOverviewResponse:
+        items = self.list_events()
+        source_counts: dict[str, int] = {}
+        event_type_counts: dict[str, int] = {}
+        action_counts: dict[str, int] = {}
+        success_count = 0
+        failed_count = 0
+        pending_count = 0
+
+        for item in items:
+            source_key = item.source or "unknown"
+            event_type_key = item.event_type or "unknown"
+            action_key = item.action or "unknown"
+            source_counts[source_key] = source_counts.get(source_key, 0) + 1
+            event_type_counts[event_type_key] = event_type_counts.get(event_type_key, 0) + 1
+            action_counts[action_key] = action_counts.get(action_key, 0) + 1
+
+            if item.outcome == 1:
+                success_count += 1
+            elif item.outcome == 2:
+                failed_count += 1
+            else:
+                pending_count += 1
+
+        return AuditOverviewResponse(
+            total=len(items),
+            success_count=success_count,
+            failed_count=failed_count,
+            pending_count=pending_count,
+            source_counts=source_counts,
+            event_type_counts=event_type_counts,
+            action_counts=action_counts,
+        )

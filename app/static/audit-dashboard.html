@@ -202,6 +202,13 @@
 
     <div class="layout">
       <section class="panel">
+        <h2>审计治理概览</h2>
+        <div id="auditOverview" class="detail-list">
+          <div class="empty">正在加载审计治理概览...</div>
+        </div>
+      </section>
+
+      <section class="panel">
         <h2>审计事件列表</h2>
         <div id="auditMeta" class="subtle">正在加载审计事件...</div>
         <div id="auditList" class="list" style="margin-top: 12px;">
@@ -239,6 +246,7 @@
       capabilityFilterInput: document.getElementById("capabilityFilterInput"),
       workflowFilterInput: document.getElementById("workflowFilterInput"),
       loadBtn: document.getElementById("loadBtn"),
+      auditOverview: document.getElementById("auditOverview"),
       auditMeta: document.getElementById("auditMeta"),
       auditList: document.getElementById("auditList"),
       auditDetail: document.getElementById("auditDetail"),
@@ -302,6 +310,20 @@
       if (el.capabilityFilterInput.value.trim()) query.set("capability_id", el.capabilityFilterInput.value.trim());
       if (el.workflowFilterInput.value.trim()) query.set("workflow", el.workflowFilterInput.value.trim());
       return query;
+    }
+
+    function renderOverview(overview) {
+      if (!overview) {
+        el.auditOverview.innerHTML = '<div class="empty">暂无审计治理概览。</div>';
+        return;
+      }
+      el.auditOverview.innerHTML = `
+        <div class="detail-row"><div class="label">总事件数</div><div class="value">${escapeHtml(overview.total)}</div></div>
+        <div class="detail-row"><div class="label">成功 / 失败 / 未完成</div><div class="value">${escapeHtml(overview.success_count)} / ${escapeHtml(overview.failed_count)} / ${escapeHtml(overview.pending_count)}</div></div>
+        <div class="detail-row"><div class="label">来源分布</div><div class="value">${escapeHtml(Object.entries(overview.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+        <div class="detail-row"><div class="label">事件类型分布</div><div class="value">${escapeHtml(Object.entries(overview.event_type_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+        <div class="detail-row"><div class="label">动作分布</div><div class="value">${escapeHtml(Object.entries(overview.action_counts || {}).slice(0, 6).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+      `;
     }
 
     function renderList() {
@@ -412,7 +434,12 @@
 
     async function loadAudit() {
       const query = buildQuery();
-      state.events = await fetchJson(`/api/audit?${query.toString()}`);
+      const [overview, events] = await Promise.all([
+        fetchJson("/api/audit/overview"),
+        fetchJson(`/api/audit?${query.toString()}`),
+      ]);
+      renderOverview(overview);
+      state.events = events;
       state.selectedIndex = 0;
       renderList();
       renderDetail();

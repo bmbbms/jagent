@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends
 
 from app.dependencies import get_audit_service
-from app.schemas import AuditEventResponse
+from app.schemas import AuditEventResponse, AuditOverviewResponse
 from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["audit"])
+
+
+@router.get("/overview", response_model=AuditOverviewResponse)
+def get_audit_overview(
+    audit_service: AuditService = Depends(get_audit_service),
+) -> AuditOverviewResponse:
+    return audit_service.build_overview()
 
 
 @router.get("", response_model=list[AuditEventResponse])

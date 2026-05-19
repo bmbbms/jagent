@@ -362,6 +362,19 @@ def test_audit_events_support_filters(client: TestClient) -> None:
     assert all(item["outcome"] == 1 for item in extended_body)
 
 
+def test_audit_overview_api(client: TestClient) -> None:
+    response = client.get("/api/audit/overview")
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "success_count" in body
+    assert "failed_count" in body
+    assert "pending_count" in body
+    assert "source_counts" in body
+    assert "event_type_counts" in body
+    assert "action_counts" in body
+
+
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
         "/api/chat",
@@ -733,6 +746,7 @@ def test_service_tickets_ui_page(client: TestClient) -> None:
 def test_audit_ui_page(client: TestClient) -> None:
     response = client.get("/ui/audit")
     assert response.status_code == 200
+    assert 'id="auditOverview"' in response.text
     assert 'id="auditList"' in response.text
     assert 'id="auditDetail"' in response.text
     assert 'id="actionFilterInput"' in response.text
