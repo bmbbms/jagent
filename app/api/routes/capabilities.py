@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_capability_registry
 from app.registry.base import CapabilityResolver
-from app.schemas import BizDomain, CapabilityInfo
+from app.schemas import BizDomain, CapabilityInfo, CapabilityOverviewResponse
 
 router = APIRouter(prefix="/capabilities", tags=["capabilities"])
 
@@ -65,6 +65,62 @@ def list_capabilities(
         )
         for item in items
     ]
+
+
+@router.get("/overview/summary", response_model=CapabilityOverviewResponse)
+def get_capability_overview(
+    registry: CapabilityResolver = Depends(get_capability_registry),
+) -> CapabilityOverviewResponse:
+    items = registry.describe_capabilities()
+    domain_counts: dict[str, int] = {}
+    source_counts: dict[str, int] = {}
+    transport_counts: dict[str, int] = {}
+    healthy_count = 0
+    unhealthy_count = 0
+    unknown_health_count = 0
+    local_count = 0
+    external_count = 0
+    approval_required_count = 0
+    high_risk_count = 0
+
+    for item in items:
+        domain_key = item.biz_domain.value
+        source_key = "external" if item.source != "local" else "local"
+        transport_key = item.transport or "unknown"
+        health_key = getattr(item, "health_status", None) or "unknown"
+
+        domain_counts[domain_key] = domain_counts.get(domain_key, 0) + 1
+        source_counts[source_key] = source_counts.get(source_key, 0) + 1
+        transport_counts[transport_key] = transport_counts.get(transport_key, 0) + 1
+
+        if source_key == "local":
+            local_count += 1
+        else:
+            external_count += 1
+        if item.requires_approval:
+            approval_required_count += 1
+        if item.risk_level == "high":
+            high_risk_count += 1
+        if health_key == "healthy":
+            healthy_count += 1
+        elif health_key == "unhealthy":
+            unhealthy_count += 1
+        else:
+            unknown_health_count += 1
+
+    return CapabilityOverviewResponse(
+        total=len(items),
+        local_count=local_count,
+        external_count=external_count,
+        approval_required_count=approval_required_count,
+        high_risk_count=high_risk_count,
+        healthy_count=healthy_count,
+        unhealthy_count=unhealthy_count,
+        unknown_health_count=unknown_health_count,
+        domain_counts=domain_counts,
+        source_counts=source_counts,
+        transport_counts=transport_counts,
+    )
 
 
 @router.get("/{capability_id}", response_model=CapabilityInfo)

@@ -138,6 +138,20 @@ class CapabilityInfo(BaseModel):
     last_latency_ms: Optional[int] = None
 
 
+class CapabilityOverviewResponse(BaseModel):
+    total: int = 0
+    local_count: int = 0
+    external_count: int = 0
+    approval_required_count: int = 0
+    high_risk_count: int = 0
+    healthy_count: int = 0
+    unhealthy_count: int = 0
+    unknown_health_count: int = 0
+    domain_counts: Dict[str, int] = Field(default_factory=dict)
+    source_counts: Dict[str, int] = Field(default_factory=dict)
+    transport_counts: Dict[str, int] = Field(default_factory=dict)
+
+
 class ExternalAgentRegisterRequest(BaseModel):
     capability_id: str
     capability_name: str

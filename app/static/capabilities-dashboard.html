@@ -253,6 +253,13 @@
 
     <div class="layout">
       <section class="panel">
+        <h2>Capability 治理概览</h2>
+        <div id="capabilityOverview" class="detail-card">
+          <div class="empty">正在加载 Capability 治理概览...</div>
+        </div>
+      </section>
+
+      <section class="panel">
         <h2>Capability 列表</h2>
         <div id="capabilityListMeta" class="subtle">正在加载 Capability 列表...</div>
         <div id="capabilityList" class="list" style="margin-top: 12px;">
@@ -292,6 +299,7 @@
       capabilityIdInput: document.getElementById("capabilityIdInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
+      capabilityOverview: document.getElementById("capabilityOverview"),
       capabilityListMeta: document.getElementById("capabilityListMeta"),
       capabilityList: document.getElementById("capabilityList"),
       capabilityDetail: document.getElementById("capabilityDetail"),
@@ -341,6 +349,24 @@
         return '<div class="empty">暂无</div>';
       }
       return `<div class="chips">${items.map(item => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("")}</div>`;
+    }
+
+    function renderOverview(overview) {
+      if (!overview) {
+        el.capabilityOverview.innerHTML = '<div class="empty">暂无 Capability 治理概览。</div>';
+        return;
+      }
+      el.capabilityOverview.innerHTML = `
+        <div class="detail-grid">
+          <div class="detail-row"><div class="label">Capability 总数</div><div class="value">${escapeHtml(overview.total)}</div></div>
+          <div class="detail-row"><div class="label">本地 / 外部</div><div class="value">${escapeHtml(overview.local_count)} / ${escapeHtml(overview.external_count)}</div></div>
+          <div class="detail-row"><div class="label">高风险 / 需审批</div><div class="value">${escapeHtml(overview.high_risk_count)} / ${escapeHtml(overview.approval_required_count)}</div></div>
+          <div class="detail-row"><div class="label">健康 / 异常 / 未知</div><div class="value">${escapeHtml(overview.healthy_count)} / ${escapeHtml(overview.unhealthy_count)} / ${escapeHtml(overview.unknown_health_count)}</div></div>
+          <div class="detail-row"><div class="label">业务域分布</div><div class="value">${escapeHtml(Object.entries(overview.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+          <div class="detail-row"><div class="label">来源分布</div><div class="value">${escapeHtml(Object.entries(overview.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+          <div class="detail-row"><div class="label">Transport 分布</div><div class="value">${escapeHtml(Object.entries(overview.transport_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+        </div>
+      `;
     }
 
     function getExternalMetadata(capabilityId) {
@@ -515,12 +541,14 @@
       if (el.healthFilter.value) query.set("health_status", el.healthFilter.value);
       if (el.skillFilterInput.value.trim()) query.set("skill_id", el.skillFilterInput.value.trim());
 
-      const [capabilities, externalAgents] = await Promise.all([
+      const [capabilities, externalAgents, overview] = await Promise.all([
         fetchJson(`/api/capabilities?${query.toString()}`),
         fetchJson("/api/external-agents"),
+        fetchJson("/api/capabilities/overview/summary"),
       ]);
       state.capabilities = capabilities;
       state.externalAgents = externalAgents;
+      renderOverview(overview);
       renderCapabilityList();
       updateQuery();
 

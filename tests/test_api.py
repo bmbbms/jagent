@@ -127,6 +127,18 @@ def test_capability_detail(client: TestClient) -> None:
     assert "health_status" in body
 
 
+def test_capability_overview(client: TestClient) -> None:
+    response = client.get("/api/capabilities/overview/summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "local_count" in body
+    assert "external_count" in body
+    assert "domain_counts" in body
+    assert "source_counts" in body
+    assert "transport_counts" in body
+
+
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200
@@ -772,6 +784,7 @@ def test_skills_ui_page(client: TestClient) -> None:
 def test_capabilities_ui_page(client: TestClient) -> None:
     response = client.get("/ui/capabilities")
     assert response.status_code == 200
+    assert 'id="capabilityOverview"' in response.text
     assert 'id="capabilityList"' in response.text
     assert 'id="capabilityDetail"' in response.text
     assert 'id="domainFilter"' in response.text
