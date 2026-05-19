@@ -8,6 +8,8 @@ from app.db.session import session_scope
 from app.repositories.audit_repository import AuditRepository
 from app.schemas import (
     AuditEventResponse,
+    AuditExecutionPlanRunResponse,
+    AuditExecutionPlanRunsResponse,
     AuditLinkedContextItemResponse,
     AuditLinkedContextResponse,
     AuditOverviewResponse,
@@ -240,4 +242,43 @@ class AuditService:
             total_events=len(items),
             context_counts=context_counts,
             items=context_items,
+        )
+
+    def list_execution_plan_runs(
+        self,
+        *,
+        actor_id: str | None = None,
+        agent_id: str | None = None,
+        limit: int = 10,
+    ) -> AuditExecutionPlanRunsResponse:
+        items = self.list_events(
+            action="evaluation.execution_plan.apply",
+            actor_id=actor_id,
+            capability_id=agent_id,
+        )
+        results: list[AuditExecutionPlanRunResponse] = []
+        for item in items[: max(limit, 1)]:
+            nested_payload = (item.payload or {}).get("payload", {})
+            results.append(
+                AuditExecutionPlanRunResponse(
+                    action=item.action,
+                    actor_id=item.actor_id,
+                    created_at=item.created_at,
+                    agent_id=nested_payload.get("agent_id") or item.capability_id,
+                    owner=nested_payload.get("owner"),
+                    priority=nested_payload.get("priority"),
+                    max_items=nested_payload.get("max_items", 0),
+                    candidate_count=nested_payload.get("candidate_count", 0),
+                    processed_count=nested_payload.get("processed_count", 0),
+                    created_ticket_count=nested_payload.get("created_ticket_count", 0),
+                    suggestion_ids=nested_payload.get("suggestion_ids", []) or [],
+                    ticket_ids=nested_payload.get("ticket_ids", []) or [],
+                    summary=(item.payload or {}).get("response_summary", ""),
+                )
+            )
+        return AuditExecutionPlanRunsResponse(
+            total=len(results),
+            total_processed_count=sum(item.processed_count for item in results),
+            total_created_ticket_count=sum(item.created_ticket_count for item in results),
+            items=results,
         )

@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends
 
 from app.dependencies import get_audit_service
-from app.schemas import AuditEventResponse, AuditLinkedContextResponse, AuditOverviewResponse
+from app.schemas import (
+    AuditEventResponse,
+    AuditExecutionPlanRunsResponse,
+    AuditLinkedContextResponse,
+    AuditOverviewResponse,
+)
 from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -75,4 +80,18 @@ def get_linked_context(
         ticket_id=ticket_id,
         suggestion_id=suggestion_id,
         evaluation_id=evaluation_id,
+    )
+
+
+@router.get("/execution-plan-runs", response_model=AuditExecutionPlanRunsResponse)
+def list_execution_plan_runs(
+    actor_id: str | None = None,
+    agent_id: str | None = None,
+    limit: int = 10,
+    audit_service: AuditService = Depends(get_audit_service),
+) -> AuditExecutionPlanRunsResponse:
+    return audit_service.list_execution_plan_runs(
+        actor_id=actor_id,
+        agent_id=agent_id,
+        limit=limit,
     )

@@ -422,6 +422,29 @@ class AuditLinkedContextResponse(BaseModel):
     items: List[AuditLinkedContextItemResponse] = Field(default_factory=list)
 
 
+class AuditExecutionPlanRunResponse(BaseModel):
+    action: str
+    actor_id: str
+    created_at: str
+    agent_id: Optional[str] = None
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+    max_items: int = 0
+    candidate_count: int = 0
+    processed_count: int = 0
+    created_ticket_count: int = 0
+    suggestion_ids: List[int] = Field(default_factory=list)
+    ticket_ids: List[str] = Field(default_factory=list)
+    summary: str = ""
+
+
+class AuditExecutionPlanRunsResponse(BaseModel):
+    total: int = 0
+    total_processed_count: int = 0
+    total_created_ticket_count: int = 0
+    items: List[AuditExecutionPlanRunResponse] = Field(default_factory=list)
+
+
 class AgentTaskEventResponse(BaseModel):
     event_id: str
     event_type: str

@@ -846,6 +846,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="executionPlanOwnerInput"' in response.text
     assert 'id="executionPlanMaxItemsInput"' in response.text
     assert 'id="applyExecutionPlanBtn"' in response.text
+    assert 'id="executionRunOverview"' in response.text
+    assert 'id="executionRunList"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
@@ -859,6 +861,8 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert response.text.count("function renderExecutionPlanOverview()") == 1
     assert response.text.count("async function loadExecutionPlan()") == 1
     assert response.text.count("async function applyExecutionPlan()") == 1
+    assert response.text.count("function renderExecutionRunOverview()") == 1
+    assert response.text.count("async function loadExecutionRuns()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
@@ -1471,6 +1475,29 @@ def test_execution_plan_apply_api(client: TestClient) -> None:
         and item["payload"].get("payload", {}).get("created_ticket_count", 0) >= 1
         for item in execution_plan_audits
     )
+
+
+def test_audit_execution_plan_runs_api(client: TestClient) -> None:
+    response = client.get(
+        "/api/audit/execution-plan-runs",
+        params={"actor_id": "execution-plan-bot", "limit": 5},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "total_processed_count" in body
+    assert "total_created_ticket_count" in body
+    assert "items" in body
+    if body["items"]:
+        first = body["items"][0]
+        assert "action" in first
+        assert "actor_id" in first
+        assert "created_at" in first
+        assert "candidate_count" in first
+        assert "processed_count" in first
+        assert "created_ticket_count" in first
+        assert "suggestion_ids" in first
+        assert "ticket_ids" in first
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

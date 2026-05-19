@@ -353,6 +353,13 @@
           <div id="executionPlanList" class="list" style="margin-bottom: 12px;">
             <div class="empty">正在加载执行计划...</div>
           </div>
+          <h2>最近执行结果</h2>
+          <div id="executionRunOverview" class="overview-grid">
+            <div class="empty">正在加载最近执行结果...</div>
+          </div>
+          <div id="executionRunList" class="list" style="margin-bottom: 12px;">
+            <div class="empty">正在加载最近执行记录...</div>
+          </div>
 
           <div class="inline-form" style="margin-bottom: 12px;">
             <select id="suggestionStatusFilter">
@@ -400,6 +407,7 @@
       suggestionOverview: null,
       executionBacklog: null,
       executionPlan: null,
+      executionRuns: null,
       selectedAnalyticsAgentId: "",
       selectedSuggestionId: "",
       suggestionView: {
@@ -437,6 +445,8 @@
       executionPlanMaxItemsInput: document.getElementById("executionPlanMaxItemsInput"),
       applyExecutionPlanBtn: document.getElementById("applyExecutionPlanBtn"),
       executionPlanList: document.getElementById("executionPlanList"),
+      executionRunOverview: document.getElementById("executionRunOverview"),
+      executionRunList: document.getElementById("executionRunList"),
       suggestionStatusFilter: document.getElementById("suggestionStatusFilter"),
       suggestionPriorityFilter: document.getElementById("suggestionPriorityFilter"),
       suggestionOwnerFilter: document.getElementById("suggestionOwnerFilter"),
@@ -755,6 +765,46 @@
       `).join("");
     }
 
+    function renderExecutionRunOverview() {
+      if (!state.executionRuns) {
+        el.executionRunOverview.innerHTML = '<div class="empty">暂无最近执行结果概览。</div>';
+        return;
+      }
+      const cards = [
+        ["最近批次", state.executionRuns.total],
+        ["累计处理建议", state.executionRuns.total_processed_count],
+        ["累计生成工单", state.executionRuns.total_created_ticket_count],
+      ];
+      el.executionRunOverview.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderExecutionRunList() {
+      const items = state.executionRuns?.items || [];
+      if (!items.length) {
+        el.executionRunList.innerHTML = '<div class="empty">当前没有执行记录。</div>';
+        return;
+      }
+      el.executionRunList.innerHTML = items.slice(0, 6).map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.agent_id || "-")} / ${escapeHtml(item.actor_id)}</div>
+          <div>
+            <span class="tag">processed:${escapeHtml(item.processed_count)}</span>
+            <span class="tag">tickets:${escapeHtml(item.created_ticket_count)}</span>
+            <span class="tag">${escapeHtml(item.priority || "-")}</span>
+          </div>
+          <div class="subtle">执行时间：${escapeHtml(formatDate(item.created_at))}</div>
+          <div class="subtle">建议ID：${escapeHtml((item.suggestion_ids || []).join(", ") || "-")}</div>
+          <div class="subtle">工单ID：${escapeHtml((item.ticket_ids || []).join(", ") || "-")}</div>
+          <div class="subtle">${escapeHtml(item.summary || "-")}</div>
+        </div>
+      `).join("");
+    }
+
     function renderAnalyticsList() {
       if (!state.analytics.length) {
         el.analyticsList.innerHTML = '<div class="empty">暂无分析结果。</div>';
@@ -784,6 +834,7 @@
           await loadSuggestionOverview();
           await loadExecutionBacklog();
           await loadExecutionPlan();
+          await loadExecutionRuns();
           await loadSuggestions();
           await loadTrend();
           renderAnalyticsList();
@@ -1047,6 +1098,8 @@
             }),
           });
           await loadSuggestionOverview();
+          await loadExecutionBacklog();
+          await loadExecutionPlan();
           await loadSuggestions();
           if (state.evaluationId) {
             await loadEvaluationDetail();
@@ -1075,6 +1128,9 @@
             }),
           });
           await loadSuggestionOverview();
+          await loadExecutionBacklog();
+          await loadExecutionPlan();
+          await loadExecutionRuns();
           await loadSuggestions();
           if (state.evaluationId) {
             await loadEvaluationDetail();
@@ -1205,6 +1261,15 @@
       renderExecutionPlanList();
     }
 
+    async function loadExecutionRuns() {
+      const query = new URLSearchParams();
+      if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
+      query.set("limit", "6");
+      state.executionRuns = await fetchJson(`/api/audit/execution-plan-runs?${query.toString()}`);
+      renderExecutionRunOverview();
+      renderExecutionRunList();
+    }
+
     async function applyExecutionPlan() {
       const requestedBy = el.executionPlanOwnerInput.value.trim() || "evaluation-plan-bot";
       const response = await fetchJson("/api/evaluations/suggestions/execution-plan/apply", {
@@ -1288,6 +1353,7 @@
       await loadSuggestionOverview();
       await loadExecutionBacklog();
       await loadExecutionPlan();
+      await loadExecutionRuns();
       await loadSuggestions();
       if (state.evaluationId) {
         await loadEvaluationDetail();
@@ -1314,6 +1380,7 @@
       await loadSuggestionOverview();
       await loadExecutionBacklog();
       await loadExecutionPlan();
+      await loadExecutionRuns();
       await loadSuggestions();
     });
     el.applyExecutionPlanBtn.addEventListener("click", applyExecutionPlan);
