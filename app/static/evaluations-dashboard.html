@@ -304,6 +304,7 @@
       suggestions: [],
       suggestionOverview: null,
       selectedAnalyticsAgentId: "",
+      selectedSuggestionId: "",
     };
 
     const el = {
@@ -381,6 +382,7 @@
         start_date_to: el.startDateTo.value,
         suggestion_status: el.suggestionStatusFilter.value,
         suggestion_owner: el.suggestionOwnerFilter.value.trim(),
+        suggestion_id: state.selectedSuggestionId,
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -543,7 +545,7 @@
       }
 
       el.suggestionList.innerHTML = state.suggestions.map(item => `
-        <div class="card">
+        <div class="card ${String(item.suggestion_id) === String(state.selectedSuggestionId) ? "active" : ""}" data-suggestion-card="${escapeHtml(item.suggestion_id)}">
           <div class="title">${escapeHtml(item.optimization_type)} / ${escapeHtml(item.target_ref || "-")}</div>
           <div>
             <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
@@ -589,6 +591,13 @@
           if (state.evaluationId) {
             await loadEvaluationDetail();
           }
+        });
+      });
+      el.suggestionList.querySelectorAll("[data-suggestion-card]").forEach(node => {
+        node.addEventListener("click", () => {
+          state.selectedSuggestionId = node.getAttribute("data-suggestion-card") || "";
+          syncQuery();
+          renderSuggestionList();
         });
       });
     }
@@ -645,6 +654,12 @@
     async function loadSuggestions() {
       const query = buildSuggestionQuery();
       state.suggestions = await fetchJson(`/api/evaluations/suggestions?${query.toString()}`);
+      if (state.selectedSuggestionId) {
+        const exists = state.suggestions.some(item => String(item.suggestion_id) === String(state.selectedSuggestionId));
+        if (!exists) {
+          state.selectedSuggestionId = "";
+        }
+      }
       renderSuggestionList();
       syncQuery();
     }
@@ -663,6 +678,7 @@
       const query = new URLSearchParams(window.location.search);
       state.evaluationId = query.get("evaluation_id") || "";
       state.selectedAnalyticsAgentId = query.get("agent_id") || "";
+      state.selectedSuggestionId = query.get("suggestion_id") || "";
       el.agentFilterInput.value = query.get("agent_id") || "";
       el.resultFilterInput.value = query.get("result_label") || "";
       el.minScoreInput.value = query.get("min_overall_score") || "";

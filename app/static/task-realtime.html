@@ -1107,6 +1107,9 @@
                 <div class="subtle">建议 ID：${escapeHtml(item.suggestion_id || "-")} / 优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
                 <div class="subtle">负责人：${escapeHtml(item.owner || "unassigned")}</div>
                 <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+                <div>
+                  <button class="secondary" type="button" data-open-suggestion="${escapeHtml(item.suggestion_id || "")}">在评估中心打开该建议</button>
+                </div>
               </div>
             `).join("")}
           </div>
@@ -1135,6 +1138,13 @@
           window.location.href = target;
         });
       }
+      el.evaluation.querySelectorAll("[data-open-suggestion]").forEach(node => {
+        node.addEventListener("click", () => {
+          const suggestionId = node.getAttribute("data-open-suggestion") || "";
+          const target = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluation.evaluation_id || "")}&suggestion_id=${encodeURIComponent(suggestionId)}`;
+          window.location.href = target;
+        });
+      });
     }
 
     function renderTask(task) {
