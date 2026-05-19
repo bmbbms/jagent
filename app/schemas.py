@@ -783,6 +783,29 @@ class AgentOptimizationExecutionPlanResponse(BaseModel):
     items: List[AgentOptimizationExecutionPlanItemResponse] = Field(default_factory=list)
 
 
+class AgentOptimizationExecutionPlanApplyRequest(BaseModel):
+    requested_by: str
+    agent_id: Optional[str] = None
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+    max_items: int = 5
+
+
+class AgentOptimizationExecutionPlanApplyResponse(BaseModel):
+    requested_by: str
+    agent_id: Optional[str] = None
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+    max_items: int = 0
+    candidate_count: int = 0
+    processed_count: int = 0
+    created_ticket_count: int = 0
+    skipped_count: int = 0
+    suggestion_ids: List[int] = Field(default_factory=list)
+    ticket_ids: List[str] = Field(default_factory=list)
+    summary: str = ""
+
+
 class AgentEvaluationSummaryResponse(BaseModel):
     evaluation_id: str
     task_id: str

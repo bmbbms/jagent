@@ -345,6 +345,11 @@
           <div id="executionPlanOverview" class="overview-grid">
             <div class="empty">正在加载优化执行计划...</div>
           </div>
+          <div class="inline-form" style="margin-bottom: 12px;">
+            <input id="executionPlanOwnerInput" placeholder="执行 owner" />
+            <input id="executionPlanMaxItemsInput" type="number" min="1" max="20" step="1" value="5" />
+            <button id="applyExecutionPlanBtn">应用执行计划</button>
+          </div>
           <div id="executionPlanList" class="list" style="margin-bottom: 12px;">
             <div class="empty">正在加载执行计划...</div>
           </div>
@@ -428,6 +433,9 @@
       executionBacklogOverview: document.getElementById("executionBacklogOverview"),
       executionBacklogList: document.getElementById("executionBacklogList"),
       executionPlanOverview: document.getElementById("executionPlanOverview"),
+      executionPlanOwnerInput: document.getElementById("executionPlanOwnerInput"),
+      executionPlanMaxItemsInput: document.getElementById("executionPlanMaxItemsInput"),
+      applyExecutionPlanBtn: document.getElementById("applyExecutionPlanBtn"),
       executionPlanList: document.getElementById("executionPlanList"),
       suggestionStatusFilter: document.getElementById("suggestionStatusFilter"),
       suggestionPriorityFilter: document.getElementById("suggestionPriorityFilter"),
@@ -1197,6 +1205,29 @@
       renderExecutionPlanList();
     }
 
+    async function applyExecutionPlan() {
+      const requestedBy = el.executionPlanOwnerInput.value.trim() || "evaluation-plan-bot";
+      const response = await fetchJson("/api/evaluations/suggestions/execution-plan/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requested_by: requestedBy,
+          agent_id: el.agentFilterInput.value.trim() || null,
+          owner: requestedBy,
+          priority: el.suggestionPriorityFilter.value || null,
+          max_items: Number(el.executionPlanMaxItemsInput.value || 5),
+        }),
+      });
+      window.alert(response.summary || "执行计划已应用");
+      await loadSuggestionOverview();
+      await loadExecutionBacklog();
+      await loadExecutionPlan();
+      await loadSuggestions();
+      if (state.evaluationId) {
+        await loadEvaluationDetail();
+      }
+    }
+
     async function loadSuggestions(options = null) {
       if (options) {
         applySuggestionView(options);
@@ -1285,6 +1316,7 @@
       await loadExecutionPlan();
       await loadSuggestions();
     });
+    el.applyExecutionPlanBtn.addEventListener("click", applyExecutionPlan);
     [el.agentFilterInput, el.resultFilterInput, el.minScoreInput, el.suggestionOwnerFilter].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await bootstrap();

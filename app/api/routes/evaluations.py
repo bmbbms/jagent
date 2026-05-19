@@ -11,6 +11,8 @@ from app.schemas import (
     AgentEvaluationRootCauseAnalyticsResponse,
     AgentEvaluationTrendResponse,
     AgentOptimizationExecutionBacklogResponse,
+    AgentOptimizationExecutionPlanApplyRequest,
+    AgentOptimizationExecutionPlanApplyResponse,
     AgentOptimizationExecutionPlanResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
@@ -174,6 +176,44 @@ def get_optimization_execution_plan(
         owner=owner,
         priority=priority,
     )
+
+
+@router.post(
+    "/suggestions/execution-plan/apply",
+    response_model=AgentOptimizationExecutionPlanApplyResponse,
+)
+def apply_optimization_execution_plan(
+    request: AgentOptimizationExecutionPlanApplyRequest,
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> AgentOptimizationExecutionPlanApplyResponse:
+    result = evaluation_service.apply_execution_plan(request)
+    audit_service.record(
+        "evaluation.execution_plan.apply",
+        request.requested_by,
+        {
+            "source": "evaluation",
+            "event_type": "execution_plan",
+            "task_id": None,
+            "agent_id": request.agent_id,
+            "capability_id": request.agent_id,
+            "request_summary": "apply optimization execution plan",
+            "response_summary": result.summary,
+            "outcome": 1,
+            "payload": {
+                "agent_id": request.agent_id,
+                "owner": result.owner,
+                "priority": result.priority,
+                "max_items": result.max_items,
+                "candidate_count": result.candidate_count,
+                "processed_count": result.processed_count,
+                "created_ticket_count": result.created_ticket_count,
+                "suggestion_ids": result.suggestion_ids,
+                "ticket_ids": result.ticket_ids,
+            },
+        },
+    )
+    return result
 
 
 @router.put(

@@ -843,6 +843,9 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="executionBacklogList"' in response.text
     assert 'id="executionPlanOverview"' in response.text
     assert 'id="executionPlanList"' in response.text
+    assert 'id="executionPlanOwnerInput"' in response.text
+    assert 'id="executionPlanMaxItemsInput"' in response.text
+    assert 'id="applyExecutionPlanBtn"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
@@ -855,6 +858,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert response.text.count("async function loadExecutionBacklog()") == 1
     assert response.text.count("function renderExecutionPlanOverview()") == 1
     assert response.text.count("async function loadExecutionPlan()") == 1
+    assert response.text.count("async function applyExecutionPlan()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
@@ -1408,6 +1412,64 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert any(
         item["suggestion_id"] == first["suggestion_id"] and item["execution_stage"] == "completed"
         for item in final_execution_backlog["items"]
+    )
+
+
+def test_execution_plan_apply_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-execution-plan-apply",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+    agent_id = chat_response.json()["capability_id"]
+
+    apply_response = client.post(
+        "/api/evaluations/suggestions/execution-plan/apply",
+        json={
+            "requested_by": "execution-plan-bot",
+            "agent_id": agent_id,
+            "owner": "execution-plan-bot",
+            "priority": "high",
+            "max_items": 2,
+        },
+    )
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["agent_id"] == agent_id
+    assert applied["candidate_count"] >= 1
+    assert applied["processed_count"] >= 1
+    assert applied["created_ticket_count"] >= 1
+    assert applied["ticket_ids"]
+    assert applied["suggestion_ids"]
+    assert "已处理" in applied["summary"]
+
+    created_tickets_response = client.get(
+        "/api/service-tickets",
+        params={"source": "evaluation", "requested_by": "execution-plan-bot"},
+    )
+    assert created_tickets_response.status_code == 200
+    created_tickets = created_tickets_response.json()
+    created_ticket_ids = {item["ticket_id"] for item in created_tickets}
+    assert set(applied["ticket_ids"]).issubset(created_ticket_ids)
+
+    execution_plan_audit_response = client.get(
+        "/api/audit",
+        params={
+            "action": "evaluation.execution_plan.apply",
+            "actor_id": "execution-plan-bot",
+        },
+    )
+    assert execution_plan_audit_response.status_code == 200
+    execution_plan_audits = execution_plan_audit_response.json()
+    assert execution_plan_audits
+    assert any(
+        item["action"] == "evaluation.execution_plan.apply"
+        and item["payload"].get("payload", {}).get("created_ticket_count", 0) >= 1
+        for item in execution_plan_audits
     )
 
 

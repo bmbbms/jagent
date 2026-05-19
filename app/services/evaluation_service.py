@@ -24,6 +24,8 @@ from app.schemas import (
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationExecutionBacklogItemResponse,
     AgentOptimizationExecutionBacklogResponse,
+    AgentOptimizationExecutionPlanApplyRequest,
+    AgentOptimizationExecutionPlanApplyResponse,
     AgentOptimizationExecutionPlanItemResponse,
     AgentOptimizationExecutionPlanResponse,
     AgentOptimizationSuggestionResponse,
@@ -863,6 +865,69 @@ class EvaluationService:
             automation_ready_agent_count=sum(1 for item in results if item.automation_ready_count > 0),
             blocked_agent_count=sum(1 for item in results if item.blocked_count > 0),
             items=results,
+        )
+
+    def apply_execution_plan(
+        self,
+        request: AgentOptimizationExecutionPlanApplyRequest,
+    ) -> AgentOptimizationExecutionPlanApplyResponse:
+        backlog = self.build_execution_backlog(
+            agent_id=request.agent_id,
+            owner=None,
+            priority=request.priority,
+            backlog_only=True,
+        )
+        candidates = [
+            item
+            for item in backlog.items
+            if item.execution_stage in {"untriaged", "ticket_pending"} and not item.ticket_id
+        ][: max(1, request.max_items)]
+
+        processed_suggestion_ids: list[int] = []
+        created_ticket_ids: list[str] = []
+        execution_owner = request.owner or request.requested_by
+
+        for candidate in candidates:
+            self.update_optimization_suggestion(
+                candidate.suggestion_id,
+                AgentOptimizationSuggestionUpdateRequest(
+                    status="in_progress",
+                    owner=execution_owner,
+                    priority=request.priority or candidate.priority,
+                ),
+            )
+            ticket_result = self.create_suggestion_ticket(
+                candidate.suggestion_id,
+                AgentOptimizationSuggestionTicketRequest(
+                    requested_by=request.requested_by,
+                    owner=execution_owner,
+                    priority=request.priority or candidate.priority,
+                    comment="自动应用执行计划生成治理工单",
+                ),
+            )
+            if ticket_result is None or not ticket_result.ticket_id:
+                continue
+            processed_suggestion_ids.append(candidate.suggestion_id)
+            created_ticket_ids.append(ticket_result.ticket_id)
+
+        skipped_count = max(0, len(candidates) - len(processed_suggestion_ids))
+        summary = (
+            f"已处理 {len(processed_suggestion_ids)} 条建议，生成 {len(created_ticket_ids)} 张工单，"
+            f"剩余跳过 {skipped_count} 条。"
+        )
+        return AgentOptimizationExecutionPlanApplyResponse(
+            requested_by=request.requested_by,
+            agent_id=request.agent_id,
+            owner=execution_owner,
+            priority=request.priority,
+            max_items=request.max_items,
+            candidate_count=len(candidates),
+            processed_count=len(processed_suggestion_ids),
+            created_ticket_count=len(created_ticket_ids),
+            skipped_count=skipped_count,
+            suggestion_ids=processed_suggestion_ids,
+            ticket_ids=created_ticket_ids,
+            summary=summary,
         )
 
     def update_optimization_suggestion(
