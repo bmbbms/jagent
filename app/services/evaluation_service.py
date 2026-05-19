@@ -15,6 +15,8 @@ from app.schemas import (
     AgentEvaluationDetailResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
+    AgentEvaluationTrendPointResponse,
+    AgentEvaluationTrendResponse,
     AgentObservationLogResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
@@ -228,6 +230,54 @@ class EvaluationService:
                 sum(item.tool_usage_score for item in evaluations) / total,
                 2,
             ),
+        )
+
+    def build_evaluation_trend(
+        self,
+        *,
+        agent_id: str | None = None,
+        limit: int = 10,
+    ) -> AgentEvaluationTrendResponse:
+        evaluations = self.list_evaluations()
+        if agent_id:
+            evaluations = [item for item in evaluations if item.agent_id == agent_id]
+        trend_items = sorted(
+            evaluations,
+            key=lambda item: datetime.fromisoformat(item.create_time),
+        )[-max(limit, 1) :]
+        if not trend_items:
+            return AgentEvaluationTrendResponse(agent_id=agent_id)
+
+        poor_count = sum(1 for item in trend_items if item.result_label == "poor")
+        latest = trend_items[-1]
+        previous = trend_items[-2] if len(trend_items) > 1 else None
+        previous_score = previous.overall_score if previous is not None else None
+        score_delta = round(latest.overall_score - (previous_score or latest.overall_score), 2)
+        attention_level = "high" if poor_count >= 2 or latest.overall_score < 75 else "normal"
+        return AgentEvaluationTrendResponse(
+            agent_id=agent_id or latest.agent_id,
+            evaluation_count=len(trend_items),
+            average_overall_score=round(
+                sum(item.overall_score for item in trend_items) / len(trend_items),
+                2,
+            ),
+            latest_overall_score=latest.overall_score,
+            previous_overall_score=previous_score,
+            score_delta=score_delta,
+            improving=score_delta >= 0,
+            poor_count=poor_count,
+            attention_level=attention_level,
+            points=[
+                AgentEvaluationTrendPointResponse(
+                    evaluation_id=item.evaluation_id,
+                    task_id=item.task_id,
+                    agent_id=item.agent_id,
+                    overall_score=item.overall_score,
+                    result_label=item.result_label,
+                    create_time=item.create_time,
+                )
+                for item in trend_items
+            ],
         )
 
     def get_evaluation(self, evaluation_id: str) -> AgentEvaluationResponse | None:

@@ -589,6 +589,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="suggestionList"' in response.text
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
+    assert 'id="trendPanel"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
 
 
@@ -720,6 +721,35 @@ def test_evaluation_analytics_overview_api(client: TestClient) -> None:
     assert "poor_evaluation_count" in body
     assert "high_attention_agent_count" in body
     assert "average_overall_score" in body
+
+
+def test_evaluation_analytics_trend_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-eval-trend",
+            "biz_domain": "merchant",
+            "message": "请帮我解答商户规则问题",
+        },
+    )
+    assert chat_response.status_code == 200
+    agent_id = chat_response.json()["capability_id"]
+
+    response = client.get(
+        "/api/evaluations/analytics/trend",
+        params={"agent_id": agent_id, "limit": 10},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent_id"] == agent_id
+    assert "evaluation_count" in body
+    assert "latest_overall_score" in body
+    assert "score_delta" in body
+    assert "improving" in body
+    assert "points" in body
+    assert isinstance(body["points"], list)
+    assert body["points"]
+    assert body["points"][-1]["agent_id"] == agent_id
 
 
 def test_evaluation_list_supports_extended_filters(client: TestClient) -> None:

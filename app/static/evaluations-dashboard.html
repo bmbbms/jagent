@@ -266,6 +266,11 @@
           <div class="empty">正在加载评估分析...</div>
         </div>
 
+        <h2>评估趋势</h2>
+        <div id="trendPanel" class="card" style="margin-bottom: 18px;">
+          <div class="empty">正在加载评估趋势...</div>
+        </div>
+
         <h2>最近评估</h2>
         <div id="evaluationList" class="list">
           <div class="empty">正在加载评估列表...</div>
@@ -315,6 +320,7 @@
       evaluations: [],
       analytics: [],
       overview: null,
+      trend: null,
       suggestions: [],
       suggestionOverview: null,
       selectedAnalyticsAgentId: "",
@@ -336,6 +342,7 @@
       refreshBtn: document.getElementById("refreshBtn"),
       overviewGrid: document.getElementById("overviewGrid"),
       analyticsList: document.getElementById("analyticsList"),
+      trendPanel: document.getElementById("trendPanel"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
       suggestionOverviewGrid: document.getElementById("suggestionOverviewGrid"),
@@ -510,6 +517,31 @@
           renderAnalyticsList();
         });
       });
+    }
+
+    function renderTrendPanel() {
+      if (!state.trend || !state.trend.points?.length) {
+        el.trendPanel.innerHTML = '<div class="empty">暂无评估趋势数据。</div>';
+        return;
+      }
+      const directionTone = state.trend.improving ? "success" : "danger";
+      const directionText = state.trend.improving ? "上升" : "下降";
+      const pointTags = state.trend.points.map(item => `
+        <span
+          class="tag ${toneByScore(item.overall_score)}"
+          title="${escapeHtml(item.create_time)} / ${escapeHtml(item.task_id)}"
+        >${escapeHtml(item.overall_score)}</span>
+      `).join("");
+      el.trendPanel.innerHTML = `
+        <div class="title">${escapeHtml(state.trend.agent_id || "all-agents")}</div>
+        <div>
+          <span class="tag ${directionTone}">${escapeHtml(directionText)}</span>
+          <span class="tag ${toneByAttention(state.trend.attention_level)}">${escapeHtml(state.trend.attention_level)}</span>
+        </div>
+        <div class="subtle">最近 ${escapeHtml(state.trend.evaluation_count)} 次评估，均分 ${escapeHtml(state.trend.average_overall_score)}，最新 ${escapeHtml(state.trend.latest_overall_score)}</div>
+        <div class="subtle">对比上一条变化：${escapeHtml(state.trend.score_delta)}，低分次数：${escapeHtml(state.trend.poor_count)}</div>
+        <div>${pointTags}</div>
+      `;
     }
 
     function renderEvaluationList() {
@@ -757,6 +789,15 @@
       renderOverview();
     }
 
+    async function loadTrend() {
+      const query = new URLSearchParams();
+      const agentId = el.agentFilterInput.value.trim();
+      if (agentId) query.set("agent_id", agentId);
+      query.set("limit", "10");
+      state.trend = await fetchJson(`/api/evaluations/analytics/trend?${query.toString()}`);
+      renderTrendPanel();
+    }
+
     async function loadSuggestionOverview() {
       const query = new URLSearchParams();
       if (el.agentFilterInput.value.trim()) query.set("agent_id", el.agentFilterInput.value.trim());
@@ -884,6 +925,7 @@
       el.evaluationIdInput.value = state.evaluationId;
       await loadOverview();
       await loadAnalytics();
+      await loadTrend();
       await loadEvaluationList();
       await loadSuggestionOverview();
       await loadSuggestions();

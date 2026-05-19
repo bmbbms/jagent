@@ -578,6 +578,28 @@ class AgentEvaluationAnalyticsOverviewResponse(BaseModel):
     average_tool_usage_score: float = 0.0
 
 
+class AgentEvaluationTrendPointResponse(BaseModel):
+    evaluation_id: str
+    task_id: str
+    agent_id: str
+    overall_score: float
+    result_label: str
+    create_time: str
+
+
+class AgentEvaluationTrendResponse(BaseModel):
+    agent_id: Optional[str] = None
+    evaluation_count: int = 0
+    average_overall_score: float = 0.0
+    latest_overall_score: float = 0.0
+    previous_overall_score: Optional[float] = None
+    score_delta: float = 0.0
+    improving: bool = False
+    poor_count: int = 0
+    attention_level: str = "normal"
+    points: List[AgentEvaluationTrendPointResponse] = Field(default_factory=list)
+
+
 class ServiceTicketResponse(BaseModel):
     ticket_id: str
     merchant_id: Optional[str] = None

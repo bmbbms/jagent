@@ -6,6 +6,7 @@ from app.dependencies import get_audit_service, get_evaluation_service
 from app.schemas import (
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationAnalyticsItemResponse,
+    AgentEvaluationTrendResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
     AgentOptimizationSuggestionTicketRequest,
@@ -57,6 +58,15 @@ def get_evaluation_analytics_overview(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> AgentEvaluationAnalyticsOverviewResponse:
     return evaluation_service.build_analytics_overview()
+
+
+@router.get("/analytics/trend", response_model=AgentEvaluationTrendResponse)
+def get_evaluation_analytics_trend(
+    agent_id: str | None = Query(default=None),
+    limit: int = Query(default=10, ge=1, le=50),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentEvaluationTrendResponse:
+    return evaluation_service.build_evaluation_trend(agent_id=agent_id, limit=limit)
 
 
 @router.get(
