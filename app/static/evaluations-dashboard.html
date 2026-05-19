@@ -303,6 +303,11 @@
           <div class="empty">正在加载评估分析...</div>
         </div>
 
+        <h2>重点 Agent 治理</h2>
+        <div id="focusAgentList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">正在加载重点 Agent...</div>
+        </div>
+
         <h2>评估趋势</h2>
         <div id="trendPanel" class="card" style="margin-bottom: 18px;">
           <div class="empty">正在加载评估趋势...</div>
@@ -356,6 +361,7 @@
       evaluationId: "",
       evaluations: [],
       analytics: [],
+      focusAgents: [],
       overview: null,
       trend: null,
       suggestions: [],
@@ -383,6 +389,7 @@
       refreshBtn: document.getElementById("refreshBtn"),
       overviewGrid: document.getElementById("overviewGrid"),
       analyticsList: document.getElementById("analyticsList"),
+      focusAgentList: document.getElementById("focusAgentList"),
       trendPanel: document.getElementById("trendPanel"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
@@ -646,6 +653,42 @@
       `;
     }
 
+    function renderFocusAgents() {
+      if (!state.focusAgents.length) {
+        el.focusAgentList.innerHTML = '<div class="empty">暂无重点 Agent。</div>';
+        return;
+      }
+      el.focusAgentList.innerHTML = state.focusAgents.map(item => `
+        <div class="card" data-focus-agent-id="${escapeHtml(item.agent_id)}">
+          <div class="title">${escapeHtml(item.agent_id)}</div>
+          <div>
+            <span class="tag ${toneByAttention(item.attention_level)}">${escapeHtml(item.attention_level)}</span>
+            <span class="tag ${toneByScore(item.average_overall_score)}">${escapeHtml(item.average_overall_score)}</span>
+            <span class="tag">${escapeHtml(item.governance_score)}</span>
+          </div>
+          <div class="subtle">${escapeHtml(item.focus_reason || "运行平稳")}</div>
+          <div class="subtle">评估 ${escapeHtml(item.evaluation_count)} / 低分率 ${escapeHtml(item.poor_rate)}%</div>
+          <div class="subtle">建议 ${escapeHtml(item.suggestion_count)} / 积压 ${escapeHtml(item.backlog_suggestion_count)} / 高优积压 ${escapeHtml(item.high_priority_backlog_count)}</div>
+          <div class="subtle">已转工单 ${escapeHtml(item.ticket_bound_suggestion_count)} / 已闭环 ${escapeHtml(item.completed_ticket_count)}</div>
+        </div>
+      `).join("");
+      el.focusAgentList.querySelectorAll("[data-focus-agent-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const agentId = node.getAttribute("data-focus-agent-id") || "";
+          if (!agentId) return;
+          state.selectedAnalyticsAgentId = agentId;
+          el.agentFilterInput.value = agentId;
+          resetSuggestionView();
+          await loadEvaluationList();
+          await loadSuggestionOverview();
+          await loadSuggestions();
+          await loadTrend();
+          renderAnalyticsList();
+          renderFocusAgents();
+        });
+      });
+    }
+
     function renderEvaluationList() {
       if (!state.evaluations.length) {
         el.evaluationList.innerHTML = '<div class="empty">暂无评估记录。</div>';
@@ -901,6 +944,11 @@
       renderAnalyticsList();
     }
 
+    async function loadFocusAgents() {
+      state.focusAgents = await fetchJson("/api/evaluations/analytics/focus-agents?limit=10");
+      renderFocusAgents();
+    }
+
     async function loadOverview() {
       state.overview = await fetchJson("/api/evaluations/analytics/overview");
       renderOverview();
@@ -977,6 +1025,7 @@
       resetSuggestionView();
       await loadOverview();
       await loadAnalytics();
+      await loadFocusAgents();
       await loadTrend();
       await loadEvaluationList();
       await loadSuggestionOverview();

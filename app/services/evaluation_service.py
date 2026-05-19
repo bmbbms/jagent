@@ -12,6 +12,7 @@ from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationAnalyticsOverviewResponse,
+    AgentEvaluationFocusAgentResponse,
     AgentEvaluationDetailResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
@@ -232,6 +233,82 @@ class EvaluationService:
             ),
         )
 
+    def list_focus_agents(self, limit: int = 10) -> list[AgentEvaluationFocusAgentResponse]:
+        analytics = self.summarize_by_agent()
+        suggestions = self.list_optimization_suggestions()
+        suggestion_map: dict[str, list[AgentOptimizationSuggestionResponse]] = {}
+        for item in suggestions:
+            if not item.target_ref:
+                continue
+            suggestion_map.setdefault(item.target_ref, []).append(item)
+
+        result: list[AgentEvaluationFocusAgentResponse] = []
+        for item in analytics:
+            agent_suggestions = suggestion_map.get(item.agent_id, [])
+            suggestion_count = len(agent_suggestions)
+            backlog_suggestion_count = sum(
+                1 for suggestion in agent_suggestions if suggestion.status != "completed"
+            )
+            high_priority_backlog_count = sum(
+                1
+                for suggestion in agent_suggestions
+                if suggestion.priority == "high" and suggestion.status != "completed"
+            )
+            ticket_bound_suggestion_count = sum(
+                1 for suggestion in agent_suggestions if suggestion.ticket_id
+            )
+            completed_ticket_count = sum(
+                1
+                for suggestion in agent_suggestions
+                if suggestion.ticket_id and suggestion.ticket_status in {"resolved", "closed"}
+            )
+            governance_score = round(
+                max(
+                    0.0,
+                    100
+                    - item.poor_rate * 0.35
+                    - backlog_suggestion_count * 6
+                    - high_priority_backlog_count * 8
+                    + completed_ticket_count * 3,
+                ),
+                2,
+            )
+            focus_reason = self._build_focus_reason(
+                attention_level=item.attention_level,
+                poor_rate=item.poor_rate,
+                backlog_suggestion_count=backlog_suggestion_count,
+                high_priority_backlog_count=high_priority_backlog_count,
+                fallback_related_count=item.fallback_related_count,
+            )
+            result.append(
+                AgentEvaluationFocusAgentResponse(
+                    agent_id=item.agent_id,
+                    attention_level=item.attention_level,
+                    average_overall_score=item.average_overall_score,
+                    evaluation_count=item.evaluation_count,
+                    poor_rate=item.poor_rate,
+                    suggestion_count=suggestion_count,
+                    backlog_suggestion_count=backlog_suggestion_count,
+                    high_priority_backlog_count=high_priority_backlog_count,
+                    ticket_bound_suggestion_count=ticket_bound_suggestion_count,
+                    completed_ticket_count=completed_ticket_count,
+                    governance_score=governance_score,
+                    focus_reason=focus_reason,
+                )
+            )
+
+        ranked = sorted(
+            result,
+            key=lambda focus: (
+                0 if focus.attention_level == "high" else 1,
+                -focus.high_priority_backlog_count,
+                -focus.backlog_suggestion_count,
+                focus.governance_score,
+                focus.average_overall_score,
+            ),
+        )
+        return ranked[: max(limit, 1)]
+
     def build_evaluation_trend(
         self,
         *,
@@ -279,6 +356,28 @@ class EvaluationService:
                 for item in trend_items
             ],
         )
+
+    @staticmethod
+    def _build_focus_reason(
+        *,
+        attention_level: str,
+        poor_rate: float,
+        backlog_suggestion_count: int,
+        high_priority_backlog_count: int,
+        fallback_related_count: int,
+    ) -> str:
+        reasons: list[str] = []
+        if attention_level == "high":
+            reasons.append("高关注")
+        if poor_rate >= 40:
+            reasons.append(f"低分率 {poor_rate}%")
+        if high_priority_backlog_count > 0:
+            reasons.append(f"高优积压 {high_priority_backlog_count}")
+        elif backlog_suggestion_count > 0:
+            reasons.append(f"建议积压 {backlog_suggestion_count}")
+        if fallback_related_count > 0:
+            reasons.append(f"fallback 关联 {fallback_related_count}")
+        return " / ".join(reasons) if reasons else "运行平稳"
 
     def get_evaluation(self, evaluation_id: str) -> AgentEvaluationResponse | None:
         with self._session_factory() as session:

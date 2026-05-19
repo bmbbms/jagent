@@ -717,10 +717,39 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="suggestionPriorityFilter"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
+    assert 'id="focusAgentList"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
+
+
+def test_evaluation_focus_agents_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-eval-focus",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+
+    response = client.get("/api/evaluations/analytics/focus-agents", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert body
+    first = body[0]
+    assert "agent_id" in first
+    assert "attention_level" in first
+    assert "suggestion_count" in first
+    assert "backlog_suggestion_count" in first
+    assert "high_priority_backlog_count" in first
+    assert "ticket_bound_suggestion_count" in first
+    assert "completed_ticket_count" in first
+    assert "governance_score" in first
+    assert "focus_reason" in first
 
 
 def test_approvals_ui_page(client: TestClient) -> None:

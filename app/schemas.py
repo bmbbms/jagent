@@ -675,6 +675,21 @@ class AgentEvaluationAnalyticsOverviewResponse(BaseModel):
     average_tool_usage_score: float = 0.0
 
 
+class AgentEvaluationFocusAgentResponse(BaseModel):
+    agent_id: str
+    attention_level: str = "normal"
+    average_overall_score: float = 0.0
+    evaluation_count: int = 0
+    poor_rate: float = 0.0
+    suggestion_count: int = 0
+    backlog_suggestion_count: int = 0
+    high_priority_backlog_count: int = 0
+    ticket_bound_suggestion_count: int = 0
+    completed_ticket_count: int = 0
+    governance_score: float = 0.0
+    focus_reason: str = ""
+
+
 class AgentEvaluationTrendPointResponse(BaseModel):
     evaluation_id: str
     task_id: str
