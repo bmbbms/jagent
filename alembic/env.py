@@ -109,6 +109,16 @@ def run_migrations_online() -> None:
         with context.begin_transaction():
             context.run_migrations()
 
+        print(
+            f"[alembic env] connection.in_transaction after migrations: {connection.in_transaction()}",
+            flush=True,
+        )
+        _log_current_version_state(connection)
+        if connection.in_transaction():
+            print("[alembic env] committing migration transaction", flush=True)
+            connection.commit()
+            _log_current_version_state(connection)
+
 
 if context.is_offline_mode():
     run_migrations_offline()
