@@ -63,6 +63,17 @@ def test_mcp_tools_api_and_overview(client: TestClient) -> None:
     assert "provider_failure_counts" in overview
     assert "transport_failure_counts" in overview
 
+    governance_issue_response = client.get("/api/mcp/governance-issues")
+    assert governance_issue_response.status_code == 200
+    governance_issues = governance_issue_response.json()
+    assert isinstance(governance_issues, list)
+    if governance_issues:
+        first_issue = governance_issues[0]
+        assert "tool_id" in first_issue
+        assert "governance_status" in first_issue
+        assert "reasons" in first_issue
+        assert "recommended_action" in first_issue
+
     recent_calls_response = client.get(
         f"/api/mcp/tools/{first['tool_id']}/recent-calls",
     )
@@ -1002,6 +1013,7 @@ def test_mcp_ui_page(client: TestClient) -> None:
     assert 'id="calledFilter"' in response.text
     assert 'id="loadBtn"' in response.text
     assert 'id="overview"' in response.text
+    assert 'id="governanceIssues"' in response.text
     assert 'id="toolList"' in response.text
     assert 'id="toolDetail"' in response.text
     assert 'id="recentCalls"' in response.text

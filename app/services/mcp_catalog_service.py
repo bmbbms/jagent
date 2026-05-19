@@ -5,7 +5,7 @@ from collections import defaultdict
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.repositories.tool_execution_repository import ToolExecutionRepository
-from app.schemas import MCPToolInfo, MCPToolOverviewResponse
+from app.schemas import MCPToolGovernanceIssueResponse, MCPToolInfo, MCPToolOverviewResponse
 from app.tools import list_mcp_tool_specs
 
 
@@ -100,6 +100,37 @@ class MCPCatalogService:
             transport_failure_counts=transport_failure_counts,
         )
 
+    def list_governance_issues(self) -> list[MCPToolGovernanceIssueResponse]:
+        items = self.list_tools()
+        issues: list[MCPToolGovernanceIssueResponse] = []
+        for item in items:
+            governance_status, reasons, recommended_action = self._build_governance_status(item)
+            if governance_status == "healthy":
+                continue
+            issues.append(
+                MCPToolGovernanceIssueResponse(
+                    tool_id=item.tool_id,
+                    provider=item.provider,
+                    transport=item.transport,
+                    enabled=item.enabled,
+                    call_count=item.call_count,
+                    failure_count=item.failure_count,
+                    average_duration_ms=item.average_duration_ms,
+                    governance_status=governance_status,
+                    reasons=reasons,
+                    recommended_action=recommended_action,
+                )
+            )
+        issues.sort(
+            key=lambda item: (
+                0 if item.governance_status == "blocked" else 1,
+                -item.failure_count,
+                -(item.average_duration_ms or 0),
+                item.tool_id,
+            )
+        )
+        return issues
+
     def _build_usage_map(self) -> dict[str, dict[str, object]]:
         with self._session_factory() as session:
             rows = self._repository.list_tool_call_logs_by_type(session, tool_type="mcp")
@@ -135,3 +166,37 @@ class MCPCatalogService:
                     sum(durations) / len(durations)
                 )
         return usage_map
+
+    @staticmethod
+    def _build_governance_status(
+        item: MCPToolInfo,
+    ) -> tuple[str, list[str], str]:
+        reasons: list[str] = []
+        if not item.enabled:
+            reasons.append("tool_disabled")
+        if item.failure_count >= 3:
+            reasons.append("failure_count_high")
+        elif item.failure_count > 0:
+            reasons.append("tool_has_failures")
+        if (item.average_duration_ms or 0) >= 3000:
+            reasons.append("latency_too_high")
+
+        if "failure_count_high" in reasons:
+            governance_status = "blocked"
+        elif reasons:
+            governance_status = "degraded"
+        else:
+            governance_status = "healthy"
+
+        if "failure_count_high" in reasons:
+            recommended_action = "建议优先排查连续失败原因，并在恢复前限制生产使用。"
+        elif "latency_too_high" in reasons:
+            recommended_action = "建议检查 MCP 服务端时延、网络链路和超时策略。"
+        elif "tool_disabled" in reasons:
+            recommended_action = "建议确认该工具是否仍需启用，避免配置与实际依赖不一致。"
+        elif "tool_has_failures" in reasons:
+            recommended_action = "建议回看最近调用任务和失败日志，定位参数或服务端问题。"
+        else:
+            recommended_action = "当前治理状态稳定，可继续观察。"
+
+        return governance_status, reasons, recommended_action

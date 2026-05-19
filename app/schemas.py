@@ -326,6 +326,19 @@ class MCPToolOverviewResponse(BaseModel):
     transport_failure_counts: Dict[str, int] = Field(default_factory=dict)
 
 
+class MCPToolGovernanceIssueResponse(BaseModel):
+    tool_id: str
+    provider: str
+    transport: str
+    enabled: bool = False
+    call_count: int = 0
+    failure_count: int = 0
+    average_duration_ms: Optional[int] = None
+    governance_status: str = "healthy"
+    reasons: List[str] = Field(default_factory=list)
+    recommended_action: str = ""
+
+
 class SkillInfo(BaseModel):
     skill_id: str
     biz_domain: BizDomain

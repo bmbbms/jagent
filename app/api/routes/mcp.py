@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.dependencies import get_mcp_catalog_service, get_tool_execution_log_service
-from app.schemas import MCPToolInfo, MCPToolOverviewResponse, ToolCallLogResponse
+from app.schemas import (
+    MCPToolGovernanceIssueResponse,
+    MCPToolInfo,
+    MCPToolOverviewResponse,
+    ToolCallLogResponse,
+)
 from app.services.mcp_catalog_service import MCPCatalogService
 from app.services.tool_execution_log_service import ToolExecutionLogService
 
@@ -29,6 +34,13 @@ def get_mcp_overview(
     service: MCPCatalogService = Depends(get_mcp_catalog_service),
 ) -> MCPToolOverviewResponse:
     return service.get_overview()
+
+
+@router.get("/governance-issues", response_model=list[MCPToolGovernanceIssueResponse])
+def list_mcp_governance_issues(
+    service: MCPCatalogService = Depends(get_mcp_catalog_service),
+) -> list[MCPToolGovernanceIssueResponse]:
+    return service.list_governance_issues()
 
 
 @router.get("/tools/{tool_id}/recent-calls", response_model=list[ToolCallLogResponse])
