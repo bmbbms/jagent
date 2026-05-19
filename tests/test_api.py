@@ -396,6 +396,31 @@ def test_audit_overview_api(client: TestClient) -> None:
     assert "linked_context_counts" in body
 
 
+def test_audit_linked_context_api(client: TestClient) -> None:
+    response = client.get(
+        "/api/audit/linked-context",
+        params={"task_id": "task-audit-filter"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "total_events" in body
+    assert "context_counts" in body
+    assert "items" in body
+    assert isinstance(body["items"], list)
+    task_contexts = [
+        item
+        for item in body["items"]
+        if item["context_type"] == "task" and item["context_id"] == "task-audit-filter"
+    ]
+    assert task_contexts
+    first = task_contexts[0]
+    assert first["event_count"] >= 1
+    assert "actions" in first
+    assert "latest_action" in first
+    assert "latest_actor_id" in first
+    assert "latest_created_at" in first
+
+
 def test_task_detail_includes_tool_execution_details(client: TestClient) -> None:
     chat_response = client.post(
         "/api/chat",

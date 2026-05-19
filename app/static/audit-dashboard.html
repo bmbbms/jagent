@@ -12,21 +12,29 @@
       --text: #241b15;
       --muted: #726657;
       --accent: #a15428;
+      --accent-soft: #f3e3d1;
+      --success: #1d7a4a;
+      --warning: #9b6d1f;
+      --danger: #b53f35;
       --radius: 18px;
       --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
     }
+
     .page {
-      max-width: 1450px;
+      max-width: 1580px;
       margin: 0 auto;
       padding: 24px;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -35,22 +43,26 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
+
     .header h1 {
       margin: 0;
       font-size: 30px;
     }
+
     .header p {
       margin: 10px 0 0;
       color: var(--muted);
       line-height: 1.7;
-      max-width: 860px;
+      max-width: 900px;
     }
+
     .toolbar {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
+
     .toolbar button,
     .toolbar input {
       min-height: 42px;
@@ -61,6 +73,7 @@
       color: var(--text);
       font: inherit;
     }
+
     .toolbar button {
       background: var(--accent);
       border: 0;
@@ -68,15 +81,18 @@
       cursor: pointer;
       font-weight: 700;
     }
+
     .toolbar button.secondary {
       background: #eadcc9;
       color: var(--text);
     }
+
     .layout {
       display: grid;
-      grid-template-columns: 430px minmax(0, 1fr);
+      grid-template-columns: 370px minmax(0, 1fr) 420px;
       gap: 20px;
     }
+
     .panel {
       background: rgba(255, 253, 249, 0.96);
       border: 1px solid var(--line);
@@ -84,39 +100,68 @@
       box-shadow: var(--shadow);
       padding: 18px;
     }
+
     .panel h2 {
       margin: 0 0 14px;
       font-size: 18px;
     }
+
+    .stack,
     .list,
-    .detail-list {
+    .detail-list,
+    .overview-grid {
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
+
+    .overview-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .overview-card,
     .card {
       background: var(--panel);
       border: 1px solid #eadcca;
       border-radius: 14px;
       padding: 14px;
+    }
+
+    .overview-card {
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+    }
+
+    .overview-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .card {
       display: grid;
       gap: 10px;
       cursor: pointer;
     }
+
     .card.active {
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
     }
+
     .title {
       font-size: 15px;
       font-weight: 700;
       line-height: 1.5;
     }
+
     .subtle,
     .empty {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
+
     .hero {
       padding: 14px 16px;
       border-radius: 16px;
@@ -124,6 +169,7 @@
       border: 1px solid #eadcca;
       margin-bottom: 14px;
     }
+
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -132,25 +178,30 @@
       padding-bottom: 8px;
       font-size: 14px;
     }
+
     .detail-row:last-child {
       border-bottom: 0;
       padding-bottom: 0;
     }
+
     .label {
       color: var(--muted);
       flex: 0 0 140px;
     }
+
     .value {
       flex: 1;
       text-align: right;
       word-break: break-word;
     }
+
     .chip-row {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       margin-top: 8px;
     }
+
     .chip {
       display: inline-flex;
       align-items: center;
@@ -161,6 +212,66 @@
       background: #f2e4d5;
       color: #6d563f;
     }
+
+    .chip.success { background: rgba(29, 122, 74, 0.12); color: var(--success); }
+    .chip.warning { background: rgba(155, 109, 31, 0.14); color: var(--warning); }
+    .chip.danger { background: rgba(181, 63, 53, 0.12); color: var(--danger); }
+
+    .context-card {
+      display: grid;
+      gap: 8px;
+      border: 1px solid #eadcca;
+      background: #fffaf4;
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+    }
+
+    .context-card:hover {
+      border-color: var(--accent);
+    }
+
+    .context-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .context-count {
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .button-row button {
+      min-height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 12px;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .button-row button.primary {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      font-weight: 700;
+    }
+
     pre.payload {
       margin: 0;
       white-space: pre-wrap;
@@ -170,8 +281,11 @@
       padding: 12px;
       font-size: 12px;
     }
-    @media (max-width: 1100px) {
-      .layout { grid-template-columns: 1fr; }
+
+    @media (max-width: 1280px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -180,7 +294,7 @@
     <div class="header">
       <div>
         <h1>审计中心</h1>
-        <p>集中查看平台审计事件，支持按操作类型、操作者、任务和审批单过滤，并可直接跳转到任务、审批、能力和流程中心做联调排查。</p>
+        <p>集中查看平台审计事件，并把任务、审批、能力、流程、评估、建议、工单之间的联动链路直接拉通展示，方便做问题追踪和治理回放。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
@@ -196,15 +310,29 @@
         <input id="approvalFilterInput" placeholder="按 approval_id 过滤" />
         <input id="capabilityFilterInput" placeholder="按 capability_id 过滤" />
         <input id="workflowFilterInput" placeholder="按 workflow 过滤" />
+        <input id="ticketFilterInput" placeholder="按 ticket_id 过滤" />
+        <input id="suggestionFilterInput" placeholder="按 suggestion_id 过滤" />
+        <input id="evaluationFilterInput" placeholder="按 evaluation_id 过滤" />
         <button id="loadBtn">加载审计</button>
       </div>
     </div>
 
     <div class="layout">
-      <section class="panel">
-        <h2>审计治理概览</h2>
-        <div id="auditOverview" class="detail-list">
-          <div class="empty">正在加载审计治理概览...</div>
+      <section class="stack">
+        <div class="panel">
+          <h2>审计治理概览</h2>
+          <div id="auditOverview" class="overview-grid">
+            <div class="empty">正在加载审计治理概览...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>上下文链路视图</h2>
+          <div class="subtle">联动上下文分布与关联链路钻取</div>
+          <div id="linkedContextSummary" class="subtle">正在加载上下文聚合...</div>
+          <div id="linkedContextList" class="list" style="margin-top: 12px;">
+            <div class="empty">正在加载上下文聚合...</div>
+          </div>
         </div>
       </section>
 
@@ -229,6 +357,7 @@
     const state = {
       events: [],
       selectedIndex: 0,
+      linkedContext: null,
     };
 
     const el = {
@@ -245,8 +374,13 @@
       approvalFilterInput: document.getElementById("approvalFilterInput"),
       capabilityFilterInput: document.getElementById("capabilityFilterInput"),
       workflowFilterInput: document.getElementById("workflowFilterInput"),
+      ticketFilterInput: document.getElementById("ticketFilterInput"),
+      suggestionFilterInput: document.getElementById("suggestionFilterInput"),
+      evaluationFilterInput: document.getElementById("evaluationFilterInput"),
       loadBtn: document.getElementById("loadBtn"),
       auditOverview: document.getElementById("auditOverview"),
+      linkedContextSummary: document.getElementById("linkedContextSummary"),
+      linkedContextList: document.getElementById("linkedContextList"),
       auditMeta: document.getElementById("auditMeta"),
       auditList: document.getElementById("auditList"),
       auditDetail: document.getElementById("auditDetail"),
@@ -275,8 +409,8 @@
       return currentEvent()?.payload || {};
     }
 
-    function syncQuery() {
-      const url = new URL(window.location.href);
+    function buildQuery() {
+      const query = new URLSearchParams();
       const pairs = {
         action: el.actionFilterInput.value.trim(),
         actor_id: el.actorFilterInput.value.trim(),
@@ -287,29 +421,37 @@
         approval_id: el.approvalFilterInput.value.trim(),
         capability_id: el.capabilityFilterInput.value.trim(),
         workflow: el.workflowFilterInput.value.trim(),
+        ticket_id: el.ticketFilterInput.value.trim(),
+        suggestion_id: el.suggestionFilterInput.value.trim(),
+        evaluation_id: el.evaluationFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
-        if (value) {
-          url.searchParams.set(key, value);
-        } else {
-          url.searchParams.delete(key);
-        }
+        if (value) query.set(key, value);
       });
+      return query;
+    }
+
+    function syncQuery() {
+      const url = new URL(window.location.href);
+      const query = buildQuery();
+      url.search = query.toString();
       window.history.replaceState({}, "", url);
     }
 
-    function buildQuery() {
-      const query = new URLSearchParams();
-      if (el.actionFilterInput.value.trim()) query.set("action", el.actionFilterInput.value.trim());
-      if (el.actorFilterInput.value.trim()) query.set("actor_id", el.actorFilterInput.value.trim());
-      if (el.sourceFilterInput.value.trim()) query.set("source", el.sourceFilterInput.value.trim());
-      if (el.eventTypeFilterInput.value.trim()) query.set("event_type", el.eventTypeFilterInput.value.trim());
-      if (el.outcomeFilterInput.value.trim()) query.set("outcome", el.outcomeFilterInput.value.trim());
-      if (el.taskFilterInput.value.trim()) query.set("task_id", el.taskFilterInput.value.trim());
-      if (el.approvalFilterInput.value.trim()) query.set("approval_id", el.approvalFilterInput.value.trim());
-      if (el.capabilityFilterInput.value.trim()) query.set("capability_id", el.capabilityFilterInput.value.trim());
-      if (el.workflowFilterInput.value.trim()) query.set("workflow", el.workflowFilterInput.value.trim());
-      return query;
+    function fillFiltersFromQuery() {
+      const query = new URLSearchParams(window.location.search);
+      el.actionFilterInput.value = query.get("action") || "";
+      el.actorFilterInput.value = query.get("actor_id") || "";
+      el.sourceFilterInput.value = query.get("source") || "";
+      el.eventTypeFilterInput.value = query.get("event_type") || "";
+      el.outcomeFilterInput.value = query.get("outcome") || "";
+      el.taskFilterInput.value = query.get("task_id") || "";
+      el.approvalFilterInput.value = query.get("approval_id") || "";
+      el.capabilityFilterInput.value = query.get("capability_id") || "";
+      el.workflowFilterInput.value = query.get("workflow") || "";
+      el.ticketFilterInput.value = query.get("ticket_id") || "";
+      el.suggestionFilterInput.value = query.get("suggestion_id") || "";
+      el.evaluationFilterInput.value = query.get("evaluation_id") || "";
     }
 
     function renderOverview(overview) {
@@ -317,17 +459,66 @@
         el.auditOverview.innerHTML = '<div class="empty">暂无审计治理概览。</div>';
         return;
       }
-      const linkedContextText = Object.entries(overview.linked_context_counts || {})
+
+      const cards = [
+        ["事件总数", overview.total],
+        ["成功事件", overview.success_count],
+        ["失败事件", overview.failed_count],
+        ["未完成事件", overview.pending_count],
+        ["来源种类", Object.keys(overview.source_counts || {}).length],
+        ["事件类型", Object.keys(overview.event_type_counts || {}).length],
+      ];
+      el.auditOverview.innerHTML = cards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderLinkedContext() {
+      const linkedContext = state.linkedContext;
+      if (!linkedContext) {
+        el.linkedContextSummary.textContent = "暂无上下文聚合。";
+        el.linkedContextList.innerHTML = '<div class="empty">暂无上下文聚合。</div>';
+        return;
+      }
+
+      const countText = Object.entries(linkedContext.context_counts || {})
         .map(([key, value]) => `${key}:${value}`)
-        .join(", ") || "-";
-      el.auditOverview.innerHTML = `
-        <div class="detail-row"><div class="label">总事件数</div><div class="value">${escapeHtml(overview.total)}</div></div>
-        <div class="detail-row"><div class="label">成功 / 失败 / 未完成</div><div class="value">${escapeHtml(overview.success_count)} / ${escapeHtml(overview.failed_count)} / ${escapeHtml(overview.pending_count)}</div></div>
-        <div class="detail-row"><div class="label">来源分布</div><div class="value">${escapeHtml(Object.entries(overview.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
-        <div class="detail-row"><div class="label">事件类型分布</div><div class="value">${escapeHtml(Object.entries(overview.event_type_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
-        <div class="detail-row"><div class="label">动作分布</div><div class="value">${escapeHtml(Object.entries(overview.action_counts || {}).slice(0, 6).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
-        <div class="detail-row"><div class="label">联动上下文分布</div><div class="value">${escapeHtml(linkedContextText)}</div></div>
-      `;
+        .join("，");
+      el.linkedContextSummary.textContent = `当前筛选范围共 ${linkedContext.total_events} 条事件，链路上下文分布：${countText || "-"}`;
+
+      const items = linkedContext.items || [];
+      if (!items.length) {
+        el.linkedContextList.innerHTML = '<div class="empty">当前筛选条件下没有可聚合的上下文链路。</div>';
+        return;
+      }
+
+      el.linkedContextList.innerHTML = items.map(item => `
+        <div
+          class="context-card"
+          data-context-type="${escapeHtml(item.context_type)}"
+          data-context-id="${escapeHtml(item.context_id)}"
+        >
+          <div class="context-head">
+            <div class="title">${escapeHtml(item.context_type)} / ${escapeHtml(item.context_id)}</div>
+            <div class="context-count">${escapeHtml(item.event_count)} 条</div>
+          </div>
+          <div class="subtle">动作集合：${escapeHtml((item.actions || []).join(", ") || "-")}</div>
+          <div class="subtle">最近事件：${escapeHtml(item.latest_action || "-")} / ${escapeHtml(item.latest_actor_id || "-")}</div>
+          <div class="subtle">最近时间：${escapeHtml(item.latest_created_at || "-")}</div>
+        </div>
+      `).join("");
+
+      el.linkedContextList.querySelectorAll("[data-context-type]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const contextType = node.getAttribute("data-context-type") || "";
+          const contextId = node.getAttribute("data-context-id") || "";
+          applyContextFilter(contextType, contextId);
+          await loadAudit();
+        });
+      });
     }
 
     function renderList() {
@@ -337,6 +528,7 @@
         el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
         return;
       }
+
       el.auditList.innerHTML = state.events.map((item, index) => {
         const payload = item.payload || {};
         return `
@@ -344,10 +536,9 @@
             <div class="title">${escapeHtml(item.action)}</div>
             <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
             <div class="subtle">source / event_type：${escapeHtml(item.source || "-")} / ${escapeHtml(item.event_type || "-")}</div>
-            <div class="subtle">outcome：${escapeHtml(item.outcome ?? "-")}</div>
-            <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
-            <div class="subtle">task_id：${escapeHtml(payload.task_id || "-")}</div>
-            <div class="subtle">approval_id：${escapeHtml(payload.approval_id || "-")}</div>
+            <div class="subtle">outcome：${escapeHtml(item.outcome ?? "-")} / 时间：${escapeHtml(item.created_at)}</div>
+            <div class="subtle">task_id：${escapeHtml(payload.task_id || item.task_id || "-")}</div>
+            <div class="subtle">approval_id：${escapeHtml(payload.approval_id || item.approval_id || "-")}</div>
           </div>
         `;
       }).join("");
@@ -361,227 +552,227 @@
       });
     }
 
+    function buildOpenButtons(payload) {
+      const buttons = [];
+      if (payload.task_id) {
+        buttons.push(`<button class="primary" type="button" data-open-task="${escapeHtml(payload.task_id)}">打开任务</button>`);
+      }
+      if (payload.approval_id) {
+        buttons.push(`<button type="button" data-open-approval="${escapeHtml(payload.approval_id)}">打开审批</button>`);
+      }
+      if (payload.workflow) {
+        buttons.push(`<button type="button" data-open-workflow="${escapeHtml(payload.workflow)}">打开 Workflow</button>`);
+      }
+      if (payload.capability_id) {
+        buttons.push(`<button type="button" data-open-capability="${escapeHtml(payload.capability_id)}">打开 Capability</button>`);
+      }
+      if (payload.ticket_id) {
+        buttons.push(`<button type="button" data-open-ticket="${escapeHtml(payload.ticket_id)}">打开工单</button>`);
+      }
+      if (payload.evaluation_id) {
+        buttons.push(`<button type="button" data-open-evaluation="${escapeHtml(payload.evaluation_id)}">打开评估</button>`);
+      }
+      if (payload.suggestion_id && payload.evaluation_id) {
+        buttons.push(`<button type="button" data-open-suggestion="${escapeHtml(payload.suggestion_id)}" data-open-suggestion-evaluation="${escapeHtml(payload.evaluation_id)}">打开建议</button>`);
+      }
+      return buttons.join("");
+    }
+
     function renderDetail() {
       const item = currentEvent();
       if (!item) {
         el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
         return;
       }
-      const payload = item.payload || {};
-      const taskId = payload.task_id || "";
-      const approvalId = payload.approval_id || "";
-      const capabilityId = payload.capability_id || "";
-      const workflowCode = payload.workflow || "";
-      const source = item.source || "";
-      const eventType = item.event_type || "";
-      const outcome = item.outcome;
+
+      const payload = {
+        task_id: item.task_id || item.payload?.task_id || "",
+        approval_id: item.approval_id || item.payload?.approval_id || "",
+        capability_id: item.capability_id || item.payload?.capability_id || "",
+        workflow: item.workflow || item.payload?.workflow || "",
+        ticket_id: item.ticket_id || item.payload?.ticket_id || "",
+        suggestion_id: item.suggestion_id || item.payload?.suggestion_id || "",
+        evaluation_id: item.evaluation_id || item.payload?.evaluation_id || "",
+      };
+
+      const tags = [
+        payload.task_id ? ["task", payload.task_id] : null,
+        payload.approval_id ? ["approval", payload.approval_id] : null,
+        payload.capability_id ? ["capability", payload.capability_id] : null,
+        payload.workflow ? ["workflow", payload.workflow] : null,
+        payload.ticket_id ? ["ticket", payload.ticket_id] : null,
+        payload.suggestion_id ? ["suggestion", payload.suggestion_id] : null,
+        payload.evaluation_id ? ["evaluation", payload.evaluation_id] : null,
+      ].filter(Boolean);
 
       el.auditDetail.innerHTML = `
         <div class="hero">
           <div class="title">${escapeHtml(item.action)}</div>
           <div class="subtle" style="margin-top: 8px;">actor_id：${escapeHtml(item.actor_id)}</div>
-          <div class="subtle">source / event_type：${escapeHtml(source || "-")} / ${escapeHtml(eventType || "-")}</div>
-          <div class="subtle">outcome：${escapeHtml(outcome ?? "-")}</div>
-          <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
+          <div class="subtle">source / event_type：${escapeHtml(item.source || "-")} / ${escapeHtml(item.event_type || "-")}</div>
+          <div class="subtle">outcome：${escapeHtml(item.outcome ?? "-")} / 时间：${escapeHtml(item.created_at)}</div>
           <div class="chip-row">
-            ${taskId ? `<span class="chip">task:${escapeHtml(taskId)}</span>` : ""}
-            ${approvalId ? `<span class="chip">approval:${escapeHtml(approvalId)}</span>` : ""}
-            ${capabilityId ? `<span class="chip">capability:${escapeHtml(capabilityId)}</span>` : ""}
-            ${workflowCode ? `<span class="chip">workflow:${escapeHtml(workflowCode)}</span>` : ""}
+            ${tags.map(tag => `<span class="chip">${escapeHtml(tag[0])}:${escapeHtml(tag[1])}</span>`).join("") || '<span class="chip success">no-linked-context</span>'}
           </div>
         </div>
         <div class="detail-list">
-          <div class="detail-row"><div class="label">source</div><div class="value">${escapeHtml(source || "-")}</div></div>
-          <div class="detail-row"><div class="label">event_type</div><div class="value">${escapeHtml(eventType || "-")}</div></div>
-          <div class="detail-row"><div class="label">outcome</div><div class="value">${escapeHtml(outcome ?? "-")}</div></div>
-          <div class="detail-row"><div class="label">task_id</div><div class="value">${escapeHtml(taskId || "-")}</div></div>
-          <div class="detail-row"><div class="label">approval_id</div><div class="value">${escapeHtml(approvalId || "-")}</div></div>
-          <div class="detail-row"><div class="label">capability_id</div><div class="value">${escapeHtml(capabilityId || "-")}</div></div>
-          <div class="detail-row"><div class="label">workflow</div><div class="value">${escapeHtml(workflowCode || "-")}</div></div>
+          <div class="detail-row"><div class="label">source</div><div class="value">${escapeHtml(item.source || "-")}</div></div>
+          <div class="detail-row"><div class="label">event_type</div><div class="value">${escapeHtml(item.event_type || "-")}</div></div>
+          <div class="detail-row"><div class="label">outcome</div><div class="value">${escapeHtml(item.outcome ?? "-")}</div></div>
+          <div class="detail-row"><div class="label">task_id</div><div class="value">${escapeHtml(payload.task_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">approval_id</div><div class="value">${escapeHtml(payload.approval_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">capability_id</div><div class="value">${escapeHtml(payload.capability_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">workflow</div><div class="value">${escapeHtml(payload.workflow || "-")}</div></div>
+          <div class="detail-row"><div class="label">ticket_id</div><div class="value">${escapeHtml(payload.ticket_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">suggestion_id</div><div class="value">${escapeHtml(payload.suggestion_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">evaluation_id</div><div class="value">${escapeHtml(payload.evaluation_id || "-")}</div></div>
         </div>
-        <div class="toolbar" style="justify-content: flex-start; margin-top: 16px;">
-          ${taskId ? '<button id="openTaskBtn" class="secondary">打开任务</button>' : ""}
-          ${approvalId ? '<button id="openApprovalBtn" class="secondary">打开审批</button>' : ""}
-          ${workflowCode ? '<button id="openWorkflowBtn" class="secondary">打开 Workflow</button>' : ""}
-          ${capabilityId ? '<button id="openCapabilityBtn" class="secondary">打开 Capability</button>' : ""}
-        </div>
+        <div class="button-row">${buildOpenButtons(payload)}</div>
         <h2 style="margin-top: 18px;">原始载荷</h2>
-        <pre class="payload">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+        <pre class="payload">${escapeHtml(JSON.stringify(item.payload || {}, null, 2))}</pre>
       `;
 
-      const openTaskBtn = document.getElementById("openTaskBtn");
-      const openApprovalBtn = document.getElementById("openApprovalBtn");
-      const openWorkflowBtn = document.getElementById("openWorkflowBtn");
-      const openCapabilityBtn = document.getElementById("openCapabilityBtn");
+      bindDetailButtons();
+    }
 
-      if (openTaskBtn && taskId) {
+    function bindDetailButtons() {
+      const openTaskBtn = el.auditDetail.querySelector("[data-open-task]");
+      const openApprovalBtn = el.auditDetail.querySelector("[data-open-approval]");
+      const openWorkflowBtn = el.auditDetail.querySelector("[data-open-workflow]");
+      const openCapabilityBtn = el.auditDetail.querySelector("[data-open-capability]");
+      const openTicketBtn = el.auditDetail.querySelector("[data-open-ticket]");
+      const openEvaluationBtn = el.auditDetail.querySelector("[data-open-evaluation]");
+      const openSuggestionBtn = el.auditDetail.querySelector("[data-open-suggestion]");
+
+      if (openTaskBtn) {
         openTaskBtn.addEventListener("click", () => {
+          const taskId = openTaskBtn.getAttribute("data-open-task") || "";
           window.location.href = `/ui/tasks?task_id=${encodeURIComponent(taskId)}`;
         });
       }
-      if (openApprovalBtn && approvalId) {
+      if (openApprovalBtn) {
         openApprovalBtn.addEventListener("click", () => {
+          const approvalId = openApprovalBtn.getAttribute("data-open-approval") || "";
           window.location.href = `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`;
         });
       }
-      if (openWorkflowBtn && workflowCode) {
+      if (openWorkflowBtn) {
         openWorkflowBtn.addEventListener("click", () => {
+          const workflowCode = openWorkflowBtn.getAttribute("data-open-workflow") || "";
           window.location.href = `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`;
         });
       }
-      if (openCapabilityBtn && capabilityId) {
+      if (openCapabilityBtn) {
         openCapabilityBtn.addEventListener("click", () => {
+          const capabilityId = openCapabilityBtn.getAttribute("data-open-capability") || "";
           window.location.href = `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`;
+        });
+      }
+      if (openTicketBtn) {
+        openTicketBtn.addEventListener("click", () => {
+          const ticketId = openTicketBtn.getAttribute("data-open-ticket") || "";
+          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
+        });
+      }
+      if (openEvaluationBtn) {
+        openEvaluationBtn.addEventListener("click", () => {
+          const evaluationId = openEvaluationBtn.getAttribute("data-open-evaluation") || "";
+          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}`;
+        });
+      }
+      if (openSuggestionBtn) {
+        openSuggestionBtn.addEventListener("click", () => {
+          const suggestionId = openSuggestionBtn.getAttribute("data-open-suggestion") || "";
+          const evaluationId = openSuggestionBtn.getAttribute("data-open-suggestion-evaluation") || "";
+          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}&suggestion_id=${encodeURIComponent(suggestionId)}`;
         });
       }
     }
 
+    function applyContextFilter(contextType, contextId) {
+      const mapping = {
+        task: el.taskFilterInput,
+        approval: el.approvalFilterInput,
+        capability: el.capabilityFilterInput,
+        workflow: el.workflowFilterInput,
+        ticket: el.ticketFilterInput,
+        suggestion: el.suggestionFilterInput,
+        evaluation: el.evaluationFilterInput,
+      };
+      const input = mapping[contextType];
+      if (!input) return;
+      input.value = contextId;
+    }
+
     async function loadAudit() {
       const query = buildQuery();
-      const [overview, events] = await Promise.all([
+      const queryString = query.toString();
+      const [overview, events, linkedContext] = await Promise.all([
         fetchJson("/api/audit/overview"),
-        fetchJson(`/api/audit?${query.toString()}`),
+        fetchJson(`/api/audit${queryString ? `?${queryString}` : ""}`),
+        fetchJson(`/api/audit/linked-context${queryString ? `?${queryString}` : ""}`),
       ]);
       renderOverview(overview);
       state.events = events;
+      state.linkedContext = linkedContext;
       state.selectedIndex = 0;
+      renderLinkedContext();
       renderList();
       renderDetail();
       syncQuery();
     }
 
     async function bootstrap() {
-      const query = new URLSearchParams(window.location.search);
-      el.actionFilterInput.value = query.get("action") || "";
-      el.actorFilterInput.value = query.get("actor_id") || "";
-      el.sourceFilterInput.value = query.get("source") || "";
-      el.eventTypeFilterInput.value = query.get("event_type") || "";
-      el.outcomeFilterInput.value = query.get("outcome") || "";
-      el.taskFilterInput.value = query.get("task_id") || "";
-      el.approvalFilterInput.value = query.get("approval_id") || "";
-      el.capabilityFilterInput.value = query.get("capability_id") || "";
-      el.workflowFilterInput.value = query.get("workflow") || "";
+      fillFiltersFromQuery();
       await loadAudit();
     }
 
-    const ticketFilterInput = document.createElement("input");
-    ticketFilterInput.id = "ticketFilterInput";
-    ticketFilterInput.placeholder = "按 ticket_id 过滤";
-    el.workflowFilterInput.insertAdjacentElement("afterend", ticketFilterInput);
-
-    const suggestionFilterInput = document.createElement("input");
-    suggestionFilterInput.id = "suggestionFilterInput";
-    suggestionFilterInput.placeholder = "按 suggestion_id 过滤";
-    ticketFilterInput.insertAdjacentElement("afterend", suggestionFilterInput);
-
-    const evaluationFilterInput = document.createElement("input");
-    evaluationFilterInput.id = "evaluationFilterInput";
-    evaluationFilterInput.placeholder = "按 evaluation_id 过滤";
-    suggestionFilterInput.insertAdjacentElement("afterend", evaluationFilterInput);
-
-    const originalBuildQuery = buildQuery;
-    buildQuery = function buildAuditQueryExtended() {
-      const query = originalBuildQuery();
-      if (ticketFilterInput.value.trim()) query.set("ticket_id", ticketFilterInput.value.trim());
-      if (suggestionFilterInput.value.trim()) query.set("suggestion_id", suggestionFilterInput.value.trim());
-      if (evaluationFilterInput.value.trim()) query.set("evaluation_id", evaluationFilterInput.value.trim());
-      return query;
-    };
-
-    const originalSyncQuery = syncQuery;
-    syncQuery = function syncAuditQueryExtended() {
-      originalSyncQuery();
-      const url = new URL(window.location.href);
-      const extraPairs = {
-        ticket_id: ticketFilterInput.value.trim(),
-        suggestion_id: suggestionFilterInput.value.trim(),
-        evaluation_id: evaluationFilterInput.value.trim(),
-      };
-      Object.entries(extraPairs).forEach(([key, value]) => {
-        if (value) {
-          url.searchParams.set(key, value);
-        } else {
-          url.searchParams.delete(key);
-        }
-      });
-      window.history.replaceState({}, "", url);
-    };
-
-    const originalRenderDetail = renderDetail;
-    renderDetail = function renderAuditDetailExtended() {
-      originalRenderDetail();
-      const item = currentEvent();
-      if (!item) {
-        return;
-      }
-      const payload = item.payload || {};
-      const ticketId = payload.ticket_id || item.ticket_id || "";
-      const suggestionId = payload.suggestion_id || item.suggestion_id || "";
-      const evaluationId = payload.evaluation_id || item.evaluation_id || "";
-      const toolbar = el.auditDetail.querySelector(".toolbar");
-      if (!toolbar) {
-        return;
-      }
-      if (ticketId && !document.getElementById("openTicketBtn")) {
-        const ticketBtn = document.createElement("button");
-        ticketBtn.id = "openTicketBtn";
-        ticketBtn.type = "button";
-        ticketBtn.className = "secondary";
-        ticketBtn.textContent = "打开工单";
-        ticketBtn.addEventListener("click", () => {
-          window.location.href = `/ui/service-tickets?ticket_id=${encodeURIComponent(ticketId)}`;
-        });
-        toolbar.appendChild(ticketBtn);
-      }
-      if (suggestionId && evaluationId && !document.getElementById("openSuggestionBtn")) {
-        const suggestionBtn = document.createElement("button");
-        suggestionBtn.id = "openSuggestionBtn";
-        suggestionBtn.type = "button";
-        suggestionBtn.className = "secondary";
-        suggestionBtn.textContent = "打开建议";
-        suggestionBtn.addEventListener("click", () => {
-          window.location.href = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}&suggestion_id=${encodeURIComponent(suggestionId)}`;
-        });
-        toolbar.appendChild(suggestionBtn);
-      }
-    };
-
-    const originalBootstrap = bootstrap;
-    bootstrap = async function bootstrapAuditExtended() {
-      const query = new URLSearchParams(window.location.search);
-      ticketFilterInput.value = query.get("ticket_id") || "";
-      suggestionFilterInput.value = query.get("suggestion_id") || "";
-      evaluationFilterInput.value = query.get("evaluation_id") || "";
-      await originalBootstrap();
-    };
-
-    el.taskPageBtn.addEventListener("click", () => {
+    function openTaskPage() {
       const taskId = el.taskFilterInput.value.trim() || currentPayload().task_id || "";
-      const target = taskId ? `/ui/tasks?task_id=${encodeURIComponent(taskId)}` : "/ui/tasks";
-      window.location.href = target;
-    });
-    el.approvalPageBtn.addEventListener("click", () => {
+      window.location.href = taskId ? `/ui/tasks?task_id=${encodeURIComponent(taskId)}` : "/ui/tasks";
+    }
+
+    function openApprovalPage() {
       const approvalId = el.approvalFilterInput.value.trim() || currentPayload().approval_id || "";
-      const target = approvalId ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}` : "/ui/approvals";
-      window.location.href = target;
-    });
-    el.workflowPageBtn.addEventListener("click", () => {
-      const workflowCode = currentPayload().workflow || "";
-      const target = workflowCode ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}` : "/ui/workflows";
-      window.location.href = target;
-    });
-    el.capabilityPageBtn.addEventListener("click", () => {
-      const capabilityId = currentPayload().capability_id || "";
-      const target = capabilityId ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}` : "/ui/capabilities";
-      window.location.href = target;
-    });
+      window.location.href = approvalId
+        ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`
+        : "/ui/approvals";
+    }
+
+    function openWorkflowPage() {
+      const workflowCode = el.workflowFilterInput.value.trim() || currentPayload().workflow || "";
+      window.location.href = workflowCode
+        ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`
+        : "/ui/workflows";
+    }
+
+    function openCapabilityPage() {
+      const capabilityId = el.capabilityFilterInput.value.trim() || currentPayload().capability_id || "";
+      window.location.href = capabilityId
+        ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`
+        : "/ui/capabilities";
+    }
+
+    el.taskPageBtn.addEventListener("click", openTaskPage);
+    el.approvalPageBtn.addEventListener("click", openApprovalPage);
+    el.workflowPageBtn.addEventListener("click", openWorkflowPage);
+    el.capabilityPageBtn.addEventListener("click", openCapabilityPage);
     el.loadBtn.addEventListener("click", loadAudit);
-      [el.actionFilterInput, el.actorFilterInput, el.sourceFilterInput, el.eventTypeFilterInput, el.outcomeFilterInput, el.taskFilterInput, el.approvalFilterInput, el.capabilityFilterInput, el.workflowFilterInput].forEach(node => {
-        node.addEventListener("keydown", async event => {
-          if (event.key === "Enter") await loadAudit();
-        });
-      });
-    [ticketFilterInput, suggestionFilterInput, evaluationFilterInput].forEach(node => {
+
+    [
+      el.actionFilterInput,
+      el.actorFilterInput,
+      el.sourceFilterInput,
+      el.eventTypeFilterInput,
+      el.outcomeFilterInput,
+      el.taskFilterInput,
+      el.approvalFilterInput,
+      el.capabilityFilterInput,
+      el.workflowFilterInput,
+      el.ticketFilterInput,
+      el.suggestionFilterInput,
+      el.evaluationFilterInput,
+    ].forEach(node => {
       node.addEventListener("keydown", async event => {
         if (event.key === "Enter") await loadAudit();
       });

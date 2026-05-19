@@ -6,7 +6,12 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from app.db.session import session_scope
 from app.repositories.audit_repository import AuditRepository
-from app.schemas import AuditEventResponse, AuditOverviewResponse
+from app.schemas import (
+    AuditEventResponse,
+    AuditLinkedContextItemResponse,
+    AuditLinkedContextResponse,
+    AuditOverviewResponse,
+)
 
 
 class AuditService:
@@ -117,4 +122,122 @@ class AuditService:
             event_type_counts=event_type_counts,
             action_counts=action_counts,
             linked_context_counts=linked_context_counts,
+        )
+
+    def build_linked_context(
+        self,
+        *,
+        action: str | None = None,
+        actor_id: str | None = None,
+        source: str | None = None,
+        event_type: str | None = None,
+        outcome: int | None = None,
+        task_id: str | None = None,
+        approval_id: str | None = None,
+        capability_id: str | None = None,
+        workflow: str | None = None,
+        ticket_id: str | None = None,
+        suggestion_id: int | None = None,
+        evaluation_id: str | None = None,
+    ) -> AuditLinkedContextResponse:
+        items = self.list_events(
+            action=action,
+            actor_id=actor_id,
+            source=source,
+            event_type=event_type,
+            outcome=outcome,
+            task_id=task_id,
+            approval_id=approval_id,
+            capability_id=capability_id,
+            workflow=workflow,
+            ticket_id=ticket_id,
+            suggestion_id=suggestion_id,
+            evaluation_id=evaluation_id,
+        )
+
+        context_aliases = {
+            "task": ("task_id",),
+            "approval": ("approval_id",),
+            "capability": ("capability_id",),
+            "workflow": ("workflow",),
+            "ticket": ("ticket_id",),
+            "suggestion": ("suggestion_id",),
+            "evaluation": ("evaluation_id",),
+        }
+        context_counts = {key: 0 for key in context_aliases}
+        grouped: dict[tuple[str, str], dict[str, object]] = {}
+
+        for item in items:
+            payload = item.payload or {}
+            for context_type, keys in context_aliases.items():
+                context_value = None
+                for key in keys:
+                    direct_value = getattr(item, key, None)
+                    if direct_value not in (None, ""):
+                        context_value = direct_value
+                        break
+                    payload_value = payload.get(key)
+                    if payload_value not in (None, ""):
+                        context_value = payload_value
+                        break
+                if context_value in (None, ""):
+                    continue
+
+                context_id = str(context_value)
+                context_counts[context_type] += 1
+                group_key = (context_type, context_id)
+                bucket = grouped.setdefault(
+                    group_key,
+                    {
+                        "actions": set(),
+                        "event_count": 0,
+                        "latest_created_at": "",
+                        "latest_action": None,
+                        "latest_actor_id": None,
+                    },
+                )
+                bucket["event_count"] = int(bucket["event_count"]) + 1
+                cast_actions = bucket["actions"]
+                if isinstance(cast_actions, set):
+                    cast_actions.add(item.action)
+                created_at = item.created_at or ""
+                if created_at >= str(bucket["latest_created_at"] or ""):
+                    bucket["latest_created_at"] = created_at
+                    bucket["latest_action"] = item.action
+                    bucket["latest_actor_id"] = item.actor_id
+
+        context_items = [
+            AuditLinkedContextItemResponse(
+                context_type=context_type,
+                context_id=context_id,
+                event_count=int(bucket["event_count"]),
+                actions=sorted(list(bucket["actions"])) if isinstance(bucket["actions"], set) else [],
+                latest_action=(
+                    str(bucket["latest_action"]) if bucket["latest_action"] is not None else None
+                ),
+                latest_actor_id=(
+                    str(bucket["latest_actor_id"])
+                    if bucket["latest_actor_id"] is not None
+                    else None
+                ),
+                latest_created_at=(
+                    str(bucket["latest_created_at"])
+                    if bucket["latest_created_at"]
+                    else None
+                ),
+            )
+            for (context_type, context_id), bucket in grouped.items()
+        ]
+        context_items.sort(
+            key=lambda item: (
+                -item.event_count,
+                item.context_type,
+                item.context_id,
+            )
+        )
+
+        return AuditLinkedContextResponse(
+            total_events=len(items),
+            context_counts=context_counts,
+            items=context_items,
         )

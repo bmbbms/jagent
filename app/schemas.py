@@ -372,6 +372,22 @@ class AuditOverviewResponse(BaseModel):
     linked_context_counts: Dict[str, int] = Field(default_factory=dict)
 
 
+class AuditLinkedContextItemResponse(BaseModel):
+    context_type: str
+    context_id: str
+    event_count: int = 0
+    actions: List[str] = Field(default_factory=list)
+    latest_action: Optional[str] = None
+    latest_actor_id: Optional[str] = None
+    latest_created_at: Optional[str] = None
+
+
+class AuditLinkedContextResponse(BaseModel):
+    total_events: int = 0
+    context_counts: Dict[str, int] = Field(default_factory=dict)
+    items: List[AuditLinkedContextItemResponse] = Field(default_factory=list)
+
+
 class AgentTaskEventResponse(BaseModel):
     event_id: str
     event_type: str
