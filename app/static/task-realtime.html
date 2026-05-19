@@ -333,6 +333,7 @@
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="evaluationCenterBtn" class="secondary">评估中心</button>
         <input id="taskIdInput" placeholder="输入 task_id，例如 task_xxx" />
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -496,6 +497,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      evaluationCenterBtn: document.getElementById("evaluationCenterBtn"),
       statusFilter: document.getElementById("statusFilter"),
       domainFilter: document.getElementById("domainFilter"),
       agentFilter: document.getElementById("agentFilter"),
@@ -923,7 +925,8 @@
             ${evaluation.suggestions.map(item => `
               <div class="list-card">
                 <h3>${escapeHtml(item.optimization_type)}</h3>
-                <div class="subtle">优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
+                <div class="subtle">建议 ID：${escapeHtml(item.suggestion_id || "-")} / 优先级：${escapeHtml(item.priority)} / 状态：${escapeHtml(item.status)}</div>
+                <div class="subtle">负责人：${escapeHtml(item.owner || "unassigned")}</div>
                 <div class="subtle">${escapeHtml(item.suggested_change)}</div>
               </div>
             `).join("")}
@@ -936,11 +939,23 @@
           <div class="subtle">总体评分 / ${escapeHtml(evaluation.result_label)}</div>
           <div style="margin-top: 6px;"><strong>${escapeHtml(evaluation.overall_score)}</strong></div>
           <div class="subtle" style="margin-top: 8px;">${escapeHtml(evaluation.summary || "-")}</div>
+          <div class="subtle" style="margin-top: 8px;">evaluation_id：${escapeHtml(evaluation.evaluation_id || "-")}</div>
         </div>
         <div class="score-list">${details || '<div class="empty">暂无维度明细。</div>'}</div>
         <h2 style="margin-top: 18px;">优化建议</h2>
         ${suggestions}
+        <div style="margin-top: 12px;">
+          <button id="openEvaluationCenterBtn" class="secondary" type="button">打开评估中心查看完整详情</button>
+        </div>
       `;
+
+      const openEvaluationCenterBtn = document.getElementById("openEvaluationCenterBtn");
+      if (openEvaluationCenterBtn && evaluation.evaluation_id) {
+        openEvaluationCenterBtn.addEventListener("click", () => {
+          const target = `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluation.evaluation_id)}`;
+          window.location.href = target;
+        });
+      }
     }
 
     function renderTask(task) {
@@ -1058,6 +1073,13 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.evaluationCenterBtn.addEventListener("click", () => {
+      const evaluationId = state.task?.evaluation?.evaluation_id || "";
+      const target = evaluationId
+        ? `/ui/evaluations?evaluation_id=${encodeURIComponent(evaluationId)}`
+        : "/ui/evaluations";
+      window.location.href = target;
     });
     el.refreshBtn.addEventListener("click", async () => {
       state.taskId = el.taskIdInput.value.trim() || state.taskId;

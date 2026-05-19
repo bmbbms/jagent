@@ -318,6 +318,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     response = client.get("/ui/tasks")
     assert response.status_code == 200
     assert 'id="agentManagerBtn"' in response.text
+    assert 'id="evaluationCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="observations"' in response.text
