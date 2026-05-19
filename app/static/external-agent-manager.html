@@ -687,8 +687,10 @@
               <div class="subtle">${escapeHtml(item.capability_id)}</div>
             </div>
             <div class="tags">
+              <span class="tag ${item.severity === "critical" ? "danger" : item.severity === "high" ? "warning" : ""}">${escapeHtml(item.severity || "medium")}</span>
               <span class="tag ${item.governance_status === "blocked" ? "danger" : "warning"}">${escapeHtml(item.governance_status)}</span>
               <span class="tag">${escapeHtml(item.biz_domain)}</span>
+              <span class="tag">${escapeHtml(item.transport || "-")}</span>
             </div>
           </div>
           <div class="subtle">失败次数：${escapeHtml(item.consecutive_failures)} / 最近延迟：${escapeHtml(item.last_latency_ms ?? "-")} ms</div>
@@ -741,10 +743,15 @@
 
     async function loadHealthOverview() {
       try {
+        const issueQuery = new URLSearchParams();
+        if (el.listDomainFilter.value) issueQuery.set("biz_domain", el.listDomainFilter.value);
+        if (el.listSourceFilter.value) issueQuery.set("source", el.listSourceFilter.value);
+        if (el.listTransportFilter.value) issueQuery.set("transport", el.listTransportFilter.value);
+        if (el.listHealthFilter.value) issueQuery.set("health_status", el.listHealthFilter.value);
         const [overview, governance, issues] = await Promise.all([
           requestJson("/api/external-agents/health-overview"),
           requestJson("/api/external-agents/governance-overview"),
-          requestJson("/api/external-agents/governance-issues"),
+          requestJson(`/api/external-agents/governance-issues?${issueQuery.toString()}`),
         ]);
         el.healthOverview.textContent = `健康概览：总数 ${overview.total} / healthy ${overview.healthy_count} / unhealthy ${overview.unhealthy_count} / unknown ${overview.unknown_count}`;
         el.governanceOverview.textContent = `治理概览：高风险 ${governance.high_risk_count} / 需审批 ${governance.approval_required_count} / degraded ${governance.degraded_count} / blocked ${governance.blocked_count} / slow ${governance.slow_count} / 来源 ${Object.entries(governance.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 协议 ${Object.entries(governance.transport_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 业务域 ${Object.entries(governance.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"}`;
@@ -876,7 +883,10 @@
     el.verifyBtn.addEventListener("click", verifyAgent);
     el.healthCheckBtn.addEventListener("click", healthCheckAgent);
     [el.listDomainFilter, el.listSourceFilter, el.listRiskFilter, el.listApprovalFilter, el.listTransportFilter, el.listHealthFilter].forEach(node => {
-      node.addEventListener("change", loadAgentList);
+      node.addEventListener("change", async () => {
+        await loadAgentList();
+        await loadHealthOverview();
+      });
     });
     el.listCapabilityFilter.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadAgentList();
