@@ -731,6 +731,7 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="listCapabilityFilter"' in response.text
     assert 'id="healthOverview"' in response.text
     assert 'id="governanceOverview"' in response.text
+    assert 'id="governanceIssueList"' in response.text
     assert 'id="agentUrlInput"' in response.text
     assert 'id="capabilityNameInput"' in response.text
     assert 'id="discoverBtn"' in response.text
@@ -784,6 +785,7 @@ def test_external_agent_health_overview_api(client: TestClient) -> None:
     assert "healthy_count" in body
     assert "unhealthy_count" in body
     assert "unknown_count" in body
+    assert "governance_status" in client.get("/api/external-agents/external.stub.agent/health").json()
 
 
 def test_external_agent_governance_overview_api(client: TestClient) -> None:
@@ -793,9 +795,25 @@ def test_external_agent_governance_overview_api(client: TestClient) -> None:
     assert "total" in body
     assert "approval_required_count" in body
     assert "high_risk_count" in body
+    assert "degraded_count" in body
+    assert "blocked_count" in body
+    assert "slow_count" in body
     assert "source_counts" in body
     assert "transport_counts" in body
     assert "domain_counts" in body
+
+
+def test_external_agent_governance_issues_api(client: TestClient) -> None:
+    response = client.get("/api/external-agents/governance-issues")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+      first = body[0]
+      assert "capability_id" in first
+      assert "governance_status" in first
+      assert "reasons" in first
+      assert "recommended_action" in first
 
 
 def test_evaluations_ui_page(client: TestClient) -> None:

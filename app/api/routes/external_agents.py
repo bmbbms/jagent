@@ -12,6 +12,7 @@ from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.schemas import (
     ExternalAgentAddRequest,
     ExternalAgentGovernanceOverviewResponse,
+    ExternalAgentGovernanceIssueResponse,
     ExternalAgentHealthResponse,
     ExternalAgentHealthOverviewResponse,
     ExternalAgentInfo,
@@ -190,6 +191,9 @@ def get_external_agent_governance_overview(
     unknown_count = 0
     approval_required_count = 0
     high_risk_count = 0
+    degraded_count = 0
+    blocked_count = 0
+    slow_count = 0
 
     for item in items:
         source_counts[item.source] = source_counts.get(item.source, 0) + 1
@@ -207,6 +211,12 @@ def get_external_agent_governance_overview(
             approval_required_count += 1
         if item.risk_level == "high":
             high_risk_count += 1
+        if item.governance_status == "degraded":
+            degraded_count += 1
+        if item.governance_status == "blocked":
+            blocked_count += 1
+        if item.last_latency_ms is not None and item.last_latency_ms >= 3000:
+            slow_count += 1
 
     return ExternalAgentGovernanceOverviewResponse(
         total=len(items),
@@ -215,10 +225,55 @@ def get_external_agent_governance_overview(
         unknown_count=unknown_count,
         approval_required_count=approval_required_count,
         high_risk_count=high_risk_count,
+        degraded_count=degraded_count,
+        blocked_count=blocked_count,
+        slow_count=slow_count,
         source_counts=source_counts,
         transport_counts=transport_counts,
         domain_counts=domain_counts,
     )
+
+
+@router.get("/governance-issues", response_model=list[ExternalAgentGovernanceIssueResponse])
+def list_external_agent_governance_issues(
+    registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
+    health_service: ExternalAgentHealthService = Depends(get_external_agent_health_service),
+) -> list[ExternalAgentGovernanceIssueResponse]:
+    health_map = {item.capability_id: item for item in persistence_service.list_items()}
+    issues: list[ExternalAgentGovernanceIssueResponse] = []
+    for metadata in registry.describe_capabilities():
+        health_item = health_map.get(metadata.capability_id)
+        response = _to_response(metadata, health_item=health_item)
+        health = health_service.get_health(metadata.capability_id)
+        if health is None:
+            continue
+        if health.governance_status == "healthy":
+            continue
+        issues.append(
+            ExternalAgentGovernanceIssueResponse(
+                capability_id=response.capability_id,
+                capability_name=response.capability_name,
+                biz_domain=response.biz_domain,
+                health_status=response.health_status,
+                governance_status=health.governance_status,
+                consecutive_failures=health.consecutive_failures,
+                last_latency_ms=health.last_latency_ms,
+                reasons=health.governance_reasons,
+                recommended_action=health.recommended_action,
+            )
+        )
+    issues.sort(
+        key=lambda item: (
+            0 if item.governance_status == "blocked" else 1,
+            -item.consecutive_failures,
+            -(item.last_latency_ms or 0),
+            item.capability_id,
+        )
+    )
+    return issues
 
 
 @router.put("/{capability_id}", response_model=ExternalAgentInfo)
@@ -368,4 +423,13 @@ def _to_response(
         last_error=getattr(health_item, "last_error", None),
         consecutive_failures=int(getattr(health_item, "consecutive_failures", 0) or 0),
         last_latency_ms=getattr(health_item, "last_latency_ms", None),
+        governance_status=ExternalAgentHealthService._build_governance_status(health_item)[0]
+        if health_item is not None
+        else "healthy",
+        governance_reasons=ExternalAgentHealthService._build_governance_status(health_item)[1]
+        if health_item is not None
+        else [],
+        recommended_action=ExternalAgentHealthService._build_governance_status(health_item)[2]
+        if health_item is not None
+        else "当前治理状态稳定，可继续观察。",
     )

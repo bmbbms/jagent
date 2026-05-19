@@ -238,6 +238,9 @@ class ExternalAgentInfo(BaseModel):
     last_error: Optional[str] = None
     consecutive_failures: int = 0
     last_latency_ms: Optional[int] = None
+    governance_status: str = "healthy"
+    governance_reasons: List[str] = Field(default_factory=list)
+    recommended_action: str = ""
 
 
 class ExternalAgentHealthResponse(BaseModel):
@@ -249,6 +252,9 @@ class ExternalAgentHealthResponse(BaseModel):
     last_error: Optional[str] = None
     consecutive_failures: int = 0
     last_latency_ms: Optional[int] = None
+    governance_status: str = "healthy"
+    governance_reasons: List[str] = Field(default_factory=list)
+    recommended_action: str = ""
 
 
 class ExternalAgentHealthOverviewResponse(BaseModel):
@@ -265,9 +271,24 @@ class ExternalAgentGovernanceOverviewResponse(BaseModel):
     unknown_count: int = 0
     approval_required_count: int = 0
     high_risk_count: int = 0
+    degraded_count: int = 0
+    blocked_count: int = 0
+    slow_count: int = 0
     source_counts: Dict[str, int] = Field(default_factory=dict)
     transport_counts: Dict[str, int] = Field(default_factory=dict)
     domain_counts: Dict[str, int] = Field(default_factory=dict)
+
+
+class ExternalAgentGovernanceIssueResponse(BaseModel):
+    capability_id: str
+    capability_name: str
+    biz_domain: BizDomain
+    health_status: str = "unknown"
+    governance_status: str = "healthy"
+    consecutive_failures: int = 0
+    last_latency_ms: Optional[int] = None
+    reasons: List[str] = Field(default_factory=list)
+    recommended_action: str = ""
 
 
 class MCPToolInfo(BaseModel):

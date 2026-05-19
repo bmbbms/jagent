@@ -339,6 +339,9 @@
         </div>
         <div id="healthOverview" class="subtle" style="margin-bottom: 8px;">正在加载健康概览...</div>
         <div id="governanceOverview" class="subtle" style="margin-bottom: 12px;">正在加载治理概览...</div>
+        <div id="governanceIssueList" class="cards" style="margin-bottom: 12px;">
+          <div class="empty">正在加载治理问题清单...</div>
+        </div>
         <div id="listMeta" class="subtle">正在加载...</div>
         <div id="agentList" class="cards">
           <div class="empty">正在加载外部 Agent 列表...</div>
@@ -397,6 +400,7 @@
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
       healthOverview: document.getElementById("healthOverview"),
       governanceOverview: document.getElementById("governanceOverview"),
+      governanceIssueList: document.getElementById("governanceIssueList"),
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
@@ -594,6 +598,7 @@
             <span class="tag">${escapeHtml(item.source || "manual_remote")}</span>
             <span class="tag">priority:${escapeHtml(item.priority)}</span>
             <span class="tag ${item.health_status === "healthy" ? "success" : item.health_status === "unhealthy" ? "danger" : ""}">health:${escapeHtml(item.health_status || "unknown")}</span>
+            <span class="tag ${item.governance_status === "blocked" ? "danger" : item.governance_status === "degraded" ? "warning" : "success"}">governance:${escapeHtml(item.governance_status || "healthy")}</span>
           </div>
           <div class="kv">
             <div class="kv-item"><div class="kv-label">描述</div><div class="kv-value">${escapeHtml(item.description || "-")}</div></div>
@@ -605,6 +610,8 @@
             <div class="kv-item"><div class="kv-label">最近延迟</div><div class="kv-value">${escapeHtml(item.last_latency_ms ?? "-")} ms</div></div>
             <div class="kv-item"><div class="kv-label">失败次数</div><div class="kv-value">${escapeHtml(item.consecutive_failures ?? 0)}</div></div>
             <div class="kv-item"><div class="kv-label">最近错误</div><div class="kv-value">${escapeHtml(item.last_error || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">治理原因</div><div class="kv-value">${escapeHtml((item.governance_reasons || []).join(", ") || "-")}</div></div>
+            <div class="kv-item"><div class="kv-label">建议动作</div><div class="kv-value">${escapeHtml(item.recommended_action || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Skills</div><div class="kv-value">${escapeHtml((item.skills || []).join(", ") || "-")}</div></div>
             <div class="kv-item"><div class="kv-label">Triggers</div><div class="kv-value">${escapeHtml((item.triggers || []).join(", ") || "-")}</div></div>
           </div>
@@ -667,6 +674,30 @@
       });
     }
 
+    function renderGovernanceIssues(items) {
+      if (!items.length) {
+        el.governanceIssueList.innerHTML = '<div class="empty">当前没有需要优先处理的治理问题。</div>';
+        return;
+      }
+      el.governanceIssueList.innerHTML = items.map(item => `
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">${escapeHtml(item.capability_name)}</div>
+              <div class="subtle">${escapeHtml(item.capability_id)}</div>
+            </div>
+            <div class="tags">
+              <span class="tag ${item.governance_status === "blocked" ? "danger" : "warning"}">${escapeHtml(item.governance_status)}</span>
+              <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            </div>
+          </div>
+          <div class="subtle">失败次数：${escapeHtml(item.consecutive_failures)} / 最近延迟：${escapeHtml(item.last_latency_ms ?? "-")} ms</div>
+          <div class="subtle">问题原因：${escapeHtml((item.reasons || []).join(", ") || "-")}</div>
+          <div class="subtle">建议动作：${escapeHtml(item.recommended_action || "-")}</div>
+        </div>
+      `).join("");
+    }
+
     async function loadAgentList() {
       try {
         const query = new URLSearchParams();
@@ -710,15 +741,18 @@
 
     async function loadHealthOverview() {
       try {
-        const [overview, governance] = await Promise.all([
+        const [overview, governance, issues] = await Promise.all([
           requestJson("/api/external-agents/health-overview"),
           requestJson("/api/external-agents/governance-overview"),
+          requestJson("/api/external-agents/governance-issues"),
         ]);
         el.healthOverview.textContent = `健康概览：总数 ${overview.total} / healthy ${overview.healthy_count} / unhealthy ${overview.unhealthy_count} / unknown ${overview.unknown_count}`;
-        el.governanceOverview.textContent = `治理概览：高风险 ${governance.high_risk_count} / 需审批 ${governance.approval_required_count} / 来源 ${Object.entries(governance.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 协议 ${Object.entries(governance.transport_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 业务域 ${Object.entries(governance.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"}`;
+        el.governanceOverview.textContent = `治理概览：高风险 ${governance.high_risk_count} / 需审批 ${governance.approval_required_count} / degraded ${governance.degraded_count} / blocked ${governance.blocked_count} / slow ${governance.slow_count} / 来源 ${Object.entries(governance.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 协议 ${Object.entries(governance.transport_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"} / 业务域 ${Object.entries(governance.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-"}`;
+        renderGovernanceIssues(issues);
       } catch (error) {
         el.healthOverview.textContent = `健康概览加载失败：${error.message}`;
         el.governanceOverview.textContent = `治理概览加载失败：${error.message}`;
+        el.governanceIssueList.innerHTML = `<div class="empty">治理问题清单加载失败：${escapeHtml(error.message)}</div>`;
       }
     }
 
