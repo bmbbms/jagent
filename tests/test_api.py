@@ -761,6 +761,12 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     overview = overview_response.json()
     assert "total" in overview
     assert overview["total"] >= 1
+    assert "ticket_bound_count" in overview
+    assert "ticket_unbound_count" in overview
+    assert "completed_ticket_count" in overview
+    assert "backlog_count" in overview
+    assert "high_priority_backlog_count" in overview
+    assert "completion_rate" in overview
 
     update_response = client.put(
         f"/api/evaluations/suggestions/{first['suggestion_id']}",
@@ -813,6 +819,7 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     status_overview = status_overview_response.json()
     assert status_overview["total"] >= 1
     assert status_overview["in_progress_count"] == status_overview["total"]
+    assert status_overview["ticket_bound_count"] >= 1
 
     ticket_list_response = client.get(
         "/api/service-tickets",
@@ -860,6 +867,16 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert synced["priority"] == "medium"
     assert synced["owner"] == "agent-optimizer"
     assert synced["closed_at"] is not None
+
+    final_overview_response = client.get(
+        "/api/evaluations/suggestions/overview",
+        params={"agent_id": agent_id},
+    )
+    assert final_overview_response.status_code == 200
+    final_overview = final_overview_response.json()
+    assert final_overview["ticket_bound_count"] >= 1
+    assert final_overview["completed_ticket_count"] >= 1
+    assert final_overview["completion_rate"] >= 0
 
 
 def test_workflow_api_and_task_workflow_events(client: TestClient) -> None:

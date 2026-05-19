@@ -515,6 +515,12 @@ class AgentOptimizationSuggestionOverviewResponse(BaseModel):
     in_progress_count: int = 0
     completed_count: int = 0
     high_priority_count: int = 0
+    ticket_bound_count: int = 0
+    ticket_unbound_count: int = 0
+    completed_ticket_count: int = 0
+    backlog_count: int = 0
+    high_priority_backlog_count: int = 0
+    completion_rate: float = 0.0
 
 
 class AgentEvaluationSummaryResponse(BaseModel):

@@ -284,12 +284,35 @@ class EvaluationService:
             owner=owner,
             priority=priority,
         )
+        total = len(items)
+        ticket_bound_count = sum(1 for item in items if item.ticket_id)
+        completed_ticket_count = sum(
+            1
+            for item in items
+            if item.ticket_id and item.ticket_status in {"resolved", "closed"}
+        )
+        backlog_count = sum(1 for item in items if item.status != "completed")
+        high_priority_backlog_count = sum(
+            1
+            for item in items
+            if item.priority == "high" and item.status != "completed"
+        )
+        completion_rate = round(
+            (sum(1 for item in items if item.status == "completed") / total) * 100,
+            2,
+        ) if total else 0.0
         return AgentOptimizationSuggestionOverviewResponse(
-            total=len(items),
+            total=total,
             new_count=sum(1 for item in items if item.status == "new"),
             in_progress_count=sum(1 for item in items if item.status == "in_progress"),
             completed_count=sum(1 for item in items if item.status == "completed"),
             high_priority_count=sum(1 for item in items if item.priority == "high"),
+            ticket_bound_count=ticket_bound_count,
+            ticket_unbound_count=total - ticket_bound_count,
+            completed_ticket_count=completed_ticket_count,
+            backlog_count=backlog_count,
+            high_priority_backlog_count=high_priority_backlog_count,
+            completion_rate=completion_rate,
         )
 
     def update_optimization_suggestion(

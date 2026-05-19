@@ -770,6 +770,83 @@
       syncQuery();
     }
 
+    function renderSuggestionOverview() {
+      if (!state.suggestionOverview) {
+        el.suggestionOverviewGrid.innerHTML = '<div class="empty">暂无优化建议概览。</div>';
+        return;
+      }
+      const cards = [
+        { label: "建议总数", value: state.suggestionOverview.total, status: "", priority: "", ticketBound: "" },
+        { label: "新建", value: state.suggestionOverview.new_count, status: "new", priority: "", ticketBound: "" },
+        { label: "进行中", value: state.suggestionOverview.in_progress_count, status: "in_progress", priority: "", ticketBound: "" },
+        { label: "已完成", value: state.suggestionOverview.completed_count, status: "completed", priority: "", ticketBound: "" },
+        { label: "高优先级", value: state.suggestionOverview.high_priority_count, status: "", priority: "high", ticketBound: "" },
+        { label: "已转工单", value: state.suggestionOverview.ticket_bound_count, status: "", priority: "", ticketBound: "true" },
+        { label: "未转工单", value: state.suggestionOverview.ticket_unbound_count, status: "", priority: "", ticketBound: "false" },
+        { label: "已闭环工单", value: state.suggestionOverview.completed_ticket_count, status: "completed", priority: "", ticketBound: "true" },
+        { label: "积压中", value: state.suggestionOverview.backlog_count, status: "backlog", priority: "", ticketBound: "" },
+        { label: "高优积压", value: state.suggestionOverview.high_priority_backlog_count, status: "backlog", priority: "high", ticketBound: "" },
+        { label: "闭环率", value: `${state.suggestionOverview.completion_rate}%`, status: "completed", priority: "", ticketBound: "" },
+      ];
+      el.suggestionOverviewGrid.innerHTML = cards.map(item => `
+        <div
+          class="overview-card interactive ${isSuggestionOverviewCardActive(item) ? "active" : ""}"
+          data-suggestion-overview-status="${escapeHtml(item.status)}"
+          data-suggestion-overview-priority="${escapeHtml(item.priority)}"
+          data-suggestion-overview-ticket-bound="${escapeHtml(item.ticketBound)}"
+        >
+          <div class="subtle">${escapeHtml(item.label)}</div>
+          <strong>${escapeHtml(item.value)}</strong>
+        </div>
+      `).join("");
+      el.suggestionOverviewGrid
+        .querySelectorAll("[data-suggestion-overview-status], [data-suggestion-overview-priority], [data-suggestion-overview-ticket-bound]")
+        .forEach(node => {
+          node.addEventListener("click", async () => {
+            const nextStatus = node.getAttribute("data-suggestion-overview-status") || "";
+            const nextPriority = node.getAttribute("data-suggestion-overview-priority") || "";
+            const ticketBound = node.getAttribute("data-suggestion-overview-ticket-bound") || "";
+            el.suggestionStatusFilter.value = nextStatus === "backlog" ? "" : nextStatus;
+            el.suggestionPriorityFilter.value = nextPriority;
+            await loadSuggestionOverview();
+            await loadSuggestions({
+              backlogOnly: nextStatus === "backlog",
+              ticketBound: ticketBound || null,
+            });
+          });
+        });
+    }
+
+    function isSuggestionOverviewCardActive(item) {
+      const currentStatus = el.suggestionStatusFilter.value || "";
+      const currentPriority = el.suggestionPriorityFilter.value || "";
+      if (item.status === "backlog") {
+        return currentPriority === item.priority;
+      }
+      return currentStatus === item.status && currentPriority === item.priority;
+    }
+
+    async function loadSuggestions(options = {}) {
+      const query = buildSuggestionQuery();
+      state.suggestions = await fetchJson(`/api/evaluations/suggestions?${query.toString()}`);
+      if (options.backlogOnly) {
+        state.suggestions = state.suggestions.filter(item => item.status !== "completed");
+      }
+      if (options.ticketBound === "true") {
+        state.suggestions = state.suggestions.filter(item => Boolean(item.ticket_id));
+      } else if (options.ticketBound === "false") {
+        state.suggestions = state.suggestions.filter(item => !item.ticket_id);
+      }
+      if (state.selectedSuggestionId) {
+        const exists = state.suggestions.some(item => String(item.suggestion_id) === String(state.selectedSuggestionId));
+        if (!exists) {
+          state.selectedSuggestionId = "";
+        }
+      }
+      renderSuggestionList();
+      syncQuery();
+    }
+
     async function bootstrap() {
       const query = new URLSearchParams(window.location.search);
       state.evaluationId = query.get("evaluation_id") || "";
