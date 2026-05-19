@@ -295,8 +295,14 @@ class MCPToolOverviewResponse(BaseModel):
     called_tool_count: int = 0
     failure_tool_count: int = 0
     total_call_count: int = 0
+    disabled_tool_count: int = 0
+    slow_tool_count: int = 0
+    total_failure_count: int = 0
+    high_risk_tool_count: int = 0
     providers: List[str] = Field(default_factory=list)
     transports: List[str] = Field(default_factory=list)
+    provider_failure_counts: Dict[str, int] = Field(default_factory=dict)
+    transport_failure_counts: Dict[str, int] = Field(default_factory=dict)
 
 
 class SkillInfo(BaseModel):

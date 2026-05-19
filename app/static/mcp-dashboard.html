@@ -237,13 +237,19 @@
         <div class="card">
           <div class="kv-item"><div class="kv-label">MCP 工具总数</div><div class="kv-value">${escapeHtml(overview.total)}</div></div>
           <div class="kv-item"><div class="kv-label">启用配置数</div><div class="kv-value">${escapeHtml(overview.enabled_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">未启用工具数</div><div class="kv-value">${escapeHtml(overview.disabled_tool_count || 0)}</div></div>
           <div class="kv-item"><div class="kv-label">Provider 数</div><div class="kv-value">${escapeHtml(overview.provider_count)}</div></div>
           <div class="kv-item"><div class="kv-label">Transport 数</div><div class="kv-value">${escapeHtml(overview.transport_count)}</div></div>
           <div class="kv-item"><div class="kv-label">已调用工具数</div><div class="kv-value">${escapeHtml(overview.called_tool_count)}</div></div>
           <div class="kv-item"><div class="kv-label">失败工具数</div><div class="kv-value">${escapeHtml(overview.failure_tool_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">高风险工具数</div><div class="kv-value">${escapeHtml(overview.high_risk_tool_count || 0)}</div></div>
+          <div class="kv-item"><div class="kv-label">慢调用工具数</div><div class="kv-value">${escapeHtml(overview.slow_tool_count || 0)}</div></div>
+          <div class="kv-item"><div class="kv-label">累计失败次数</div><div class="kv-value">${escapeHtml(overview.total_failure_count || 0)}</div></div>
           <div class="kv-item"><div class="kv-label">累计调用次数</div><div class="kv-value">${escapeHtml(overview.total_call_count)}</div></div>
           <div class="kv-item"><div class="kv-label">Providers</div><div class="kv-value">${escapeHtml((overview.providers || []).join(", ") || "-")}</div></div>
           <div class="kv-item"><div class="kv-label">Transports</div><div class="kv-value">${escapeHtml((overview.transports || []).join(", ") || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">Provider 风险分布</div><div class="kv-value">${escapeHtml(Object.entries(overview.provider_failure_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">Transport 风险分布</div><div class="kv-value">${escapeHtml(Object.entries(overview.transport_failure_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
         </div>
       `;
     }

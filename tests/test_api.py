@@ -54,8 +54,14 @@ def test_mcp_tools_api_and_overview(client: TestClient) -> None:
     overview = overview_response.json()
     assert "total" in overview
     assert "enabled_count" in overview
+    assert "disabled_tool_count" in overview
+    assert "slow_tool_count" in overview
+    assert "total_failure_count" in overview
+    assert "high_risk_tool_count" in overview
     assert "providers" in overview
     assert "transports" in overview
+    assert "provider_failure_counts" in overview
+    assert "transport_failure_counts" in overview
 
     recent_calls_response = client.get(
         f"/api/mcp/tools/{first['tool_id']}/recent-calls",
@@ -950,6 +956,8 @@ def test_mcp_ui_page(client: TestClient) -> None:
     assert 'id="toolDetail"' in response.text
     assert 'id="recentCalls"' in response.text
     assert "/api/mcp/tools" in response.text
+    assert "Provider 风险分布" in response.text
+    assert "Transport 风险分布" in response.text
 
 
 def test_evaluation_analytics_api(client: TestClient) -> None:

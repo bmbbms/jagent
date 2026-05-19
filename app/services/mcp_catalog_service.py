@@ -64,6 +64,18 @@ class MCPCatalogService:
         transports = sorted({item.transport for item in items})
         called_items = [item for item in items if item.call_count > 0]
         failure_items = [item for item in items if item.failure_count > 0]
+        provider_failure_counts: dict[str, int] = {}
+        transport_failure_counts: dict[str, int] = {}
+
+        for item in items:
+            if item.failure_count > 0:
+                provider_failure_counts[item.provider] = (
+                    provider_failure_counts.get(item.provider, 0) + item.failure_count
+                )
+                transport_failure_counts[item.transport] = (
+                    transport_failure_counts.get(item.transport, 0) + item.failure_count
+                )
+
         return MCPToolOverviewResponse(
             total=len(items),
             enabled_count=sum(1 for item in items if item.enabled),
@@ -72,8 +84,20 @@ class MCPCatalogService:
             called_tool_count=len(called_items),
             failure_tool_count=len(failure_items),
             total_call_count=sum(item.call_count for item in items),
+            disabled_tool_count=sum(1 for item in items if not item.enabled),
+            slow_tool_count=sum(
+                1 for item in items if (item.average_duration_ms or 0) >= 1500
+            ),
+            total_failure_count=sum(item.failure_count for item in items),
+            high_risk_tool_count=sum(
+                1
+                for item in items
+                if item.failure_count > 0 or (item.average_duration_ms or 0) >= 1500
+            ),
             providers=providers,
             transports=transports,
+            provider_failure_counts=provider_failure_counts,
+            transport_failure_counts=transport_failure_counts,
         )
 
     def _build_usage_map(self) -> dict[str, dict[str, object]]:
