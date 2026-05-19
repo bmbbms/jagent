@@ -2,7 +2,7 @@ from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.dependencies import get_evaluation_service
+from app.dependencies import get_audit_service, get_evaluation_service
 from app.schemas import (
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationAnalyticsItemResponse,
@@ -13,6 +13,7 @@ from app.schemas import (
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
 )
+from app.services.audit_service import AuditService
 from app.services.evaluation_service import EvaluationService
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
@@ -119,10 +120,35 @@ def create_optimization_suggestion_ticket(
     suggestion_id: int,
     request: AgentOptimizationSuggestionTicketRequest,
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> AgentOptimizationSuggestionResponse:
     item = evaluation_service.create_suggestion_ticket(suggestion_id, request)
     if item is None:
         raise HTTPException(status_code=404, detail="optimization suggestion not found")
+    audit_service.record(
+        "service_ticket.create",
+        request.requested_by,
+        {
+            "source": "evaluation",
+            "event_type": "service_ticket",
+            "task_id": getattr(item, "linked_task_id", None) or None,
+            "evaluation_id": item.source_ref if item.source_type == "evaluation" else None,
+            "suggestion_id": item.suggestion_id,
+            "ticket_id": item.ticket_id,
+            "ticket_status": item.ticket_status,
+            "agent_id": item.target_ref,
+            "capability_id": item.target_ref,
+            "request_summary": "create service ticket from optimization suggestion",
+            "response_summary": item.suggested_change,
+            "outcome": 1,
+            "payload": {
+                "ticket_id": item.ticket_id,
+                "suggestion_id": item.suggestion_id,
+                "priority": item.priority,
+                "owner": item.owner,
+            },
+        },
+    )
     return item
 
 

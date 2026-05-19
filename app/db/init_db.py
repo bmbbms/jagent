@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import sys
 import threading
 from pathlib import Path
@@ -19,6 +20,7 @@ _init_lock = threading.Lock()
 _init_done = False
 _migration_lock = threading.Lock()
 _migration_done = False
+logger = logging.getLogger(__name__)
 
 
 def init_db(engine: Engine) -> None:
@@ -212,6 +214,10 @@ def run_db_migrations(settings: Settings) -> None:
         config.set_main_option("script_location", str(alembic_script_path))
         config.set_main_option("sqlalchemy.url", settings.database_url)
 
-        alembic_command.upgrade(config, "head")
+        try:
+            alembic_command.upgrade(config, "head")
+        except Exception:
+            logger.exception("Database migration failed while upgrading Alembic to head")
+            raise
 
         _migration_done = True
