@@ -292,6 +292,21 @@
 
       <section class="panel">
         <h2>已注册外部 Agent</h2>
+        <div class="actions" style="margin-bottom: 12px;">
+          <select id="listDomainFilter">
+            <option value="">全部业务域</option>
+            <option value="merchant">merchant</option>
+            <option value="operations">operations</option>
+            <option value="data_support">data_support</option>
+            <option value="partner">partner</option>
+          </select>
+          <select id="listSourceFilter">
+            <option value="">全部来源</option>
+            <option value="manual_remote">manual_remote</option>
+            <option value="generic_add">generic_add</option>
+          </select>
+          <input id="listCapabilityFilter" placeholder="按 capability_id 过滤" />
+        </div>
         <div id="listMeta" class="subtle">正在加载...</div>
         <div id="agentList" class="cards">
           <div class="empty">正在加载外部 Agent 列表...</div>
@@ -340,6 +355,9 @@
       refreshBtn: document.getElementById("refreshBtn"),
       resetFormBtn: document.getElementById("resetFormBtn"),
       verifyBtn: document.getElementById("verifyBtn"),
+      listDomainFilter: document.getElementById("listDomainFilter"),
+      listSourceFilter: document.getElementById("listSourceFilter"),
+      listCapabilityFilter: document.getElementById("listCapabilityFilter"),
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
       resultBox: document.getElementById("resultBox"),
@@ -566,7 +584,11 @@
 
     async function loadAgentList() {
       try {
-        const items = await requestJson("/api/external-agents");
+        const query = new URLSearchParams();
+        if (el.listDomainFilter.value) query.set("biz_domain", el.listDomainFilter.value);
+        if (el.listSourceFilter.value) query.set("source", el.listSourceFilter.value);
+        if (el.listCapabilityFilter.value.trim()) query.set("capability_id", el.listCapabilityFilter.value.trim());
+        const items = await requestJson(`/api/external-agents?${query.toString()}`);
         renderAgentList(items);
         const queryCapabilityId = getQueryCapabilityId();
         if (queryCapabilityId) {
@@ -676,6 +698,12 @@
       setStatus("已重置表单", "success");
     });
     el.verifyBtn.addEventListener("click", verifyAgent);
+    [el.listDomainFilter, el.listSourceFilter].forEach(node => {
+      node.addEventListener("change", loadAgentList);
+    });
+    el.listCapabilityFilter.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadAgentList();
+    });
 
     resetForm();
     loadAgentList();

@@ -209,6 +209,15 @@ def test_register_and_route_external_agent(
     external_agents = external_agents_response.json()
     assert any(item["capability_id"] == "external.stub.agent" for item in external_agents)
 
+    filtered_response = client.get(
+        "/api/external-agents",
+        params={"biz_domain": "merchant", "source": "manual_remote", "capability_id": "external.stub.agent"},
+    )
+    assert filtered_response.status_code == 200
+    filtered_items = filtered_response.json()
+    assert len(filtered_items) == 1
+    assert filtered_items[0]["capability_id"] == "external.stub.agent"
+
     capabilities_response = client.get("/api/capabilities")
     assert capabilities_response.status_code == 200
     capabilities = capabilities_response.json()

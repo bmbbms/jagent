@@ -418,6 +418,9 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert response.status_code == 200
     assert '/ui/capabilities' in response.text
     assert '/ui/skills' in response.text
+    assert 'id="listDomainFilter"' in response.text
+    assert 'id="listSourceFilter"' in response.text
+    assert 'id="listCapabilityFilter"' in response.text
     assert 'id="agentUrlInput"' in response.text
     assert 'id="capabilityNameInput"' in response.text
     assert 'id="discoverBtn"' in response.text

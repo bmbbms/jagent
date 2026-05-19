@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.dependencies import (
     get_external_capability_persistence_service,
@@ -104,9 +104,19 @@ def add_external_agent(
 
 @router.get("", response_model=list[ExternalAgentInfo])
 def list_external_agents(
+    biz_domain: str | None = Query(default=None),
+    source: str | None = Query(default=None),
+    capability_id: str | None = Query(default=None),
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
 ) -> list[ExternalAgentInfo]:
-    return [_to_response(item) for item in registry.describe_capabilities()]
+    items = [_to_response(item) for item in registry.describe_capabilities()]
+    if biz_domain:
+        items = [item for item in items if item.biz_domain.value == biz_domain]
+    if source:
+        items = [item for item in items if item.source == source]
+    if capability_id:
+        items = [item for item in items if item.capability_id == capability_id]
+    return items
 
 
 @router.put("/{capability_id}", response_model=ExternalAgentInfo)
