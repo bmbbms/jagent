@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.db.models import ServiceTicketModel
 from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
@@ -16,6 +18,7 @@ from app.schemas import (
     AgentObservationLogResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
+    AgentOptimizationSuggestionTicketRequest,
     AgentOptimizationSuggestionUpdateRequest,
     ChatRequest,
     ChatResponse,
@@ -308,6 +311,73 @@ class EvaluationService:
             session.refresh(item)
             return self._to_suggestion(item)
 
+    def create_suggestion_ticket(
+        self,
+        suggestion_id: int,
+        request: AgentOptimizationSuggestionTicketRequest,
+    ) -> AgentOptimizationSuggestionResponse | None:
+        with self._session_factory() as session:
+            suggestion = self._repository.get_suggestion(session, suggestion_id)
+            if suggestion is None:
+                return None
+            if suggestion.ticket_id:
+                return self._to_suggestion(suggestion)
+
+            ticket_id = f"EVAL-{uuid4().hex[:8].upper()}"
+            description_lines = [
+                f"evaluation_id={suggestion.evaluation_id}",
+                f"suggestion_id={suggestion.id}",
+                f"agent_id={suggestion.agent_id}",
+                f"optimization_type={suggestion.optimization_type}",
+                f"target_ref={suggestion.target_ref or '-'}",
+                f"source_type={suggestion.source_type or '-'}",
+                f"source_ref={suggestion.source_ref or '-'}",
+                "",
+                "current_value_summary:",
+                suggestion.current_value_summary or "-",
+                "",
+                "suggested_change:",
+                suggestion.suggested_change,
+            ]
+            if request.comment:
+                description_lines.extend(["", "comment:", request.comment])
+
+            session.add(
+                ServiceTicketModel(
+                    ticket_id=ticket_id,
+                    biz_domain="operations",
+                    category="agent_optimization",
+                    priority=request.priority or suggestion.priority,
+                    title=f"评估优化任务/{suggestion.optimization_type}",
+                    description="\n".join(description_lines),
+                    status="submitted",
+                    requested_by=request.requested_by,
+                    source="evaluation",
+                    payload={
+                        "suggestion_id": suggestion.id,
+                        "evaluation_id": suggestion.evaluation_id,
+                        "agent_id": suggestion.agent_id,
+                        "optimization_type": suggestion.optimization_type,
+                        "target_ref": suggestion.target_ref,
+                        "source_type": suggestion.source_type,
+                        "source_ref": suggestion.source_ref,
+                    },
+                )
+            )
+            item = self._repository.bind_ticket(
+                session,
+                suggestion_id=suggestion_id,
+                ticket_id=ticket_id,
+                ticket_status="submitted",
+                owner=request.owner,
+                priority=request.priority,
+            )
+            session.commit()
+            if item is None:
+                return None
+            session.refresh(item)
+            return self._to_suggestion(item)
+
     def _collect_runtime_facts(self, *, task_id: str) -> EvaluationRuntimeFacts:
         observations = (
             self._observation_service.list_observations(task_id=task_id)
@@ -448,10 +518,10 @@ class EvaluationService:
         return (
             f"评估 Agent 认为当前任务总体表现为 {overall_score:.2f} 分，"
             f"主要由 {response.capability_name} 完成。"
-            f"本次观测到 {len(runtime_facts.observations)} 条运行观测、"
+            f"本次观测到 {len(runtime_facts.observations)} 条运行观测，"
             f"{len(runtime_facts.tool_calls)} 次工具调用，"
             f"fallback {runtime_facts.fallback_count} 次，"
-            f"可用于后续路由优化、提示词优化和工具编排调整。"
+            "可用于后续路由优化、提示词优化和工具编排调整。"
         )
 
     @staticmethod
@@ -514,8 +584,10 @@ class EvaluationService:
                 "optimization_type": "prompt",
                 "target_ref": response.capability_id,
                 "current_value_summary": response.summary[:200],
-                "suggested_change": "增加任务目标、输出格式和边界条件描述，提升回答稳定性与一致性。",
+                "suggested_change": "补充任务目标、输出格式和边界条件描述，提升回答稳定性与一致性。",
                 "priority": "medium",
+                "source_type": "evaluation_dimension",
+                "source_ref": "completion",
             }
         ]
         if scores["tool_usage"] < 85:
@@ -526,6 +598,8 @@ class EvaluationService:
                     "current_value_summary": ",".join(response.selected_tools),
                     "suggested_change": "收敛工具清单，仅保留高命中率工具，并增加工具选择规则。",
                     "priority": "high",
+                    "source_type": "evaluation_dimension",
+                    "source_ref": "tool_usage",
                 }
             )
         if runtime_facts.fallback_count > 0:
@@ -537,8 +611,12 @@ class EvaluationService:
                         f"fallback_count={runtime_facts.fallback_count}, "
                         f"observations={len(runtime_facts.observations)}"
                     ),
-                    "suggested_change": "补齐 AgentScope 模型桥接配置或增强 runtime session 编排，降低本地 fallback 比例。",
+                    "suggested_change": (
+                        "补齐 AgentScope 模型桥接配置或增强 runtime session 编排，降低本地 fallback 比例。"
+                    ),
                     "priority": "high",
+                    "source_type": "runtime_fact",
+                    "source_ref": "fallback_count",
                 }
             )
         if scores["efficiency"] < 80:
@@ -549,6 +627,8 @@ class EvaluationService:
                     "current_value_summary": f"total_latency_ms={runtime_facts.total_latency_ms}",
                     "suggested_change": "优化 planner 到 executor 的链路，收敛工具数和中间阶段，缩短端到端耗时。",
                     "priority": "medium",
+                    "source_type": "evaluation_dimension",
+                    "source_ref": "efficiency",
                 }
             )
         return suggestions
@@ -605,6 +685,11 @@ class EvaluationService:
             priority=item.priority,
             status=item.status,
             owner=item.owner,
+            source_type=item.source_type,
+            source_ref=item.source_ref,
+            ticket_id=item.ticket_id,
+            ticket_status=item.ticket_status,
+            closed_at=item.closed_at.isoformat() if item.closed_at else None,
             create_time=item.create_time.isoformat() if item.create_time else "",
             update_time=item.update_time.isoformat() if item.update_time else "",
         )

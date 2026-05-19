@@ -433,6 +433,11 @@ class AgentOptimizationSuggestionModel(Base):
     priority: Mapped[str] = mapped_column(String(16), default="medium")
     status: Mapped[str] = mapped_column(String(16), default="new")
     owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    ticket_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ticket_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     update_time: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

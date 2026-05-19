@@ -733,6 +733,8 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert "suggestion_id" in first
     assert "status" in first
     assert "priority" in first
+    assert "source_type" in first
+    assert "source_ref" in first
 
     overview_response = client.get(
         "/api/evaluations/suggestions/overview",
@@ -756,6 +758,21 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert updated["status"] == "in_progress"
     assert updated["owner"] == "agent-ops"
     assert updated["priority"] == "high"
+
+    ticket_response = client.post(
+        f"/api/evaluations/suggestions/{first['suggestion_id']}/ticket",
+        json={
+            "requested_by": "agent-ops",
+            "owner": "agent-ops",
+            "priority": "high",
+            "comment": "转为评估优化工单",
+        },
+    )
+    assert ticket_response.status_code == 200
+    ticket_bound = ticket_response.json()
+    assert ticket_bound["ticket_id"] is not None
+    assert ticket_bound["ticket_status"] == "submitted"
+    assert ticket_bound["status"] == "in_progress"
 
     priority_filtered_response = client.get(
         "/api/evaluations/suggestions",

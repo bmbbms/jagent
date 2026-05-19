@@ -367,6 +367,11 @@
       return "";
     }
 
+    function buildTicketSummary(item) {
+      if (!item.ticket_id) return "未转工单";
+      return `${item.ticket_id} / ${item.ticket_status || "unknown"}`;
+    }
+
     function formatDate(value) {
       if (!value) return "-";
       const date = new Date(value);
@@ -548,6 +553,8 @@
               <span class="tag">${escapeHtml(item.owner || "unassigned")}</span>
             </div>
             <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+            <div class="subtle">来源：${escapeHtml(item.source_type || "-")} / ${escapeHtml(item.source_ref || "-")}</div>
+            <div class="subtle">工单：${escapeHtml(buildTicketSummary(item))}</div>
             <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
           </div>
         `).join("")
@@ -590,6 +597,8 @@
             <span class="tag">${escapeHtml(item.owner || "unassigned")}</span>
           </div>
           <div class="subtle">${escapeHtml(item.suggested_change)}</div>
+          <div class="subtle">来源：${escapeHtml(item.source_type || "-")} / ${escapeHtml(item.source_ref || "-")}</div>
+          <div class="subtle">工单：${escapeHtml(buildTicketSummary(item))}</div>
           <div class="subtle">suggestion_id：${escapeHtml(item.suggestion_id)} / 更新时间：${escapeHtml(formatDate(item.update_time))}</div>
           <div class="inline-form">
             <input data-owner-input="${escapeHtml(item.suggestion_id)}" placeholder="owner" value="${escapeHtml(item.owner || "")}" />
@@ -604,6 +613,10 @@
               <option value="low" ${item.priority === "low" ? "selected" : ""}>low</option>
             </select>
             <button data-save-suggestion="${escapeHtml(item.suggestion_id)}">保存</button>
+            <button
+              data-create-ticket="${escapeHtml(item.suggestion_id)}"
+              ${item.ticket_id ? "disabled" : ""}
+            >${item.ticket_id ? "已转工单" : "转为工单"}</button>
           </div>
         </div>
       `).join("");
@@ -621,6 +634,33 @@
               owner: ownerNode?.value.trim() || null,
               status: statusNode?.value || null,
               priority: priorityNode?.value || null,
+            }),
+          });
+          await loadSuggestionOverview();
+          await loadSuggestions();
+          if (state.evaluationId) {
+            await loadEvaluationDetail();
+          }
+        });
+      });
+      el.suggestionList.querySelectorAll("[data-create-ticket]").forEach(node => {
+        node.addEventListener("click", async event => {
+          event.stopPropagation();
+          const suggestionId = node.getAttribute("data-create-ticket");
+          if (!suggestionId || node.hasAttribute("disabled")) {
+            return;
+          }
+          const ownerNode = document.querySelector(`[data-owner-input="${suggestionId}"]`);
+          const priorityNode = document.querySelector(`[data-priority-input="${suggestionId}"]`);
+          const owner = ownerNode?.value.trim() || "evaluation-dashboard";
+          await fetchJson(`/api/evaluations/suggestions/${encodeURIComponent(suggestionId)}/ticket`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              requested_by: owner,
+              owner,
+              priority: priorityNode?.value || null,
+              comment: "由评估中心创建优化工单",
             }),
           });
           await loadSuggestionOverview();

@@ -8,6 +8,7 @@ from app.schemas import (
     AgentEvaluationAnalyticsItemResponse,
     AgentOptimizationSuggestionOverviewResponse,
     AgentOptimizationSuggestionResponse,
+    AgentOptimizationSuggestionTicketRequest,
     AgentOptimizationSuggestionUpdateRequest,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
@@ -105,6 +106,21 @@ def update_optimization_suggestion(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> AgentOptimizationSuggestionResponse:
     item = evaluation_service.update_optimization_suggestion(suggestion_id, request)
+    if item is None:
+        raise HTTPException(status_code=404, detail="optimization suggestion not found")
+    return item
+
+
+@router.post(
+    "/suggestions/{suggestion_id}/ticket",
+    response_model=AgentOptimizationSuggestionResponse,
+)
+def create_optimization_suggestion_ticket(
+    suggestion_id: int,
+    request: AgentOptimizationSuggestionTicketRequest,
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentOptimizationSuggestionResponse:
+    item = evaluation_service.create_suggestion_ticket(suggestion_id, request)
     if item is None:
         raise HTTPException(status_code=404, detail="optimization suggestion not found")
     return item

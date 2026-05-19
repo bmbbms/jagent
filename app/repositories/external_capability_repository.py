@@ -38,9 +38,19 @@ class ExternalCapabilityRepository:
 
     def upsert(self, session: Session, metadata: CapabilityMetadata) -> CapabilityMetadata:
         item = session.get(ExternalCapabilityRegistryModel, metadata.capability_id)
+        should_reset_health = False
         if item is None:
             item = ExternalCapabilityRegistryModel(capability_id=metadata.capability_id)
             session.add(item)
+            should_reset_health = True
+        else:
+            if (
+                item.endpoint != metadata.endpoint
+                or item.service_path != metadata.service_path
+                or item.transport != metadata.transport
+                or item.enabled is False
+            ):
+                should_reset_health = True
 
         item.capability_name = metadata.capability_name
         item.biz_domain = metadata.biz_domain.value
@@ -59,8 +69,14 @@ class ExternalCapabilityRepository:
         item.service_port = metadata.service_port
         item.service_path = metadata.service_path
         item.extras = metadata.extras
-        if not item.health_status:
+        if should_reset_health or not item.health_status:
             item.health_status = "unknown"
+            item.last_check_time = None
+            item.last_success_time = None
+            item.last_failure_time = None
+            item.last_error = None
+            item.last_latency_ms = None
+            item.consecutive_failures = 0
         if item.consecutive_failures is None:
             item.consecutive_failures = 0
         item.enabled = True

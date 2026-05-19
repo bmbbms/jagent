@@ -487,6 +487,11 @@ class AgentOptimizationSuggestionResponse(BaseModel):
     priority: str
     status: str
     owner: Optional[str] = None
+    source_type: Optional[str] = None
+    source_ref: Optional[str] = None
+    ticket_id: Optional[str] = None
+    ticket_status: Optional[str] = None
+    closed_at: Optional[str] = None
     create_time: str = ""
     update_time: str = ""
 
@@ -495,6 +500,13 @@ class AgentOptimizationSuggestionUpdateRequest(BaseModel):
     status: Optional[str] = None
     owner: Optional[str] = None
     priority: Optional[str] = None
+
+
+class AgentOptimizationSuggestionTicketRequest(BaseModel):
+    requested_by: str
+    owner: Optional[str] = None
+    priority: Optional[str] = None
+    comment: str = ""
 
 
 class AgentOptimizationSuggestionOverviewResponse(BaseModel):

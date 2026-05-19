@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Iterable, List
 from uuid import uuid4
 
@@ -99,6 +100,8 @@ class EvaluationRepository:
                     priority=suggestion.get("priority", "medium"),
                     status=suggestion.get("status", "new"),
                     owner=suggestion.get("owner"),
+                    source_type=suggestion.get("source_type"),
+                    source_ref=suggestion.get("source_ref"),
                 )
             )
         session.flush()
@@ -189,6 +192,31 @@ class EvaluationRepository:
             return None
         if status is not None:
             item.status = status
+        if owner is not None:
+            item.owner = owner
+        if priority is not None:
+            item.priority = priority
+        if status == "completed":
+            item.closed_at = datetime.utcnow()
+        session.flush()
+        return item
+
+    def bind_ticket(
+        self,
+        session: Session,
+        *,
+        suggestion_id: int,
+        ticket_id: str,
+        ticket_status: str,
+        owner: str | None = None,
+        priority: str | None = None,
+    ) -> AgentOptimizationSuggestionModel | None:
+        item = session.get(AgentOptimizationSuggestionModel, suggestion_id)
+        if item is None:
+            return None
+        item.ticket_id = ticket_id
+        item.ticket_status = ticket_status
+        item.status = "in_progress"
         if owner is not None:
             item.owner = owner
         if priority is not None:
