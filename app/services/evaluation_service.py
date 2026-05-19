@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
-    AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationAnalyticsItemResponse,
+    AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationDetailResponse,
     AgentEvaluationResponse,
     AgentEvaluationSummaryResponse,
-    AgentOptimizationSuggestionResponse,
     AgentObservationLogResponse,
+    AgentOptimizationSuggestionResponse,
     ChatRequest,
     ChatResponse,
     DataAccessLogResponse,
@@ -181,13 +181,11 @@ class EvaluationService:
                 if datetime.fromisoformat(item.create_time) <= create_time_to
             ]
         if attention_level:
-            analytics_by_agent = {
-                item.agent_id: item for item in self.summarize_by_agent()
-            }
+            analytics_by_agent = {item.agent_id: item for item in self.summarize_by_agent()}
             items = [
                 item
                 for item in items
-                if analytics_by_agent.get(item.agent_id, None) is not None
+                if analytics_by_agent.get(item.agent_id) is not None
                 and analytics_by_agent[item.agent_id].attention_level == attention_level
             ]
         return items
@@ -206,7 +204,9 @@ class EvaluationService:
                 1 for item in items if "fallback" in (item.summary or "").lower()
             )
             poor_rate = round((poor_count / total) * 100, 2) if total else 0.0
-            attention_level = "high" if poor_rate >= 40 or fallback_related_count >= 2 else "normal"
+            attention_level = (
+                "high" if poor_rate >= 40 or fallback_related_count >= 2 else "normal"
+            )
             result.append(
                 AgentEvaluationAnalyticsItemResponse(
                     agent_id=agent_id,

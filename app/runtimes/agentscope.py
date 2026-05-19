@@ -210,7 +210,7 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="executor_started",
-            title="Executor started",
+            title="执行器启动",
             content=planner_result.planning_summary,
             agent_id=agent.definition.capability_id,
             event_payload={
@@ -313,7 +313,7 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="executor_completed",
-            title="Executor completed",
+            title="执行器完成",
             content=executor_result.execution_summary,
             agent_id=agent.definition.capability_id,
             event_payload=asdict(executor_result),
@@ -455,7 +455,7 @@ class AgentScopeAgentRuntime:
             AgentScopeExecutionStep(
                 step_id="analyze_request",
                 step_type="analysis",
-                title="Analyze request",
+                title="分析用户请求",
                 content=request.message,
                 metadata={"biz_domain": request.biz_domain.value},
             )
@@ -465,7 +465,7 @@ class AgentScopeAgentRuntime:
                 AgentScopeExecutionStep(
                     step_id=f"skill_{skill.skill_id}",
                     step_type="skill",
-                    title=f"Load skill {skill.skill_id}",
+                    title=f"加载 Skill {skill.skill_id}",
                     content=skill.purpose,
                     metadata={
                         "required_inputs": list(skill.required_inputs),
@@ -479,7 +479,7 @@ class AgentScopeAgentRuntime:
                 AgentScopeExecutionStep(
                     step_id="prepare_tools",
                     step_type="tooling",
-                    title="Prepare tool inventory",
+                    title="准备工具清单",
                     content=", ".join(item.tool_id for item in tool_inventory),
                     metadata={"tool_count": len(tool_inventory)},
                 )
@@ -488,8 +488,8 @@ class AgentScopeAgentRuntime:
             AgentScopeExecutionStep(
                 step_id="execute_capability",
                 step_type="execution",
-                title="Execute capability agent",
-                content="Run current capability implementation and emit task artifacts.",
+                title="执行能力 Agent",
+                content="执行当前能力实现并产出任务结果。",
             )
         )
         return steps
@@ -550,7 +550,7 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="runtime_session_started",
-            title="Runtime session started",
+            title="运行会话启动",
             content=session.session_id,
             agent_id=session.capability_id,
             event_payload=asdict(session),
@@ -562,7 +562,7 @@ class AgentScopeAgentRuntime:
                 context=context,
                 task_id=context.task_id,
                 event_type="skill_bundle_loaded",
-                title="Skill bundle loaded",
+                title="Skill 包已加载",
                 content=", ".join(item.skill_id for item in runtime_skills),
                 agent_id=session.capability_id,
                 event_payload={
@@ -585,7 +585,7 @@ class AgentScopeAgentRuntime:
                 context=context,
                 task_id=context.task_id,
                 event_type="tool_inventory_prepared",
-                title="Tool inventory prepared",
+                title="工具清单已准备",
                 content=", ".join(item.tool_id for item in tool_inventory),
                 agent_id=session.capability_id,
                 event_payload={
@@ -599,7 +599,7 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="planner_started",
-            title="Planner started",
+            title="规划器启动",
             content=session.capability_name,
             agent_id=session.capability_id,
             event_payload={
@@ -613,8 +613,8 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="execution_plan_created",
-            title="Execution plan created",
-            content=f"{len(execution_plan.steps)} planned steps",
+            title="执行计划已生成",
+            content=f"共规划 {len(execution_plan.steps)} 个步骤",
             agent_id=session.capability_id,
             event_payload={
                 "runtime_session_id": session.session_id,
@@ -631,7 +631,7 @@ class AgentScopeAgentRuntime:
             context=context,
             task_id=context.task_id,
             event_type="planner_completed",
-            title="Planner completed",
+            title="规划器完成",
             content=planner_result.planning_summary,
             agent_id=session.capability_id,
             event_payload=asdict(planner_result),
@@ -643,8 +643,8 @@ class AgentScopeAgentRuntime:
                 context=context,
                 task_id=context.task_id,
                 event_type="runtime_fallback",
-                title="Runtime fallback",
-                content="AgentScope package not installed, using local capability execution path.",
+                title="运行时回退",
+                content="未安装 AgentScope 运行包，已回退到本地能力执行路径。",
                 agent_id=session.capability_id,
                 event_payload={
                     "runtime_session_id": session.session_id,

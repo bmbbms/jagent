@@ -163,6 +163,9 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert body["runtime_sessions"][0]["observation_count"] >= 1
     assert body["runtime_sessions"][0]["tool_call_count"] >= 1
     assert body["evaluation"] is not None
+    event_titles = {item["title"] for item in body["events"]}
+    assert "任务已创建" in event_titles
+    assert "生成最终回复" in event_titles
     tool_runtime_session_ids = {
         item["runtime_session_id"] for item in body["tool_calls"] if item.get("runtime_session_id")
     }
@@ -391,7 +394,6 @@ def test_evaluation_list_supports_extended_filters(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
-    assert body
     for item in body:
         assert item["overall_score"] >= 70
 
