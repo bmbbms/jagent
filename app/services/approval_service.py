@@ -22,9 +22,20 @@ class ApprovalService:
         self._session_factory = session_factory
         self._repository = repository
 
-    def list_tasks(self) -> list[ApprovalTask]:
+    def list_tasks(
+        self,
+        *,
+        status: str | None = None,
+        biz_domain: str | None = None,
+        requested_by: str | None = None,
+    ) -> list[ApprovalTask]:
         with self._session_factory() as session:
-            return self._repository.list_tasks(session)
+            return self._repository.list_tasks(
+                session,
+                status=status,
+                biz_domain=biz_domain,
+                requested_by=requested_by,
+            )
 
     def get_task(self, approval_id: str) -> ApprovalTask:
         with self._session_factory() as session:

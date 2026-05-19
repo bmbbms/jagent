@@ -16,9 +16,27 @@ router = APIRouter(prefix="/approvals", tags=["approvals"])
 
 @router.get("", response_model=list[ApprovalTask])
 def list_approvals(
+    status: str | None = None,
+    biz_domain: str | None = None,
+    requested_by: str | None = None,
     approval_service: ApprovalService = Depends(get_approval_service),
 ) -> list[ApprovalTask]:
-    return approval_service.list_tasks()
+    return approval_service.list_tasks(
+        status=status,
+        biz_domain=biz_domain,
+        requested_by=requested_by,
+    )
+
+
+@router.get("/{approval_id}", response_model=ApprovalTask)
+def get_approval(
+    approval_id: str,
+    approval_service: ApprovalService = Depends(get_approval_service),
+) -> ApprovalTask:
+    try:
+        return approval_service.get_task(approval_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="approval task not found") from exc
 
 
 @router.post("", response_model=ApprovalTask)

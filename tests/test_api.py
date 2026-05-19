@@ -119,6 +119,42 @@ def test_create_and_decide_approval(client: TestClient) -> None:
     assert decide_response.json()["status"] == "approved"
 
 
+def test_approval_list_filters_and_detail_api(client: TestClient) -> None:
+    create_response = client.post(
+        "/api/approvals",
+        json={
+            "title": "过滤审批测试",
+            "biz_domain": "operations",
+            "requested_by": "u-approval-filter",
+            "risk_level": "high",
+            "capability_id": "operations.quota_review",
+            "workflow": "quota_review",
+            "payload": {"task_id": "task-approval-filter"},
+        },
+    )
+    assert create_response.status_code == 200
+    approval = create_response.json()
+
+    list_response = client.get(
+        "/api/approvals",
+        params={
+            "status": "pending",
+            "biz_domain": "operations",
+            "requested_by": "u-approval-filter",
+        },
+    )
+    assert list_response.status_code == 200
+    approvals = list_response.json()
+    assert any(item["approval_id"] == approval["approval_id"] for item in approvals)
+
+    detail_response = client.get(f"/api/approvals/{approval['approval_id']}")
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["approval_id"] == approval["approval_id"]
+    assert detail["task_id"] == "task-approval-filter"
+    assert detail["status"] == "pending"
+
+
 def test_audit_events(client: TestClient) -> None:
     response = client.get("/api/audit")
     assert response.status_code == 200
@@ -319,6 +355,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert response.status_code == 200
     assert 'id="agentManagerBtn"' in response.text
     assert 'id="evaluationCenterBtn"' in response.text
+    assert 'id="approvalCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="structuredToolResults"' in response.text
     assert 'id="observations"' in response.text
@@ -347,11 +384,22 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="evaluationList"' in response.text
     assert 'id="evaluationDetail"' in response.text
     assert 'id="evaluationIdInput"' in response.text
+    assert 'id="approvalPageBtn"' in response.text
     assert 'id="analyticsList"' in response.text
     assert 'id="agentFilterInput"' in response.text
     assert 'id="resultFilterInput"' in response.text
     assert 'id="suggestionList"' in response.text
     assert 'id="loadSuggestionsBtn"' in response.text
+
+
+def test_approvals_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/approvals")
+    assert response.status_code == 200
+    assert 'id="approvalList"' in response.text
+    assert 'id="approvalDetail"' in response.text
+    assert 'id="approvalIdInput"' in response.text
+    assert 'id="statusFilter"' in response.text
+    assert 'id="requestedByFilter"' in response.text
 
 
 def test_evaluation_analytics_api(client: TestClient) -> None:

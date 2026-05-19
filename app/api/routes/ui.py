@@ -25,3 +25,9 @@ def external_agent_page() -> FileResponse:
 def evaluations_page() -> FileResponse:
     page_path = Path(__file__).resolve().parents[2] / "static" / "evaluations-dashboard.html"
     return FileResponse(page_path)
+
+
+@router.get("/approvals")
+def approvals_page() -> FileResponse:
+    page_path = Path(__file__).resolve().parents[2] / "static" / "approvals-dashboard.html"
+    return FileResponse(page_path)

@@ -62,6 +62,7 @@ class ApprovalStatus(str, Enum):
 
 class ApprovalTask(BaseModel):
     approval_id: str
+    task_id: Optional[str] = None
     title: str
     biz_domain: BizDomain
     status: ApprovalStatus
@@ -69,7 +70,11 @@ class ApprovalTask(BaseModel):
     requested_by: str
     capability_id: Optional[str] = None
     workflow: Optional[str] = None
+    reason: Optional[str] = None
+    current_approver: Optional[str] = None
     payload: Dict[str, Any] = Field(default_factory=dict)
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
 
 
 class CreateApprovalRequest(BaseModel):

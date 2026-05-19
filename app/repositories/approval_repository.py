@@ -9,8 +9,22 @@ from app.schemas import ApprovalStatus, ApprovalTask, BizDomain, CreateApprovalR
 
 
 class ApprovalRepository:
-    def list_tasks(self, session: Session) -> List[ApprovalTask]:
-        items = session.query(ApprovalTaskModel).order_by(ApprovalTaskModel.create_time.desc()).all()
+    def list_tasks(
+        self,
+        session: Session,
+        *,
+        status: str | None = None,
+        biz_domain: str | None = None,
+        requested_by: str | None = None,
+    ) -> List[ApprovalTask]:
+        query = session.query(ApprovalTaskModel)
+        if status:
+            query = query.filter(ApprovalTaskModel.status == status)
+        if biz_domain:
+            query = query.filter(ApprovalTaskModel.biz_domain == biz_domain)
+        if requested_by:
+            query = query.filter(ApprovalTaskModel.requested_by == requested_by)
+        items = query.order_by(ApprovalTaskModel.create_time.desc()).all()
         return [self._to_schema(item) for item in items]
 
     def get_task(self, session: Session, approval_id: str) -> ApprovalTask | None:
@@ -76,6 +90,7 @@ class ApprovalRepository:
     def _to_schema(self, model: ApprovalTaskModel) -> ApprovalTask:
         return ApprovalTask(
             approval_id=model.approval_id,
+            task_id=model.task_id,
             title=model.title,
             biz_domain=BizDomain(model.biz_domain),
             status=ApprovalStatus(model.status),
@@ -83,5 +98,9 @@ class ApprovalRepository:
             requested_by=model.requested_by,
             capability_id=model.capability_id,
             workflow=model.workflow_code,
+            reason=model.reason,
+            current_approver=model.current_approver,
             payload=model.payload or {},
+            create_time=model.create_time.isoformat() if model.create_time else None,
+            update_time=model.update_time.isoformat() if model.update_time else None,
         )

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审批中心</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #241b15;
+      --muted: #726657;
+      --accent: #a15428;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --danger: #b64133;
+      --radius: 18px;
+      --shadow: 0 16px 38px rgba(73, 42, 19, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #fbf6ef 0%, var(--bg) 100%);
+    }
+    .page {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+    .header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar button,
+    .toolbar input,
+    .toolbar select,
+    .toolbar textarea {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+    }
+    .toolbar button {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .toolbar button.secondary {
+      background: #eadcc9;
+      color: var(--text);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+    .list,
+    .detail-list {
+      display: grid;
+      gap: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(161, 84, 40, 0.14);
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .subtle,
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+    }
+    .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
+    .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
+    .danger { background: rgba(182, 65, 51, 0.12); color: var(--danger); }
+    .hero {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .label {
+      color: var(--muted);
+      flex: 0 0 120px;
+    }
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+    .decision-box {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .decision-box textarea {
+      min-height: 96px;
+      border-radius: 14px;
+      resize: vertical;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>审批中心</h1>
+        <p>集中查看待审批与已处理审批单，支持按状态、业务域、申请人过滤，并直接执行通过或拒绝操作，便于联调高风险任务的 Workflow + Approval 闭环。</p>
+      </div>
+      <div class="toolbar">
+        <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="evaluationPageBtn" class="secondary">评估中心</button>
+        <input id="approvalIdInput" placeholder="输入 approval_id 直接打开" />
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+          <option value="pending">pending</option>
+          <option value="approved">approved</option>
+          <option value="rejected">rejected</option>
+        </select>
+        <select id="domainFilter">
+          <option value="">全部业务域</option>
+          <option value="merchant">merchant</option>
+          <option value="operations">operations</option>
+          <option value="data_support">data_support</option>
+          <option value="partner">partner</option>
+        </select>
+        <input id="requestedByFilter" placeholder="按申请人过滤" />
+        <button id="loadBtn">加载审批</button>
+        <button id="refreshBtn" class="secondary">刷新列表</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>审批列表</h2>
+        <div id="approvalListMeta" class="subtle">正在加载审批列表...</div>
+        <div id="approvalList" class="list" style="margin-top: 12px;">
+          <div class="empty">正在加载审批列表...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>审批详情</h2>
+        <div id="approvalDetail">
+          <div class="empty">请选择左侧审批单查看详情。</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      approvalId: "",
+      approvals: [],
+      currentApproval: null,
+    };
+
+    const el = {
+      taskPageBtn: document.getElementById("taskPageBtn"),
+      evaluationPageBtn: document.getElementById("evaluationPageBtn"),
+      approvalIdInput: document.getElementById("approvalIdInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      domainFilter: document.getElementById("domainFilter"),
+      requestedByFilter: document.getElementById("requestedByFilter"),
+      loadBtn: document.getElementById("loadBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      approvalListMeta: document.getElementById("approvalListMeta"),
+      approvalList: document.getElementById("approvalList"),
+      approvalDetail: document.getElementById("approvalDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function toneByStatus(status) {
+      if (status === "approved") return "success";
+      if (status === "rejected") return "danger";
+      if (status === "pending") return "warning";
+      return "";
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(body?.detail || `HTTP ${response.status}`);
+      }
+      return body;
+    }
+
+    function syncQuery() {
+      const url = new URL(window.location.href);
+      const pairs = {
+        approval_id: state.approvalId,
+        status: el.statusFilter.value,
+        biz_domain: el.domainFilter.value,
+        requested_by: el.requestedByFilter.value.trim(),
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
+      window.history.replaceState({}, "", url);
+    }
+
+    function buildApprovalListQuery() {
+      const query = new URLSearchParams();
+      if (el.statusFilter.value) query.set("status", el.statusFilter.value);
+      if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      if (el.requestedByFilter.value.trim()) query.set("requested_by", el.requestedByFilter.value.trim());
+      return query;
+    }
+
+    function renderApprovalList() {
+      el.approvalListMeta.textContent = `当前共 ${state.approvals.length} 条审批记录`;
+      if (!state.approvals.length) {
+        el.approvalList.innerHTML = '<div class="empty">当前筛选条件下没有审批记录。</div>';
+        return;
+      }
+      el.approvalList.innerHTML = state.approvals.map(item => `
+        <div class="card ${item.approval_id === state.approvalId ? "active" : ""}" data-approval-id="${escapeHtml(item.approval_id)}">
+          <div class="title">${escapeHtml(item.title)}</div>
+          <div>
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            <span class="tag">${escapeHtml(item.risk_level)}</span>
+          </div>
+          <div class="subtle">审批单号：${escapeHtml(item.approval_id)}</div>
+          <div class="subtle">申请人：${escapeHtml(item.requested_by)}</div>
+          <div class="subtle">任务：${escapeHtml(item.task_id || "-")}</div>
+        </div>
+      `).join("");
+
+      el.approvalList.querySelectorAll("[data-approval-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const approvalId = node.getAttribute("data-approval-id") || "";
+          state.approvalId = approvalId;
+          el.approvalIdInput.value = approvalId;
+          await loadApprovalDetail();
+        });
+      });
+    }
+
+    function renderApprovalDetail(item) {
+      if (!item) {
+        el.approvalDetail.innerHTML = '<div class="empty">请选择左侧审批单查看详情。</div>';
+        return;
+      }
+      const payloadText = JSON.stringify(item.payload || {}, null, 2);
+      const canDecide = item.status === "pending";
+      el.approvalDetail.innerHTML = `
+        <div class="hero">
+          <div class="title">${escapeHtml(item.title)}</div>
+          <div style="margin-top: 8px;">
+            <span class="tag ${toneByStatus(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            <span class="tag">${escapeHtml(item.risk_level)}</span>
+          </div>
+          <div class="subtle" style="margin-top: 8px;">审批单号：${escapeHtml(item.approval_id)}</div>
+        </div>
+        <div class="detail-list">
+          <div class="detail-row"><div class="label">任务 ID</div><div class="value">${escapeHtml(item.task_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">申请人</div><div class="value">${escapeHtml(item.requested_by)}</div></div>
+          <div class="detail-row"><div class="label">能力 Agent</div><div class="value">${escapeHtml(item.capability_id || "-")}</div></div>
+          <div class="detail-row"><div class="label">工作流</div><div class="value">${escapeHtml(item.workflow || "-")}</div></div>
+          <div class="detail-row"><div class="label">原因</div><div class="value">${escapeHtml(item.reason || "-")}</div></div>
+          <div class="detail-row"><div class="label">当前审批人</div><div class="value">${escapeHtml(item.current_approver || "-")}</div></div>
+          <div class="detail-row"><div class="label">创建时间</div><div class="value">${escapeHtml(formatDate(item.create_time))}</div></div>
+          <div class="detail-row"><div class="label">更新时间</div><div class="value">${escapeHtml(formatDate(item.update_time))}</div></div>
+        </div>
+        <h2 style="margin-top: 18px;">审批载荷</h2>
+        <pre class="subtle" style="white-space: pre-wrap; word-break: break-word; background: #fbf6ef; border-radius: 14px; padding: 12px;">${escapeHtml(payloadText)}</pre>
+        <div class="decision-box">
+          <input id="reviewerIdInput" placeholder="审批人 reviewer_id" value="reviewer-1" />
+          <textarea id="decisionCommentInput" placeholder="审批意见">${canDecide ? "审批通过" : ""}</textarea>
+          <div class="toolbar" style="justify-content: flex-start;">
+            <button id="approveBtn" ${canDecide ? "" : "disabled"}>通过</button>
+            <button id="rejectBtn" class="secondary" ${canDecide ? "" : "disabled"}>拒绝</button>
+            ${item.task_id ? `<button id="openTaskBtn" class="secondary">打开任务</button>` : ""}
+          </div>
+        </div>
+      `;
+
+      const approveBtn = document.getElementById("approveBtn");
+      const rejectBtn = document.getElementById("rejectBtn");
+      const openTaskBtn = document.getElementById("openTaskBtn");
+
+      if (approveBtn) {
+        approveBtn.addEventListener("click", async () => {
+          await submitDecision("approve");
+        });
+      }
+      if (rejectBtn) {
+        rejectBtn.addEventListener("click", async () => {
+          await submitDecision("reject");
+        });
+      }
+      if (openTaskBtn && item.task_id) {
+        openTaskBtn.addEventListener("click", () => {
+          window.location.href = `/ui/tasks?task_id=${encodeURIComponent(item.task_id)}`;
+        });
+      }
+    }
+
+    async function submitDecision(decision) {
+      if (!state.approvalId) return;
+      const reviewerId = document.getElementById("reviewerIdInput")?.value.trim() || "reviewer-1";
+      const comment = document.getElementById("decisionCommentInput")?.value.trim() || "";
+      await fetchJson(`/api/approvals/${encodeURIComponent(state.approvalId)}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewer_id: reviewerId,
+          decision,
+          comment,
+        }),
+      });
+      await loadApprovalList();
+      await loadApprovalDetail();
+    }
+
+    async function loadApprovalList() {
+      const query = buildApprovalListQuery();
+      state.approvals = await fetchJson(`/api/approvals?${query.toString()}`);
+      renderApprovalList();
+      syncQuery();
+      if (!state.approvalId && state.approvals[0]?.approval_id) {
+        state.approvalId = state.approvals[0].approval_id;
+        el.approvalIdInput.value = state.approvalId;
+      }
+    }
+
+    async function loadApprovalDetail() {
+      const approvalId = el.approvalIdInput.value.trim() || state.approvalId;
+      if (!approvalId) return;
+      state.approvalId = approvalId;
+      state.currentApproval = await fetchJson(`/api/approvals/${encodeURIComponent(approvalId)}`);
+      renderApprovalList();
+      renderApprovalDetail(state.currentApproval);
+      syncQuery();
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      state.approvalId = query.get("approval_id") || "";
+      el.approvalIdInput.value = state.approvalId;
+      el.statusFilter.value = query.get("status") || "";
+      el.domainFilter.value = query.get("biz_domain") || "";
+      el.requestedByFilter.value = query.get("requested_by") || "";
+      await loadApprovalList();
+      if (state.approvalId) {
+        await loadApprovalDetail();
+      } else if (state.approvals[0]?.approval_id) {
+        state.approvalId = state.approvals[0].approval_id;
+        el.approvalIdInput.value = state.approvalId;
+        await loadApprovalDetail();
+      }
+    }
+
+    el.taskPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/tasks";
+    });
+    el.evaluationPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/evaluations";
+    });
+    el.loadBtn.addEventListener("click", loadApprovalDetail);
+    el.refreshBtn.addEventListener("click", bootstrap);
+    [el.statusFilter, el.domainFilter].forEach(node => {
+      node.addEventListener("change", bootstrap);
+    });
+    el.requestedByFilter.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
+    });
+    el.approvalIdInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await loadApprovalDetail();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>
