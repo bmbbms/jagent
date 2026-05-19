@@ -501,6 +501,9 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert '/ui/skills' in response.text
     assert 'id="listDomainFilter"' in response.text
     assert 'id="listSourceFilter"' in response.text
+    assert 'id="listRiskFilter"' in response.text
+    assert 'id="listApprovalFilter"' in response.text
+    assert 'id="listTransportFilter"' in response.text
     assert 'id="listCapabilityFilter"' in response.text
     assert 'id="agentUrlInput"' in response.text
     assert 'id="capabilityNameInput"' in response.text
@@ -509,6 +512,24 @@ def test_external_agent_manager_ui_page(client: TestClient) -> None:
     assert 'id="updateBtn"' in response.text
     assert 'id="verifyBtn"' in response.text
     assert 'id="agentList"' in response.text
+
+
+def test_external_agent_list_supports_governance_filters(client: TestClient) -> None:
+    response = client.get(
+        "/api/external-agents",
+        params={
+            "risk_level": "low",
+            "requires_approval": False,
+            "transport": "http",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        assert all(item["risk_level"] == "low" for item in body)
+        assert all(item["requires_approval"] is False for item in body)
+        assert all(item["transport"] == "http" for item in body)
 
 
 def test_evaluations_ui_page(client: TestClient) -> None:

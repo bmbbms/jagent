@@ -305,6 +305,22 @@
             <option value="manual_remote">manual_remote</option>
             <option value="generic_add">generic_add</option>
           </select>
+          <select id="listRiskFilter">
+            <option value="">全部风险</option>
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+          </select>
+          <select id="listApprovalFilter">
+            <option value="">全部审批要求</option>
+            <option value="true">requires_approval=true</option>
+            <option value="false">requires_approval=false</option>
+          </select>
+          <select id="listTransportFilter">
+            <option value="">全部传输协议</option>
+            <option value="a2a">a2a</option>
+            <option value="http">http</option>
+          </select>
           <input id="listCapabilityFilter" placeholder="按 capability_id 过滤" />
         </div>
         <div id="listMeta" class="subtle">正在加载...</div>
@@ -357,6 +373,9 @@
       verifyBtn: document.getElementById("verifyBtn"),
       listDomainFilter: document.getElementById("listDomainFilter"),
       listSourceFilter: document.getElementById("listSourceFilter"),
+      listRiskFilter: document.getElementById("listRiskFilter"),
+      listApprovalFilter: document.getElementById("listApprovalFilter"),
+      listTransportFilter: document.getElementById("listTransportFilter"),
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
       editorModeText: document.getElementById("editorModeText"),
       pageStatus: document.getElementById("pageStatus"),
@@ -587,6 +606,9 @@
         const query = new URLSearchParams();
         if (el.listDomainFilter.value) query.set("biz_domain", el.listDomainFilter.value);
         if (el.listSourceFilter.value) query.set("source", el.listSourceFilter.value);
+        if (el.listRiskFilter.value) query.set("risk_level", el.listRiskFilter.value);
+        if (el.listApprovalFilter.value) query.set("requires_approval", el.listApprovalFilter.value);
+        if (el.listTransportFilter.value) query.set("transport", el.listTransportFilter.value);
         if (el.listCapabilityFilter.value.trim()) query.set("capability_id", el.listCapabilityFilter.value.trim());
         const items = await requestJson(`/api/external-agents?${query.toString()}`);
         renderAgentList(items);
@@ -698,7 +720,7 @@
       setStatus("已重置表单", "success");
     });
     el.verifyBtn.addEventListener("click", verifyAgent);
-    [el.listDomainFilter, el.listSourceFilter].forEach(node => {
+    [el.listDomainFilter, el.listSourceFilter, el.listRiskFilter, el.listApprovalFilter, el.listTransportFilter].forEach(node => {
       node.addEventListener("change", loadAgentList);
     });
     el.listCapabilityFilter.addEventListener("keydown", async event => {
