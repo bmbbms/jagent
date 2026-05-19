@@ -138,6 +138,16 @@ class EvaluationRepository:
             .all()
         )
 
+    def list_all_details(self, session: Session) -> List[AgentEvaluationDetailModel]:
+        return (
+            session.query(AgentEvaluationDetailModel)
+            .order_by(
+                AgentEvaluationDetailModel.dimension_code.asc(),
+                AgentEvaluationDetailModel.id.asc(),
+            )
+            .all()
+        )
+
     def list_suggestions(
         self, session: Session, evaluation_id: str
     ) -> List[AgentOptimizationSuggestionModel]:

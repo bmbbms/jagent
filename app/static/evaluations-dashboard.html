@@ -308,6 +308,11 @@
           <div class="empty">正在加载重点 Agent...</div>
         </div>
 
+        <h2>评估维度治理</h2>
+        <div id="dimensionAnalyticsList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">正在加载评估维度治理...</div>
+        </div>
+
         <h2>评估趋势</h2>
         <div id="trendPanel" class="card" style="margin-bottom: 18px;">
           <div class="empty">正在加载评估趋势...</div>
@@ -362,6 +367,7 @@
       evaluations: [],
       analytics: [],
       focusAgents: [],
+      dimensionAnalytics: [],
       overview: null,
       trend: null,
       suggestions: [],
@@ -390,6 +396,7 @@
       overviewGrid: document.getElementById("overviewGrid"),
       analyticsList: document.getElementById("analyticsList"),
       focusAgentList: document.getElementById("focusAgentList"),
+      dimensionAnalyticsList: document.getElementById("dimensionAnalyticsList"),
       trendPanel: document.getElementById("trendPanel"),
       evaluationList: document.getElementById("evaluationList"),
       evaluationDetail: document.getElementById("evaluationDetail"),
@@ -689,6 +696,25 @@
       });
     }
 
+    function renderDimensionAnalytics() {
+      if (!state.dimensionAnalytics.length) {
+        el.dimensionAnalyticsList.innerHTML = '<div class="empty">暂无评估维度治理数据。</div>';
+        return;
+      }
+      el.dimensionAnalyticsList.innerHTML = state.dimensionAnalytics.map(item => `
+        <div class="card">
+          <div class="title">${escapeHtml(item.dimension_name)} / ${escapeHtml(item.dimension_code)}</div>
+          <div>
+            <span class="tag ${toneByScore(item.average_score)}">${escapeHtml(item.average_score)}</span>
+            <span class="tag ${toneByAttention(item.attention_level)}">${escapeHtml(item.attention_level)}</span>
+          </div>
+          <div class="subtle">评估数：${escapeHtml(item.evaluation_count)} / 低分次数：${escapeHtml(item.low_score_count)} / 低分率：${escapeHtml(item.low_score_rate)}%</div>
+          <div class="subtle">关联建议：${escapeHtml(item.related_suggestion_count)} / 高频问题：${escapeHtml((item.top_problem_types || []).join(", ") || "-")}</div>
+          <div class="subtle">${escapeHtml(item.improvement_hint || "暂无治理建议。")}</div>
+        </div>
+      `).join("");
+    }
+
     function renderEvaluationList() {
       if (!state.evaluations.length) {
         el.evaluationList.innerHTML = '<div class="empty">暂无评估记录。</div>';
@@ -949,6 +975,11 @@
       renderFocusAgents();
     }
 
+    async function loadDimensionAnalytics() {
+      state.dimensionAnalytics = await fetchJson("/api/evaluations/analytics/dimensions");
+      renderDimensionAnalytics();
+    }
+
     async function loadOverview() {
       state.overview = await fetchJson("/api/evaluations/analytics/overview");
       renderOverview();
@@ -1026,6 +1057,7 @@
       await loadOverview();
       await loadAnalytics();
       await loadFocusAgents();
+      await loadDimensionAnalytics();
       await loadTrend();
       await loadEvaluationList();
       await loadSuggestionOverview();

@@ -748,6 +748,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
     assert 'id="focusAgentList"' in response.text
+    assert 'id="dimensionAnalyticsList"' in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
@@ -952,6 +953,31 @@ def test_evaluation_analytics_overview_api(client: TestClient) -> None:
     assert "poor_evaluation_count" in body
     assert "high_attention_agent_count" in body
     assert "average_overall_score" in body
+
+
+def test_evaluation_dimension_analytics_api(client: TestClient) -> None:
+    chat_response = client.post(
+        "/api/chat",
+        json={
+            "user_id": "u-eval-dimensions",
+            "biz_domain": "operations",
+            "message": "请协助做调额审核",
+        },
+    )
+    assert chat_response.status_code == 200
+
+    response = client.get("/api/evaluations/analytics/dimensions")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert body
+    first = body[0]
+    assert "dimension_code" in first
+    assert "dimension_name" in first
+    assert "average_score" in first
+    assert "low_score_rate" in first
+    assert "related_suggestion_count" in first
+    assert "improvement_hint" in first
 
 
 def test_evaluation_analytics_trend_api(client: TestClient) -> None:

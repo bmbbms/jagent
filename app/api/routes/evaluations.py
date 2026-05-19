@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.dependencies import get_audit_service, get_evaluation_service
 from app.schemas import (
     AgentEvaluationAnalyticsOverviewResponse,
+    AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationFocusAgentResponse,
     AgentEvaluationTrendResponse,
@@ -67,6 +68,16 @@ def list_evaluation_focus_agents(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> list[AgentEvaluationFocusAgentResponse]:
     return evaluation_service.list_focus_agents(limit=limit)
+
+
+@router.get(
+    "/analytics/dimensions",
+    response_model=list[AgentEvaluationDimensionAnalyticsResponse],
+)
+def list_evaluation_dimension_analytics(
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> list[AgentEvaluationDimensionAnalyticsResponse]:
+    return evaluation_service.summarize_dimensions()
 
 
 @router.get("/analytics/trend", response_model=AgentEvaluationTrendResponse)

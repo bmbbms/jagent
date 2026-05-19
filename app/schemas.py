@@ -691,6 +691,19 @@ class AgentEvaluationFocusAgentResponse(BaseModel):
     focus_reason: str = ""
 
 
+class AgentEvaluationDimensionAnalyticsResponse(BaseModel):
+    dimension_code: str
+    dimension_name: str
+    evaluation_count: int = 0
+    average_score: float = 0.0
+    low_score_count: int = 0
+    low_score_rate: float = 0.0
+    related_suggestion_count: int = 0
+    attention_level: str = "normal"
+    top_problem_types: List[str] = Field(default_factory=list)
+    improvement_hint: str = ""
+
+
 class AgentEvaluationTrendPointResponse(BaseModel):
     evaluation_id: str
     task_id: str

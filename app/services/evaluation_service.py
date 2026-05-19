@@ -10,6 +10,7 @@ from app.db.models import ServiceTicketModel
 from app.db.session import session_scope
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
+    AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationAnalyticsItemResponse,
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationFocusAgentResponse,
@@ -309,6 +310,68 @@ class EvaluationService:
         )
         return ranked[: max(limit, 1)]
 
+    def summarize_dimensions(self) -> list[AgentEvaluationDimensionAnalyticsResponse]:
+        with self._session_factory() as session:
+            details = self._repository.list_all_details(session)
+
+        suggestions = self.list_optimization_suggestions()
+        suggestion_map: dict[str, int] = {}
+        for item in suggestions:
+            if item.source_ref:
+                suggestion_map[item.source_ref] = suggestion_map.get(item.source_ref, 0) + 1
+
+        grouped: dict[str, list] = {}
+        for item in details:
+            grouped.setdefault(item.dimension_code, []).append(item)
+
+        result: list[AgentEvaluationDimensionAnalyticsResponse] = []
+        for dimension_code, items in grouped.items():
+            total = len(items)
+            low_score_count = sum(1 for item in items if item.score < 80)
+            low_score_rate = round((low_score_count / total) * 100, 2) if total else 0.0
+            problem_type_counts: dict[str, int] = {}
+            for item in items:
+                if item.problem_type:
+                    problem_type_counts[item.problem_type] = (
+                        problem_type_counts.get(item.problem_type, 0) + 1
+                    )
+            top_problem_types = [
+                name
+                for name, _count in sorted(
+                    problem_type_counts.items(),
+                    key=lambda pair: (-pair[1], pair[0]),
+                )[:3]
+            ]
+            attention_level = "high" if low_score_rate >= 40 or low_score_count >= 2 else "normal"
+            result.append(
+                AgentEvaluationDimensionAnalyticsResponse(
+                    dimension_code=dimension_code,
+                    dimension_name=items[0].dimension_name,
+                    evaluation_count=total,
+                    average_score=round(sum(item.score for item in items) / total, 2),
+                    low_score_count=low_score_count,
+                    low_score_rate=low_score_rate,
+                    related_suggestion_count=suggestion_map.get(dimension_code, 0),
+                    attention_level=attention_level,
+                    top_problem_types=top_problem_types,
+                    improvement_hint=self._build_dimension_improvement_hint(
+                        dimension_code=dimension_code,
+                        low_score_rate=low_score_rate,
+                        related_suggestion_count=suggestion_map.get(dimension_code, 0),
+                    ),
+                )
+            )
+
+        return sorted(
+            result,
+            key=lambda item: (
+                0 if item.attention_level == "high" else 1,
+                item.average_score,
+                -item.related_suggestion_count,
+                item.dimension_code,
+            ),
+        )
+
     def build_evaluation_trend(
         self,
         *,
@@ -356,6 +419,25 @@ class EvaluationService:
                 for item in trend_items
             ],
         )
+
+    @staticmethod
+    def _build_dimension_improvement_hint(
+        *,
+        dimension_code: str,
+        low_score_rate: float,
+        related_suggestion_count: int,
+    ) -> str:
+        if dimension_code == "tool_usage":
+            return "优先收敛工具选择规则，减少低收益调用，并补执行前判断。"
+        if dimension_code == "efficiency":
+            return "优先优化执行链路时延、fallback 频率与中间步骤数量。"
+        if dimension_code == "compliance":
+            return "优先补审批绑定、审计留痕和敏感访问控制策略。"
+        if dimension_code == "completion":
+            return "优先强化任务目标、输出格式与结果收口约束。"
+        if related_suggestion_count > 0 or low_score_rate >= 30:
+            return "建议结合已有优化建议，优先治理该维度的高频失分问题。"
+        return "当前维度整体稳定，可继续观察趋势变化。"
 
     @staticmethod
     def _build_focus_reason(
