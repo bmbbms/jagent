@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.dependencies import get_service_ticket_service
+from app.dependencies import get_audit_service, get_service_ticket_service
 from app.schemas import ServiceTicketResponse, ServiceTicketUpdateRequest
+from app.services.audit_service import AuditService
 from app.services.service_ticket_service import ServiceTicketService
 
 router = APIRouter(prefix="/service-tickets", tags=["service-tickets"])
@@ -45,8 +46,34 @@ def update_service_ticket(
     ticket_id: str,
     request: ServiceTicketUpdateRequest,
     service_ticket_service: ServiceTicketService = Depends(get_service_ticket_service),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> ServiceTicketResponse:
+    ticket_ctx = service_ticket_service.get_ticket_audit_context(ticket_id)
     item = service_ticket_service.update_ticket(ticket_id, request)
     if item is None:
         raise HTTPException(status_code=404, detail="service ticket not found")
+    audit_service.record(
+        "service_ticket.update",
+        request.owner or item.requested_by,
+        {
+            "source": item.source,
+            "event_type": "service_ticket",
+            "task_id": ticket_ctx.get("task_id") if ticket_ctx else item.linked_task_id,
+            "approval_id": None,
+            "capability_id": ticket_ctx.get("agent_id") if ticket_ctx else item.linked_agent_id,
+            "agent_id": ticket_ctx.get("agent_id") if ticket_ctx else item.linked_agent_id,
+            "request_summary": "update service ticket",
+            "response_summary": item.description,
+            "outcome": 1,
+            "payload": {
+                "ticket_id": item.ticket_id,
+                "suggestion_id": item.linked_suggestion_id,
+                "evaluation_id": item.linked_evaluation_id,
+                "task_id": item.linked_task_id,
+                "status": item.status,
+                "priority": item.priority,
+                "owner": item.owner,
+            },
+        },
+    )
     return item

@@ -122,6 +122,7 @@ def create_optimization_suggestion_ticket(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> AgentOptimizationSuggestionResponse:
+    suggestion_ctx = evaluation_service.get_suggestion_audit_context(suggestion_id)
     item = evaluation_service.create_suggestion_ticket(suggestion_id, request)
     if item is None:
         raise HTTPException(status_code=404, detail="optimization suggestion not found")
@@ -131,19 +132,21 @@ def create_optimization_suggestion_ticket(
         {
             "source": "evaluation",
             "event_type": "service_ticket",
-            "task_id": getattr(item, "linked_task_id", None) or None,
-            "evaluation_id": item.source_ref if item.source_type == "evaluation" else None,
+            "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
+            "evaluation_id": suggestion_ctx.get("evaluation_id") if suggestion_ctx else None,
             "suggestion_id": item.suggestion_id,
             "ticket_id": item.ticket_id,
             "ticket_status": item.ticket_status,
-            "agent_id": item.target_ref,
-            "capability_id": item.target_ref,
+            "agent_id": suggestion_ctx.get("agent_id") if suggestion_ctx else None,
+            "capability_id": suggestion_ctx.get("agent_id") if suggestion_ctx else None,
             "request_summary": "create service ticket from optimization suggestion",
             "response_summary": item.suggested_change,
             "outcome": 1,
             "payload": {
                 "ticket_id": item.ticket_id,
                 "suggestion_id": item.suggestion_id,
+                "evaluation_id": suggestion_ctx.get("evaluation_id") if suggestion_ctx else None,
+                "task_id": suggestion_ctx.get("task_id") if suggestion_ctx else None,
                 "priority": item.priority,
                 "owner": item.owner,
             },

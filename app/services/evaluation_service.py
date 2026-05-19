@@ -334,6 +334,21 @@ class EvaluationService:
             session.refresh(item)
             return self._to_suggestion(item)
 
+    def get_suggestion_audit_context(self, suggestion_id: int) -> dict[str, str | int | None] | None:
+        with self._session_factory() as session:
+            suggestion = self._repository.get_suggestion(session, suggestion_id)
+            if suggestion is None:
+                return None
+            evaluation = self._repository.get_evaluation(session, suggestion.evaluation_id)
+            return {
+                "suggestion_id": suggestion.id,
+                "evaluation_id": suggestion.evaluation_id,
+                "task_id": evaluation.task_id if evaluation is not None else None,
+                "agent_id": suggestion.agent_id,
+                "optimization_type": suggestion.optimization_type,
+                "target_ref": suggestion.target_ref,
+            }
+
     def create_suggestion_ticket(
         self,
         suggestion_id: int,

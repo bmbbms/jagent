@@ -884,6 +884,16 @@ def test_evaluation_suggestion_apis(client: TestClient) -> None:
     assert synced["owner"] == "agent-optimizer"
     assert synced["closed_at"] is not None
 
+    ticket_audit_response = client.get(
+        "/api/audit",
+        params={"task_id": task_id},
+    )
+    assert ticket_audit_response.status_code == 200
+    ticket_audit_events = ticket_audit_response.json()
+    audit_actions = {item["action"] for item in ticket_audit_events}
+    assert "service_ticket.create" in audit_actions
+    assert "service_ticket.update" in audit_actions
+
     final_overview_response = client.get(
         "/api/evaluations/suggestions/overview",
         params={"agent_id": agent_id},

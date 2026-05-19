@@ -52,6 +52,24 @@ class ServiceTicketService:
                 return None
             return self._to_response(item)
 
+    def get_ticket_audit_context(self, ticket_id: str) -> dict[str, str | int | None] | None:
+        with self._session_factory() as session:
+            item = self._repository.get_ticket(session, ticket_id)
+            if item is None:
+                return None
+            payload = item.payload or {}
+            return {
+                "ticket_id": item.ticket_id,
+                "task_id": payload.get("task_id"),
+                "evaluation_id": payload.get("evaluation_id"),
+                "suggestion_id": payload.get("suggestion_id"),
+                "agent_id": payload.get("agent_id"),
+                "status": item.status,
+                "priority": item.priority,
+                "owner": item.owner,
+                "source": item.source,
+            }
+
     def update_ticket(
         self,
         ticket_id: str,
