@@ -355,12 +355,7 @@
     }
 
     function getVisibleCapabilities() {
-      return state.capabilities.filter(item => {
-        if (el.sourceFilter.value && getCapabilitySource(item.capability_id) !== el.sourceFilter.value) {
-          return false;
-        }
-        return true;
-      });
+      return state.capabilities;
     }
 
     function renderCapabilityList() {
@@ -479,6 +474,7 @@
     async function loadCapabilities() {
       const query = new URLSearchParams();
       if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
+      if (el.sourceFilter.value) query.set("source", el.sourceFilter.value);
       const [capabilities, externalAgents] = await Promise.all([
         fetchJson(`/api/capabilities?${query.toString()}`),
         fetchJson("/api/external-agents"),

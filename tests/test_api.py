@@ -36,6 +36,14 @@ def test_capabilities(client: TestClient) -> None:
     assert merchant_qa["source"] == "local"
 
 
+def test_capabilities_support_source_filter(client: TestClient) -> None:
+    response = client.get("/api/capabilities", params={"source": "local"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body
+    assert all(item["source"] == "local" for item in body)
+
+
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200
