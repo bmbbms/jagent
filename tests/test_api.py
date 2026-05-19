@@ -414,7 +414,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
 
 
 def test_external_agent_manager_ui_page(client: TestClient) -> None:
-    response = client.get("/ui/external-agents")
+    response = client.get("/ui/external-agents?capability_id=external.stub.agent")
     assert response.status_code == 200
     assert '/ui/capabilities' in response.text
     assert '/ui/skills' in response.text

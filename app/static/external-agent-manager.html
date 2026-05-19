@@ -349,6 +349,11 @@
 
     let editingCapabilityId = "";
 
+    function getQueryCapabilityId() {
+      const query = new URLSearchParams(window.location.search);
+      return (query.get("capability_id") || "").trim();
+    }
+
     function escapeHtml(value) {
       return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -563,6 +568,15 @@
       try {
         const items = await requestJson("/api/external-agents");
         renderAgentList(items);
+        const queryCapabilityId = getQueryCapabilityId();
+        if (queryCapabilityId) {
+          const target = items.find(item => item.capability_id === queryCapabilityId);
+          if (target) {
+            fillForm(target);
+            setStatus(`已按 capability_id 载入 ${queryCapabilityId}`, "success");
+            showResult(target);
+          }
+        }
       } catch (error) {
         el.listMeta.textContent = "加载失败";
         el.agentList.innerHTML = `<div class="empty">加载外部 Agent 列表失败：${escapeHtml(error.message)}</div>`;

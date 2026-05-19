@@ -464,7 +464,7 @@
       }
       if (openExternalAgentBtn) {
         openExternalAgentBtn.addEventListener("click", () => {
-          window.location.href = `/ui/external-agents`;
+          window.location.href = `/ui/external-agents?capability_id=${encodeURIComponent(item.capability_id)}`;
         });
       }
       if (openSkillPageBtn && (item.skills || [])[0]) {
