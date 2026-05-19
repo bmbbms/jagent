@@ -244,6 +244,35 @@ class ExternalAgentHealthOverviewResponse(BaseModel):
     unknown_count: int = 0
 
 
+class MCPToolInfo(BaseModel):
+    tool_id: str
+    provider: str
+    description: str = ""
+    transport: str = "stdio"
+    command: Optional[str] = None
+    args: List[str] = Field(default_factory=list)
+    enabled: bool = False
+    config_path: Optional[str] = None
+    call_count: int = 0
+    success_count: int = 0
+    failure_count: int = 0
+    last_status: Optional[str] = None
+    last_called_at: Optional[str] = None
+    average_duration_ms: Optional[int] = None
+
+
+class MCPToolOverviewResponse(BaseModel):
+    total: int = 0
+    enabled_count: int = 0
+    provider_count: int = 0
+    transport_count: int = 0
+    called_tool_count: int = 0
+    failure_tool_count: int = 0
+    total_call_count: int = 0
+    providers: List[str] = Field(default_factory=list)
+    transports: List[str] = Field(default_factory=list)
+
+
 class SkillInfo(BaseModel):
     skill_id: str
     biz_domain: BizDomain

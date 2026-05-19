@@ -27,6 +27,37 @@ def test_health(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_mcp_tools_api_and_overview(client: TestClient) -> None:
+    tools_response = client.get("/api/mcp/tools")
+    assert tools_response.status_code == 200
+    tools = tools_response.json()
+    assert isinstance(tools, list)
+    assert tools
+    first = tools[0]
+    assert "tool_id" in first
+    assert "provider" in first
+    assert "transport" in first
+    assert "call_count" in first
+
+    filtered_response = client.get(
+        "/api/mcp/tools",
+        params={"provider": first["provider"], "transport": first["transport"]},
+    )
+    assert filtered_response.status_code == 200
+    filtered = filtered_response.json()
+    assert filtered
+    assert all(item["provider"] == first["provider"] for item in filtered)
+    assert all(item["transport"] == first["transport"] for item in filtered)
+
+    overview_response = client.get("/api/mcp/overview")
+    assert overview_response.status_code == 200
+    overview = overview_response.json()
+    assert "total" in overview
+    assert "enabled_count" in overview
+    assert "providers" in overview
+    assert "transports" in overview
+
+
 def test_capabilities(client: TestClient) -> None:
     response = client.get("/api/capabilities")
     assert response.status_code == 200
@@ -744,6 +775,20 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="healthFilter"' in response.text
     assert 'id="skillFilterInput"' in response.text
     assert 'id="capabilityIdInput"' in response.text
+
+
+def test_mcp_ui_page(client: TestClient) -> None:
+    response = client.get("/ui/mcp")
+    assert response.status_code == 200
+    assert 'id="providerFilter"' in response.text
+    assert 'id="transportFilter"' in response.text
+    assert 'id="enabledFilter"' in response.text
+    assert 'id="calledFilter"' in response.text
+    assert 'id="loadBtn"' in response.text
+    assert 'id="overview"' in response.text
+    assert 'id="toolList"' in response.text
+    assert 'id="toolDetail"' in response.text
+    assert "/api/mcp/tools" in response.text
 
 
 def test_evaluation_analytics_api(client: TestClient) -> None:

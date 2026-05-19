@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCP 治理中心</title>
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --panel: #fffdf9;
+      --panel-soft: #fbf6ef;
+      --line: #e1d4c4;
+      --text: #251d17;
+      --muted: #756759;
+      --accent: #b15f33;
+      --success: #1f7a4d;
+      --warning: #a8741d;
+      --danger: #b64133;
+      --shadow: 0 18px 40px rgba(79, 43, 17, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, #fff6ec 0, #fff6ec 18%, transparent 19%),
+        linear-gradient(180deg, #faf4ec 0%, var(--bg) 100%);
+    }
+    .page { max-width: 1500px; margin: 0 auto; padding: 24px; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 10px 0 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav a, .toolbar button, .toolbar select {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 { margin: 0 0 14px; font-size: 18px; }
+    .cards, .kv, .toolbar, .list {
+      display: grid;
+      gap: 12px;
+    }
+    .toolbar {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 14px;
+    }
+    .toolbar button { grid-column: span 2; background: var(--accent); color: #fff; border-color: var(--accent); }
+    .card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(177, 95, 51, 0.12);
+    }
+    .card-title { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.5; }
+    .subtle, .empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #72563d;
+    }
+    .success { background: rgba(31, 122, 77, 0.12); color: var(--success); }
+    .warning { background: rgba(168, 116, 29, 0.14); color: var(--warning); }
+    .danger { background: rgba(182, 65, 51, 0.14); color: var(--danger); }
+    .kv-item {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(226, 213, 195, 0.92);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+    .kv-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .kv-label { color: var(--muted); }
+    .kv-value { word-break: break-word; }
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--panel-soft);
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>MCP 治理中心</h1>
+        <p>集中查看平台当前识别到的 MCP 工具目录、provider 与 transport 分布，以及历史调用情况，帮助判断哪些接入已经被真实任务使用、哪些 provider 存在失败风险。</p>
+      </div>
+      <div class="nav">
+        <a href="/ui/tasks">任务面板</a>
+        <a href="/ui/capabilities">Capability 中心</a>
+        <a href="/ui/external-agents">外部 Agent</a>
+        <a href="/api/mcp/tools">MCP API</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>过滤与概览</h2>
+        <div class="toolbar">
+          <select id="providerFilter">
+            <option value="">全部 provider</option>
+          </select>
+          <select id="transportFilter">
+            <option value="">全部 transport</option>
+            <option value="stdio">stdio</option>
+            <option value="http">http</option>
+            <option value="sse">sse</option>
+          </select>
+          <select id="enabledFilter">
+            <option value="">全部状态</option>
+            <option value="true">enabled</option>
+            <option value="false">disabled</option>
+          </select>
+          <select id="calledFilter">
+            <option value="">全部使用情况</option>
+            <option value="true">只看已调用</option>
+          </select>
+          <button id="loadBtn" type="button">加载 MCP 工具</button>
+        </div>
+        <div id="overview" class="cards">
+          <div class="empty">正在加载概览...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>MCP 工具目录</h2>
+        <div id="toolList" class="list">
+          <div class="empty">正在加载 MCP 工具...</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top: 20px;">
+      <h2>工具详情</h2>
+      <div id="toolDetail" class="kv">
+        <div class="empty">点击右侧某个 MCP 工具查看详情。</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      tools: [],
+      selectedToolId: "",
+      overview: null,
+    };
+
+    const el = {
+      providerFilter: document.getElementById("providerFilter"),
+      transportFilter: document.getElementById("transportFilter"),
+      enabledFilter: document.getElementById("enabledFilter"),
+      calledFilter: document.getElementById("calledFilter"),
+      loadBtn: document.getElementById("loadBtn"),
+      overview: document.getElementById("overview"),
+      toolList: document.getElementById("toolList"),
+      toolDetail: document.getElementById("toolDetail"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function renderOverview(overview) {
+      if (!overview) {
+        el.overview.innerHTML = '<div class="empty">暂无概览。</div>';
+        return;
+      }
+      el.overview.innerHTML = `
+        <div class="card">
+          <div class="kv-item"><div class="kv-label">MCP 工具总数</div><div class="kv-value">${escapeHtml(overview.total)}</div></div>
+          <div class="kv-item"><div class="kv-label">启用配置数</div><div class="kv-value">${escapeHtml(overview.enabled_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">Provider 数</div><div class="kv-value">${escapeHtml(overview.provider_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">Transport 数</div><div class="kv-value">${escapeHtml(overview.transport_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">已调用工具数</div><div class="kv-value">${escapeHtml(overview.called_tool_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">失败工具数</div><div class="kv-value">${escapeHtml(overview.failure_tool_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">累计调用次数</div><div class="kv-value">${escapeHtml(overview.total_call_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">Providers</div><div class="kv-value">${escapeHtml((overview.providers || []).join(", ") || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">Transports</div><div class="kv-value">${escapeHtml((overview.transports || []).join(", ") || "-")}</div></div>
+        </div>
+      `;
+    }
+
+    function renderToolList() {
+      if (!state.tools.length) {
+        el.toolList.innerHTML = '<div class="empty">当前没有匹配的 MCP 工具。</div>';
+        return;
+      }
+      el.toolList.innerHTML = state.tools.map(item => `
+        <div class="card ${state.selectedToolId === item.tool_id ? "active" : ""}" data-tool-id="${escapeHtml(item.tool_id)}">
+          <div class="card-title">${escapeHtml(item.tool_id)}</div>
+          <div class="subtle">${escapeHtml(item.description || "暂无描述")}</div>
+          <div class="tags">
+            <span class="tag">${escapeHtml(item.provider)}</span>
+            <span class="tag">${escapeHtml(item.transport)}</span>
+            <span class="tag ${item.enabled ? "success" : "warning"}">${item.enabled ? "enabled" : "disabled"}</span>
+            <span class="tag ${item.failure_count > 0 ? "danger" : item.call_count > 0 ? "success" : ""}">calls:${escapeHtml(item.call_count)}</span>
+          </div>
+          <div class="subtle">成功 ${escapeHtml(item.success_count)} / 失败 ${escapeHtml(item.failure_count)} / 最近状态 ${escapeHtml(item.last_status || "-")}</div>
+        </div>
+      `).join("");
+      el.toolList.querySelectorAll("[data-tool-id]").forEach(node => {
+        node.addEventListener("click", () => {
+          state.selectedToolId = node.getAttribute("data-tool-id") || "";
+          renderToolList();
+          renderToolDetail(state.tools.find(item => item.tool_id === state.selectedToolId) || null);
+        });
+      });
+    }
+
+    function renderToolDetail(item) {
+      if (!item) {
+        el.toolDetail.innerHTML = '<div class="empty">点击右侧某个 MCP 工具查看详情。</div>';
+        return;
+      }
+      el.toolDetail.innerHTML = `
+        <div class="card">
+          <div class="kv-item"><div class="kv-label">tool_id</div><div class="kv-value">${escapeHtml(item.tool_id)}</div></div>
+          <div class="kv-item"><div class="kv-label">provider</div><div class="kv-value">${escapeHtml(item.provider)}</div></div>
+          <div class="kv-item"><div class="kv-label">transport</div><div class="kv-value">${escapeHtml(item.transport)}</div></div>
+          <div class="kv-item"><div class="kv-label">状态</div><div class="kv-value">${escapeHtml(item.enabled ? "enabled" : "disabled")}</div></div>
+          <div class="kv-item"><div class="kv-label">配置文件</div><div class="kv-value">${escapeHtml(item.config_path || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">命令</div><div class="kv-value">${escapeHtml(item.command || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">参数</div><div class="kv-value">${escapeHtml((item.args || []).join(" ") || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">累计调用</div><div class="kv-value">${escapeHtml(item.call_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">成功 / 失败</div><div class="kv-value">${escapeHtml(item.success_count)} / ${escapeHtml(item.failure_count)}</div></div>
+          <div class="kv-item"><div class="kv-label">最近调用</div><div class="kv-value">${escapeHtml(item.last_called_at || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">平均耗时</div><div class="kv-value">${escapeHtml(item.average_duration_ms ?? "-")}${item.average_duration_ms != null ? " ms" : ""}</div></div>
+          <div class="kv-item"><div class="kv-label">描述</div><div class="kv-value">${escapeHtml(item.description || "-")}</div></div>
+          <div class="kv-item"><div class="kv-label">原始 args</div><div class="kv-value"><pre>${escapeHtml(JSON.stringify(item.args || [], null, 2))}</pre></div></div>
+        </div>
+      `;
+    }
+
+    function rebuildProviderOptions() {
+      const current = el.providerFilter.value;
+      const providers = Array.from(new Set(state.tools.map(item => item.provider))).sort();
+      el.providerFilter.innerHTML = '<option value="">全部 provider</option>' + providers.map(
+        item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`
+      ).join("");
+      el.providerFilter.value = providers.includes(current) ? current : "";
+    }
+
+    async function loadPage() {
+      const params = new URLSearchParams();
+      if (el.providerFilter.value) params.set("provider", el.providerFilter.value);
+      if (el.transportFilter.value) params.set("transport", el.transportFilter.value);
+      if (el.enabledFilter.value) params.set("enabled", el.enabledFilter.value);
+      if (el.calledFilter.value) params.set("only_called", el.calledFilter.value);
+
+      const [overview, tools] = await Promise.all([
+        fetchJson("/api/mcp/overview"),
+        fetchJson(`/api/mcp/tools?${params.toString()}`),
+      ]);
+      state.overview = overview;
+      state.tools = tools;
+      if (!state.selectedToolId && tools.length) {
+        state.selectedToolId = tools[0].tool_id;
+      }
+      if (state.selectedToolId && !tools.find(item => item.tool_id === state.selectedToolId)) {
+        state.selectedToolId = tools[0]?.tool_id || "";
+      }
+      rebuildProviderOptions();
+      renderOverview(overview);
+      renderToolList();
+      renderToolDetail(tools.find(item => item.tool_id === state.selectedToolId) || null);
+    }
+
+    el.loadBtn.addEventListener("click", loadPage);
+    [el.transportFilter, el.enabledFilter, el.calledFilter].forEach(node => {
+      node.addEventListener("change", loadPage);
+    });
+    el.providerFilter.addEventListener("change", loadPage);
+
+    loadPage();
+  </script>
+</body>
+</html>

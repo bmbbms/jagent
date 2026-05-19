@@ -42,7 +42,7 @@ def available_tools(biz_domain: BizDomain) -> List[str]:
 
 def list_tool_specs(biz_domain: BizDomain) -> List[ToolSpec]:
     specs = list(INTERNAL_TOOLS.get(biz_domain, []))
-    specs.extend(_load_mcp_tool_specs())
+    specs.extend(list_mcp_tool_specs())
     return specs
 
 
@@ -51,10 +51,14 @@ def get_tool_spec(tool_id: str) -> ToolSpec | None:
         for item in items:
             if item.tool_id == tool_id:
                 return item
-    for item in _load_mcp_tool_specs():
+    for item in list_mcp_tool_specs():
         if item.tool_id == tool_id:
             return item
     return None
+
+
+def list_mcp_tool_specs() -> List[ToolSpec]:
+    return _load_mcp_tool_specs()
 
 
 def _load_mcp_tool_specs() -> List[ToolSpec]:
@@ -81,9 +85,11 @@ def _load_mcp_tool_specs() -> List[ToolSpec]:
                 provider=server_name,
                 description=f"MCP server: {server_name}",
                 metadata={
+                    "enabled": bool(server.get("enabled", False)),
                     "transport": server.get("transport", "stdio"),
                     "command": server.get("command"),
                     "args": server.get("args", []),
+                    "config_path": str(config_path),
                 },
             )
         )

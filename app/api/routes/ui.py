@@ -61,3 +61,9 @@ def skills_page() -> FileResponse:
 def capabilities_page() -> FileResponse:
     page_path = Path(__file__).resolve().parents[2] / "static" / "capabilities-dashboard.html"
     return FileResponse(page_path)
+
+
+@router.get("/mcp")
+def mcp_page() -> FileResponse:
+    page_path = Path(__file__).resolve().parents[2] / "static" / "mcp-dashboard.html"
+    return FileResponse(page_path)

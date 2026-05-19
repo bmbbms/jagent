@@ -110,6 +110,19 @@ class ToolExecutionRepository:
             .all()
         )
 
+    def list_tool_call_logs_by_type(
+        self,
+        session: Session,
+        *,
+        tool_type: str,
+    ) -> list[ToolCallLogModel]:
+        return (
+            session.query(ToolCallLogModel)
+            .filter(ToolCallLogModel.tool_type == tool_type)
+            .order_by(ToolCallLogModel.start_time.desc())
+            .all()
+        )
+
     def list_data_access_logs(
         self,
         session: Session,

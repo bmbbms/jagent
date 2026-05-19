@@ -37,6 +37,7 @@ from app.services.internal_tool_registry import build_default_internal_tool_regi
 from app.services.internal_tool_http_provider import HttpInternalToolProvider
 from app.services.internal_tool_provider import InternalToolProvider, LocalDbInternalToolProvider
 from app.services.knowledge_service import KnowledgeService
+from app.services.mcp_catalog_service import MCPCatalogService
 from app.services.mcp_service import MCPService
 from app.services.observation_service import ObservationService
 from app.services.service_ticket_service import ServiceTicketService
@@ -198,6 +199,14 @@ def get_knowledge_service() -> KnowledgeService:
 @lru_cache
 def get_mcp_service() -> MCPService:
     return MCPService()
+
+
+@lru_cache
+def get_mcp_catalog_service() -> MCPCatalogService:
+    return MCPCatalogService(
+        session_factory=get_session_factory(),
+        repository=ToolExecutionRepository(),
+    )
 
 
 @lru_cache

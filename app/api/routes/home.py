@@ -25,6 +25,7 @@ def home(
             f"{settings.api_prefix}/capabilities",
             f"{settings.api_prefix}/skills",
             f"{settings.api_prefix}/external-agents",
+            f"{settings.api_prefix}/mcp/tools",
             f"{settings.api_prefix}/workflows",
             f"{settings.api_prefix}/knowledge/search",
             f"{settings.api_prefix}/approvals",
