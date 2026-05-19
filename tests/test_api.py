@@ -18,6 +18,7 @@ def test_home(client: TestClient) -> None:
     body = response.json()
     assert body["app_name"] == "Acquiring AI"
     assert body["capabilities"]
+    assert "/api/skills" in body["endpoints"]
 
 
 def test_health(client: TestClient) -> None:
