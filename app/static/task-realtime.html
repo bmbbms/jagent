@@ -461,6 +461,13 @@
         </section>
 
         <section class="panel">
+          <h2>多 Agent 协作视图</h2>
+          <div id="agentCollaborationView" class="detail-list">
+            <div class="empty">当前任务暂无可展示的协作链路。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>执行时间线</h2>
           <div id="timeline" class="timeline">
             <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
@@ -588,6 +595,7 @@
       structuredToolResults: document.getElementById("structuredToolResults"),
       workflowSnapshot: document.getElementById("workflowSnapshot"),
       skillSnapshot: document.getElementById("skillSnapshot"),
+      agentCollaborationView: document.getElementById("agentCollaborationView"),
       timeline: document.getElementById("timeline"),
         evaluation: document.getElementById("evaluation"),
         toolCalls: document.getElementById("toolCalls"),
@@ -1220,6 +1228,36 @@
       `;
     }
 
+    function renderAgentCollaborationView(collaborationView) {
+      if (!collaborationView || !(collaborationView.steps || []).length) {
+        el.agentCollaborationView.innerHTML = `<div class="empty">当前任务暂无可展示的协作链路。</div>`;
+        return;
+      }
+      const collaborationPath = (collaborationView.collaboration_path || []).join(" -> ") || "-";
+      const stepsHtml = (collaborationView.steps || []).map(item => `
+        <div class="list-card">
+          <h3>${escapeHtml(item.order_no)} / ${escapeHtml(item.title || item.event_type)}</h3>
+          <div class="subtle">${escapeHtml(item.stage_label || item.event_type)} / ${escapeHtml(item.agent_id || "-")}</div>
+          <div class="detail-item"><div class="label">Session</div><div class="value">${escapeHtml(item.session_id || "-")}</div></div>
+          <div class="detail-item"><div class="label">状态</div><div class="value">${escapeHtml(item.event_status || "-")}</div></div>
+          <div class="detail-item"><div class="label">时间</div><div class="value">${escapeHtml(formatDate(item.timestamp))}</div></div>
+          <div class="subtle">${escapeHtml(item.summary || "-")}</div>
+        </div>
+      `).join("");
+
+      el.agentCollaborationView.innerHTML = `
+        <div class="list-card">
+          <h3>协作总览</h3>
+          <div class="detail-item"><div class="label">参与 Agent</div><div class="value">${escapeHtml(collaborationView.agent_count)}</div></div>
+          <div class="detail-item"><div class="label">切换次数</div><div class="value">${escapeHtml(collaborationView.handoff_count)}</div></div>
+          <div class="detail-item"><div class="label">外部 Agent 步骤</div><div class="value">${escapeHtml(collaborationView.external_agent_step_count)}</div></div>
+          <div class="detail-item"><div class="label">MCP 步骤</div><div class="value">${escapeHtml(collaborationView.mcp_step_count)}</div></div>
+          <div class="detail-item"><div class="label">协作路径</div><div class="value">${escapeHtml(collaborationPath)}</div></div>
+        </div>
+        ${stepsHtml}
+      `;
+    }
+
     function renderDataAccess(logs = []) {
       if (!logs.length) {
         el.dataAccess.innerHTML = `<div class="empty">暂无数据访问明细。</div>`;
@@ -1322,6 +1360,7 @@
       renderStructuredToolResults(task.structured_tool_results || []);
       renderWorkflowSnapshot(task);
       renderSkillSnapshot(task);
+      renderAgentCollaborationView(task.runtime_governance?.collaboration_view || null);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);

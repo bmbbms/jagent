@@ -577,6 +577,27 @@ class RuntimeSessionViewResponse(BaseModel):
     observations: List["AgentObservationLogResponse"] = Field(default_factory=list)
 
 
+class AgentCollaborationStepResponse(BaseModel):
+    order_no: int
+    event_type: str
+    title: str = ""
+    agent_id: Optional[str] = None
+    session_id: Optional[str] = None
+    event_status: str = "success"
+    timestamp: str = ""
+    stage_label: str = ""
+    summary: str = ""
+
+
+class TaskAgentCollaborationViewResponse(BaseModel):
+    agent_count: int = 0
+    handoff_count: int = 0
+    external_agent_step_count: int = 0
+    mcp_step_count: int = 0
+    collaboration_path: List[str] = Field(default_factory=list)
+    steps: List["AgentCollaborationStepResponse"] = Field(default_factory=list)
+
+
 class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     runtime_session_count: int = 0
     observation_count: int = 0
@@ -593,6 +614,7 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     observed_phases: List[str] = Field(default_factory=list)
     fallback_reasons: List[str] = Field(default_factory=list)
     risk_flags: List[str] = Field(default_factory=list)
+    collaboration_view: Optional["TaskAgentCollaborationViewResponse"] = None
 
 
 class TaskRuntimeGovernanceOverviewResponse(BaseModel):

@@ -451,6 +451,7 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert isinstance(body["observations"], list)
     assert isinstance(body["runtime_sessions"], list)
     assert isinstance(body["runtime_governance"], dict)
+    assert isinstance(body["runtime_governance"]["collaboration_view"], dict)
     assert body["structured_tool_results"]
     assert body["output_overview"]["total_deliverables"] >= 1
     assert body["output_overview"]["deliverables"]
@@ -470,6 +471,10 @@ def test_task_detail_includes_tool_execution_details(client: TestClient) -> None
     assert "mcp_error_count" in body["runtime_governance"]
     assert "mcp_providers" in body["runtime_governance"]
     assert "risk_flags" in body["runtime_governance"]
+    assert "agent_count" in body["runtime_governance"]["collaboration_view"]
+    assert "handoff_count" in body["runtime_governance"]["collaboration_view"]
+    assert "collaboration_path" in body["runtime_governance"]["collaboration_view"]
+    assert "steps" in body["runtime_governance"]["collaboration_view"]
     assert body["evaluation"] is not None
     event_titles = {item["title"] for item in body["events"]}
     assert "任务已创建" in event_titles
@@ -698,6 +703,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="structuredToolResults"' in response.text
     assert 'id="workflowSnapshot"' in response.text
     assert 'id="skillSnapshot"' in response.text
+    assert 'id="agentCollaborationView"' in response.text
     assert 'id="observations"' in response.text
     assert 'id="runtimeSessions"' in response.text
     assert 'id="runtimeGovernance"' in response.text

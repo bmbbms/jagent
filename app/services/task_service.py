@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.session import session_scope
 from app.repositories.task_repository import TaskRepository
 from app.schemas import (
+    AgentCollaborationStepResponse,
     AgentTaskArtifactResponse,
     AgentTaskDeliverableResponse,
     AgentTaskDetailResponse,
@@ -21,6 +22,7 @@ from app.schemas import (
     ChatResponse,
     DataAccessLogResponse,
     RuntimeSessionViewResponse,
+    TaskAgentCollaborationViewResponse,
     TaskRuntimeGovernanceOverviewResponse,
     TaskRuntimeGovernanceSummaryResponse,
     StructuredToolResultResponse,
@@ -749,6 +751,10 @@ class TaskService:
             risk_flags.append("multi_agent_handoff_detected")
         if len(runtime_sessions) > 1:
             risk_flags.append("multi_session_execution")
+        collaboration_view = TaskService._build_agent_collaboration_view(
+            events=events,
+            runtime_sessions=runtime_sessions,
+        )
         return TaskRuntimeGovernanceSummaryResponse(
             runtime_session_count=len(runtime_sessions),
             observation_count=len(observations),
@@ -765,6 +771,83 @@ class TaskService:
             observed_phases=phases,
             fallback_reasons=fallback_reasons,
             risk_flags=risk_flags,
+            collaboration_view=collaboration_view,
+        )
+
+    @staticmethod
+    def _build_agent_collaboration_view(
+        *,
+        events: list[AgentTaskEventResponse],
+        runtime_sessions: list[RuntimeSessionViewResponse],
+    ) -> TaskAgentCollaborationViewResponse:
+        session_agent_map = {
+            item.session_id: item.agent_id
+            for item in runtime_sessions
+            if item.session_id
+        }
+        collaboration_event_types = {
+            "agent_selected": "agent_selected",
+            "agent_started": "agent_started",
+            "runtime_session_started": "runtime_session_started",
+            "workflow_started": "workflow_started",
+            "workflow_step_registered": "workflow_step_registered",
+            "mcp_call_started": "mcp_call",
+            "mcp_call_finished": "mcp_call",
+            "external_agent_call_started": "external_agent_call",
+            "external_agent_call_finished": "external_agent_call",
+            "external_agent_call_failed": "external_agent_call",
+            "approval_requested": "approval_requested",
+            "approval_finished": "approval_finished",
+            "final_response": "final_response",
+        }
+
+        steps: list[AgentCollaborationStepResponse] = []
+        collaboration_path: list[str] = []
+        external_agent_step_count = 0
+        mcp_step_count = 0
+
+        for index, item in enumerate(events, start=1):
+            if item.event_type not in collaboration_event_types:
+                continue
+            payload = item.event_payload if isinstance(item.event_payload, dict) else {}
+            session_id = None
+            runtime_session_id = payload.get("runtime_session_id")
+            if isinstance(runtime_session_id, str) and runtime_session_id:
+                session_id = runtime_session_id
+            agent_id = item.agent_id or session_agent_map.get(session_id or "")
+            if agent_id and (not collaboration_path or collaboration_path[-1] != agent_id):
+                collaboration_path.append(agent_id)
+            if item.event_type.startswith("external_agent_call"):
+                external_agent_step_count += 1
+            if item.event_type.startswith("mcp_call"):
+                mcp_step_count += 1
+
+            stage_label = collaboration_event_types[item.event_type]
+            summary = item.content or ""
+            if not summary:
+                summary = str(payload.get("summary") or payload.get("next_action") or "")
+            steps.append(
+                AgentCollaborationStepResponse(
+                    order_no=index,
+                    event_type=item.event_type,
+                    title=item.title,
+                    agent_id=agent_id,
+                    session_id=session_id,
+                    event_status=item.event_status,
+                    timestamp=item.start_time,
+                    stage_label=stage_label,
+                    summary=summary[:240],
+                )
+            )
+
+        handoff_count = max(0, len(collaboration_path) - 1)
+        return TaskAgentCollaborationViewResponse(
+            agent_count=len(collaboration_path),
+            handoff_count=handoff_count,
+            external_agent_step_count=external_agent_step_count,
+            mcp_step_count=mcp_step_count,
+            collaboration_path=collaboration_path,
+            steps=steps,
         )
 
     @staticmethod
