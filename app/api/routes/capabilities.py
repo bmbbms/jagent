@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.dependencies import get_capability_registry
+from app.dependencies import get_capability_registry, get_task_service
 from app.registry.base import CapabilityResolver
-from app.schemas import BizDomain, CapabilityInfo, CapabilityOverviewResponse
+from app.schemas import (
+    AgentTaskSummaryResponse,
+    BizDomain,
+    CapabilityInfo,
+    CapabilityOverviewResponse,
+)
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/capabilities", tags=["capabilities"])
 
@@ -121,6 +127,29 @@ def get_capability_overview(
         source_counts=source_counts,
         transport_counts=transport_counts,
     )
+
+
+@router.get("/{capability_id}/recent-tasks", response_model=list[AgentTaskSummaryResponse])
+def list_capability_recent_tasks(
+    capability_id: str,
+    limit: int = Query(default=10, ge=1, le=50),
+    registry: CapabilityResolver = Depends(get_capability_registry),
+    task_service: TaskService = Depends(get_task_service),
+) -> list[AgentTaskSummaryResponse]:
+    item = next(
+        (entry for entry in registry.describe_capabilities() if entry.capability_id == capability_id),
+        None,
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="capability not found")
+    task_list = task_service.list_tasks(
+        selected_agent_id=capability_id,
+        page=1,
+        page_size=limit,
+        sort_by="start_time",
+        sort_order="desc",
+    )
+    return task_list.items
 
 
 @router.get("/{capability_id}", response_model=CapabilityInfo)

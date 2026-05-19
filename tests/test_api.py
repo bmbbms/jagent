@@ -139,6 +139,20 @@ def test_capability_overview(client: TestClient) -> None:
     assert "transport_counts" in body
 
 
+def test_capability_recent_tasks_api(client: TestClient) -> None:
+    response = client.get("/api/capabilities/merchant.qa/recent-tasks", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+      first = body[0]
+      assert "task_id" in first
+      assert "selected_agent_id" in first
+      assert first["selected_agent_id"] == "merchant.qa"
+      assert "status" in first
+      assert "start_time" in first
+
+
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200
@@ -880,6 +894,7 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="capabilityOverview"' in response.text
     assert 'id="capabilityList"' in response.text
     assert 'id="capabilityDetail"' in response.text
+    assert 'id="capabilityRecentTaskList"' in response.text
     assert 'id="domainFilter"' in response.text
     assert 'id="sourceFilter"' in response.text
     assert 'id="riskFilter"' in response.text
