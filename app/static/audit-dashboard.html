@@ -88,7 +88,8 @@
       margin: 0 0 14px;
       font-size: 18px;
     }
-    .list {
+    .list,
+    .detail-list {
       display: grid;
       gap: 10px;
     }
@@ -99,6 +100,7 @@
       padding: 14px;
       display: grid;
       gap: 10px;
+      cursor: pointer;
     }
     .card.active {
       border-color: var(--accent);
@@ -115,7 +117,51 @@
       font-size: 13px;
       line-height: 1.6;
     }
-    pre {
+    .hero {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff6ec 0%, #fffdf9 100%);
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed rgba(230, 215, 196, 0.95);
+      padding-bottom: 8px;
+      font-size: 14px;
+    }
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .label {
+      color: var(--muted);
+      flex: 0 0 140px;
+    }
+    .value {
+      flex: 1;
+      text-align: right;
+      word-break: break-word;
+    }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f2e4d5;
+      color: #6d563f;
+    }
+    pre.payload {
       margin: 0;
       white-space: pre-wrap;
       word-break: break-word;
@@ -134,11 +180,13 @@
     <div class="header">
       <div>
         <h1>审计中心</h1>
-        <p>集中查看平台审计事件，支持按操作类型、操作者、任务和审批单过滤，方便联调审批、任务执行和外部 Agent 接入过程中的审计留痕。</p>
+        <p>集中查看平台审计事件，支持按操作类型、操作者、任务和审批单过滤，并可直接跳转到任务、审批、能力和流程中心做联调排查。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
         <button id="approvalPageBtn" class="secondary">审批中心</button>
+        <button id="workflowPageBtn" class="secondary">Workflow Center</button>
+        <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <input id="actionFilterInput" placeholder="按 action 过滤" />
         <input id="actorFilterInput" placeholder="按 actor_id 过滤" />
         <input id="taskFilterInput" placeholder="按 task_id 过滤" />
@@ -174,6 +222,8 @@
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
       approvalPageBtn: document.getElementById("approvalPageBtn"),
+      workflowPageBtn: document.getElementById("workflowPageBtn"),
+      capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       actionFilterInput: document.getElementById("actionFilterInput"),
       actorFilterInput: document.getElementById("actorFilterInput"),
       taskFilterInput: document.getElementById("taskFilterInput"),
@@ -193,8 +243,36 @@
 
     async function fetchJson(url) {
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : [];
+      if (!response.ok) throw new Error(body?.detail || `HTTP ${response.status}`);
+      return body;
+    }
+
+    function currentEvent() {
+      return state.events[state.selectedIndex] || null;
+    }
+
+    function currentPayload() {
+      return currentEvent()?.payload || {};
+    }
+
+    function syncQuery() {
+      const url = new URL(window.location.href);
+      const pairs = {
+        action: el.actionFilterInput.value.trim(),
+        actor_id: el.actorFilterInput.value.trim(),
+        task_id: el.taskFilterInput.value.trim(),
+        approval_id: el.approvalFilterInput.value.trim(),
+      };
+      Object.entries(pairs).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value);
+        } else {
+          url.searchParams.delete(key);
+        }
+      });
+      window.history.replaceState({}, "", url);
     }
 
     function buildQuery() {
@@ -213,13 +291,18 @@
         el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
         return;
       }
-      el.auditList.innerHTML = state.events.map((item, index) => `
-        <div class="card ${index === state.selectedIndex ? "active" : ""}" data-index="${index}">
-          <div class="title">${escapeHtml(item.action)}</div>
-          <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
-          <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
-        </div>
-      `).join("");
+      el.auditList.innerHTML = state.events.map((item, index) => {
+        const payload = item.payload || {};
+        return `
+          <div class="card ${index === state.selectedIndex ? "active" : ""}" data-index="${index}">
+            <div class="title">${escapeHtml(item.action)}</div>
+            <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
+            <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
+            <div class="subtle">task_id：${escapeHtml(payload.task_id || "-")}</div>
+            <div class="subtle">approval_id：${escapeHtml(payload.approval_id || "-")}</div>
+          </div>
+        `;
+      }).join("");
 
       el.auditList.querySelectorAll("[data-index]").forEach(node => {
         node.addEventListener("click", () => {
@@ -231,19 +314,70 @@
     }
 
     function renderDetail() {
-      const item = state.events[state.selectedIndex];
+      const item = currentEvent();
       if (!item) {
         el.auditDetail.innerHTML = '<div class="empty">请选择左侧审计事件查看详情。</div>';
         return;
       }
+      const payload = item.payload || {};
+      const taskId = payload.task_id || "";
+      const approvalId = payload.approval_id || "";
+      const capabilityId = payload.capability_id || "";
+      const workflowCode = payload.workflow || "";
+
       el.auditDetail.innerHTML = `
-        <div class="card">
+        <div class="hero">
           <div class="title">${escapeHtml(item.action)}</div>
-          <div class="subtle">actor_id：${escapeHtml(item.actor_id)}</div>
+          <div class="subtle" style="margin-top: 8px;">actor_id：${escapeHtml(item.actor_id)}</div>
           <div class="subtle">时间：${escapeHtml(item.created_at)}</div>
-          <pre>${escapeHtml(JSON.stringify(item.payload || {}, null, 2))}</pre>
+          <div class="chip-row">
+            ${taskId ? `<span class="chip">task:${escapeHtml(taskId)}</span>` : ""}
+            ${approvalId ? `<span class="chip">approval:${escapeHtml(approvalId)}</span>` : ""}
+            ${capabilityId ? `<span class="chip">capability:${escapeHtml(capabilityId)}</span>` : ""}
+            ${workflowCode ? `<span class="chip">workflow:${escapeHtml(workflowCode)}</span>` : ""}
+          </div>
         </div>
+        <div class="detail-list">
+          <div class="detail-row"><div class="label">task_id</div><div class="value">${escapeHtml(taskId || "-")}</div></div>
+          <div class="detail-row"><div class="label">approval_id</div><div class="value">${escapeHtml(approvalId || "-")}</div></div>
+          <div class="detail-row"><div class="label">capability_id</div><div class="value">${escapeHtml(capabilityId || "-")}</div></div>
+          <div class="detail-row"><div class="label">workflow</div><div class="value">${escapeHtml(workflowCode || "-")}</div></div>
+        </div>
+        <div class="toolbar" style="justify-content: flex-start; margin-top: 16px;">
+          ${taskId ? '<button id="openTaskBtn" class="secondary">打开任务</button>' : ""}
+          ${approvalId ? '<button id="openApprovalBtn" class="secondary">打开审批</button>' : ""}
+          ${workflowCode ? '<button id="openWorkflowBtn" class="secondary">打开 Workflow</button>' : ""}
+          ${capabilityId ? '<button id="openCapabilityBtn" class="secondary">打开 Capability</button>' : ""}
+        </div>
+        <h2 style="margin-top: 18px;">原始载荷</h2>
+        <pre class="payload">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
       `;
+
+      const openTaskBtn = document.getElementById("openTaskBtn");
+      const openApprovalBtn = document.getElementById("openApprovalBtn");
+      const openWorkflowBtn = document.getElementById("openWorkflowBtn");
+      const openCapabilityBtn = document.getElementById("openCapabilityBtn");
+
+      if (openTaskBtn && taskId) {
+        openTaskBtn.addEventListener("click", () => {
+          window.location.href = `/ui/tasks?task_id=${encodeURIComponent(taskId)}`;
+        });
+      }
+      if (openApprovalBtn && approvalId) {
+        openApprovalBtn.addEventListener("click", () => {
+          window.location.href = `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}`;
+        });
+      }
+      if (openWorkflowBtn && workflowCode) {
+        openWorkflowBtn.addEventListener("click", () => {
+          window.location.href = `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}`;
+        });
+      }
+      if (openCapabilityBtn && capabilityId) {
+        openCapabilityBtn.addEventListener("click", () => {
+          window.location.href = `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`;
+        });
+      }
     }
 
     async function loadAudit() {
@@ -252,13 +386,37 @@
       state.selectedIndex = 0;
       renderList();
       renderDetail();
+      syncQuery();
+    }
+
+    async function bootstrap() {
+      const query = new URLSearchParams(window.location.search);
+      el.actionFilterInput.value = query.get("action") || "";
+      el.actorFilterInput.value = query.get("actor_id") || "";
+      el.taskFilterInput.value = query.get("task_id") || "";
+      el.approvalFilterInput.value = query.get("approval_id") || "";
+      await loadAudit();
     }
 
     el.taskPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/tasks";
+      const taskId = el.taskFilterInput.value.trim() || currentPayload().task_id || "";
+      const target = taskId ? `/ui/tasks?task_id=${encodeURIComponent(taskId)}` : "/ui/tasks";
+      window.location.href = target;
     });
     el.approvalPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/approvals";
+      const approvalId = el.approvalFilterInput.value.trim() || currentPayload().approval_id || "";
+      const target = approvalId ? `/ui/approvals?approval_id=${encodeURIComponent(approvalId)}` : "/ui/approvals";
+      window.location.href = target;
+    });
+    el.workflowPageBtn.addEventListener("click", () => {
+      const workflowCode = currentPayload().workflow || "";
+      const target = workflowCode ? `/ui/workflows?workflow_code=${encodeURIComponent(workflowCode)}` : "/ui/workflows";
+      window.location.href = target;
+    });
+    el.capabilityPageBtn.addEventListener("click", () => {
+      const capabilityId = currentPayload().capability_id || "";
+      const target = capabilityId ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}` : "/ui/capabilities";
+      window.location.href = target;
     });
     el.loadBtn.addEventListener("click", loadAudit);
     [el.actionFilterInput, el.actorFilterInput, el.taskFilterInput, el.approvalFilterInput].forEach(node => {
@@ -267,7 +425,7 @@
       });
     });
 
-    loadAudit();
+    bootstrap();
   </script>
 </body>
 </html>
