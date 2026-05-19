@@ -9,7 +9,7 @@ from alembic import op
 from alembic import context
 import sqlalchemy as sa
 from sqlalchemy import inspect
-from sqlalchemy.exc import NoInspectionAvailable
+from sqlalchemy.exc import NoInspectionAvailable, SQLAlchemyError
 
 
 revision = "0003_add_internal_tool_business_tables"
@@ -20,11 +20,25 @@ depends_on = None
 AUTO_ID_TYPE = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
+def _is_already_exists_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return (
+        "already exists" in message
+        or "duplicate key name" in message
+        or "duplicate column name" in message
+        or "(1050," in message
+        or "(1061," in message
+    )
+
+
 def _run_step(step_name: str, operation) -> None:
     print(f"[alembic 0003] {step_name}", flush=True)
     try:
         operation()
     except Exception as exc:
+        if _is_already_exists_error(exc):
+            print(f"[alembic 0003] skipped existing object during {step_name}: {exc!r}", flush=True)
+            return
         print(f"[alembic 0003] FAILED {step_name}: {exc!r}", flush=True)
         raise
 
@@ -35,9 +49,13 @@ def _table_exists(table_name: str) -> bool:
     bind = op.get_bind()
     try:
         inspector = inspect(bind)
-    except NoInspectionAvailable:
+        return table_name in inspector.get_table_names()
+    except (NoInspectionAvailable, SQLAlchemyError) as exc:
+        print(
+            f"[alembic 0003] table existence check failed for {table_name}: {exc!r}; continuing",
+            flush=True,
+        )
         return False
-    return table_name in inspector.get_table_names()
 
 
 def _index_exists(table_name: str, index_name: str) -> bool:
@@ -46,14 +64,19 @@ def _index_exists(table_name: str, index_name: str) -> bool:
     bind = op.get_bind()
     try:
         inspector = inspect(bind)
-    except NoInspectionAvailable:
+        if table_name not in inspector.get_table_names():
+            return False
+        return any(item["name"] == index_name for item in inspector.get_indexes(table_name))
+    except (NoInspectionAvailable, SQLAlchemyError) as exc:
+        print(
+            f"[alembic 0003] index existence check failed for {index_name}: {exc!r}; continuing",
+            flush=True,
+        )
         return False
-    if table_name not in inspector.get_table_names():
-        return False
-    return any(item["name"] == index_name for item in inspector.get_indexes(table_name))
 
 
 def upgrade() -> None:
+    print("[alembic 0003] starting internal tool business table migration", flush=True)
     if not _table_exists("t_service_ticket"):
         _run_step(
             "create table t_service_ticket",
