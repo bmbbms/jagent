@@ -14,6 +14,7 @@ def list_capabilities(
     risk_level: str | None = Query(default=None),
     requires_approval: bool | None = Query(default=None),
     transport: str | None = Query(default=None),
+    skill_id: str | None = Query(default=None),
     registry: CapabilityResolver = Depends(get_capability_registry),
 ) -> list[CapabilityInfo]:
     items = registry.describe_capabilities(biz_domain)
@@ -28,6 +29,8 @@ def list_capabilities(
         items = [item for item in items if item.requires_approval == requires_approval]
     if transport:
         items = [item for item in items if item.transport == transport]
+    if skill_id:
+        items = [item for item in items if skill_id in item.skills]
     return [
         CapabilityInfo(
             capability_id=item.capability_id,

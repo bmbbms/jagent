@@ -238,6 +238,7 @@
           <option value="http">http</option>
           <option value="a2a">a2a</option>
         </select>
+        <input id="skillFilterInput" placeholder="按 skill_id 反查 capability" />
         <input id="capabilityIdInput" placeholder="输入 capability_id 直接打开" />
         <button id="loadBtn">加载能力</button>
         <button id="refreshBtn" class="secondary">刷新列表</button>
@@ -280,6 +281,7 @@
       riskFilter: document.getElementById("riskFilter"),
       approvalFilter: document.getElementById("approvalFilter"),
       transportFilter: document.getElementById("transportFilter"),
+      skillFilterInput: document.getElementById("skillFilterInput"),
       capabilityIdInput: document.getElementById("capabilityIdInput"),
       loadBtn: document.getElementById("loadBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
@@ -314,6 +316,7 @@
         risk_level: el.riskFilter.value,
         requires_approval: el.approvalFilter.value,
         transport: el.transportFilter.value,
+        skill_id: el.skillFilterInput.value.trim(),
       };
       Object.entries(pairs).forEach(([key, value]) => {
         if (value) {
@@ -409,6 +412,11 @@
         <div class="section-split">
           <h2>Declared Skills</h2>
           ${renderTagList(item.skills || [], "warning")}
+          ${(item.skills || []).length
+            ? `<div class="chips">${(item.skills || []).map(skill => `
+              <button class="secondary" type="button" data-open-skill="${escapeHtml(skill)}">打开 ${escapeHtml(skill)}</button>
+            `).join("")}</div>`
+            : ""}
         </div>
 
         <div class="section-split">
@@ -458,6 +466,15 @@
       const openTaskPageBtn = document.getElementById("openTaskPageBtn");
       const openExternalAgentBtn = document.getElementById("openExternalAgentBtn");
       const openSkillPageBtn = document.getElementById("openSkillPageBtn");
+      el.capabilityDetail.querySelectorAll("[data-open-skill]").forEach(node => {
+        node.addEventListener("click", () => {
+          const skillId = node.getAttribute("data-open-skill") || "";
+          if (!skillId) {
+            return;
+          }
+          window.location.href = `/ui/skills?skill_id=${encodeURIComponent(skillId)}&capability_id=${encodeURIComponent(item.capability_id)}`;
+        });
+      });
 
       if (openTaskPageBtn) {
         openTaskPageBtn.addEventListener("click", () => {
@@ -483,6 +500,7 @@
       if (el.riskFilter.value) query.set("risk_level", el.riskFilter.value);
       if (el.approvalFilter.value) query.set("requires_approval", el.approvalFilter.value);
       if (el.transportFilter.value) query.set("transport", el.transportFilter.value);
+      if (el.skillFilterInput.value.trim()) query.set("skill_id", el.skillFilterInput.value.trim());
 
       const [capabilities, externalAgents] = await Promise.all([
         fetchJson(`/api/capabilities?${query.toString()}`),
@@ -526,6 +544,7 @@
       el.riskFilter.value = query.get("risk_level") || "";
       el.approvalFilter.value = query.get("requires_approval") || "";
       el.transportFilter.value = query.get("transport") || "";
+      el.skillFilterInput.value = query.get("skill_id") || "";
       await loadCapabilities();
       if (state.capabilityId) {
         loadCapabilityDetail();
@@ -550,6 +569,9 @@
     });
     [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
+    });
+    el.skillFilterInput.addEventListener("keydown", async event => {
+      if (event.key === "Enter") await bootstrap();
     });
     el.loadBtn.addEventListener("click", loadCapabilityDetail);
     el.refreshBtn.addEventListener("click", bootstrap);

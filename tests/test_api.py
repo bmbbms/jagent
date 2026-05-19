@@ -56,6 +56,7 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
             "risk_level": "high",
             "requires_approval": True,
             "transport": "inproc",
+            "skill_id": "quota_review",
         },
     )
     assert filtered_response.status_code == 200
@@ -64,6 +65,7 @@ def test_capabilities_support_source_filter(client: TestClient) -> None:
     assert all(item["risk_level"] == "high" for item in filtered_body)
     assert all(item["requires_approval"] is True for item in filtered_body)
     assert all(item["transport"] == "inproc" for item in filtered_body)
+    assert all("quota_review" in item["skills"] for item in filtered_body)
 
 
 def test_capability_detail(client: TestClient) -> None:
@@ -627,6 +629,7 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="riskFilter"' in response.text
     assert 'id="approvalFilter"' in response.text
     assert 'id="transportFilter"' in response.text
+    assert 'id="skillFilterInput"' in response.text
     assert 'id="capabilityIdInput"' in response.text
 
 
