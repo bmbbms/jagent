@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     nacos_service_cluster: str = "DEFAULT"
     nacos_service_weight: float = 1.0
     nacos_ai_enabled: bool = False
+    nacos_ai_publish_local_agents: bool = False
     nacos_ai_namespace: str = "public"
     nacos_ai_server_address: str = ""
     nacos_ai_username: str = ""

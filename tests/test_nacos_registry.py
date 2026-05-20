@@ -127,3 +127,71 @@ def test_nacos_registry_treats_conflict_as_idempotent() -> None:
         registry.register_remote(metadata)
 
     assert "merchant.review.agent" in registry._local_cache
+
+
+def test_nacos_registry_does_not_publish_local_agents_by_default() -> None:
+    registry = NacosCapabilityRegistry(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_publish_local_agents=False,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        )
+    )
+
+    class _FakeAgent:
+        definition = type(
+            "Definition",
+            (),
+            {
+                "capability_id": "merchant.test.agent",
+                "name": "Merchant Test Agent",
+                "biz_domain": BizDomain.merchant,
+                "description": "test",
+                "priority": 1,
+                "triggers": [],
+                "skills": [],
+                "version": "v1",
+                "risk_level": "low",
+                "requires_approval": False,
+                "tags": [],
+                "transport": "inproc",
+                "endpoint": None,
+                "service_name": None,
+                "service_host": None,
+                "service_port": None,
+                "service_path": "/api/chat",
+                "extras": {},
+            },
+        )()
+
+    with patch.object(registry, "_publish_agent_card") as mocked_publish:
+        registry.register_local(_FakeAgent())
+    mocked_publish.assert_not_called()
+
+
+def test_nacos_registry_maps_remote_agent_without_capability_metadata() -> None:
+    registry = NacosCapabilityRegistry(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        )
+    )
+    remote_cards = [
+        {
+            "name": "payment-regulation-agent",
+            "description": "desc",
+            "supportedInterfaces": [
+                {"transport": "JSONRPC", "url": "http://127.0.0.1:9000/a2a"}
+            ],
+            "skills": [{"id": "dialog", "name": "dialog"}],
+            "metadata": {},
+        }
+    ]
+    with patch.object(registry, "_load_remote_agent_cards") as mocked_loader:
+        mocked_loader.return_value = [
+            registry._from_agent_card(remote_cards[0])  # noqa: SLF001
+        ]
+        items = registry.describe_capabilities()
+    assert items
+    assert items[0].capability_id == "nacos.merchant.payment.regulation.agent"
+    assert items[0].service_path == "/a2a"

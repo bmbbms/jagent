@@ -24,7 +24,7 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
     def register_local(self, agent: CapabilityAgent) -> None:
         metadata = self._to_metadata(agent)
         self._local_cache[metadata.capability_id] = metadata
-        if self._settings.nacos_ai_enabled:
+        if self._settings.nacos_ai_enabled and self._settings.nacos_ai_publish_local_agents:
             print(
                 f"[nacos] publish local capability capability_id={metadata.capability_id} "
                 f"name={metadata.capability_name}",
@@ -34,7 +34,7 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
 
     def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
         self._local_cache[metadata.capability_id] = metadata
-        if self._settings.nacos_ai_enabled:
+        if self._settings.nacos_ai_enabled and self._settings.nacos_ai_publish_local_agents:
             print(
                 f"[nacos] publish remote capability capability_id={metadata.capability_id} "
                 f"name={metadata.capability_name}",
@@ -165,20 +165,29 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
 
     def _from_agent_card(self, card: dict[str, Any]) -> CapabilityMetadata | None:
         metadata = card.get("metadata") or {}
+        capability_name = str(card.get("name") or "").strip()
         capability_id = str(metadata.get("capability_id") or "").strip()
         if not capability_id:
-            return None
+            capability_id = self._fallback_capability_id(
+                capability_name=capability_name or "remote-agent",
+                biz_domain=str(metadata.get("biz_domain") or "merchant"),
+            )
         skills = []
         for item in card.get("skills") or []:
             if isinstance(item, dict) and isinstance(item.get("id"), str):
                 skills.append(item["id"])
         transport = str(metadata.get("transport") or "a2a")
-        endpoint = metadata.get("endpoint") or card.get("url")
-        service_path = str(metadata.get("service_path") or "/a2a")
+        interface_url = self._read_supported_interface_url(card)
+        endpoint = metadata.get("endpoint") or interface_url or card.get("url")
+        service_path = str(
+            metadata.get("service_path")
+            or self._extract_path_from_url(interface_url or card.get("url"))
+            or "/a2a"
+        )
         biz_domain = metadata.get("biz_domain") or "merchant"
         return CapabilityMetadata(
             capability_id=capability_id,
-            capability_name=str(card.get("name") or capability_id),
+            capability_name=capability_name or capability_id,
             biz_domain=BizDomain(str(biz_domain)),
             description=str(card.get("description") or ""),
             priority=int(metadata.get("priority") or 100),
@@ -240,3 +249,30 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         if not path.startswith("/"):
             path = f"/{path}"
         return f"{base}{path}"
+
+    @staticmethod
+    def _extract_path_from_url(url: Any) -> str:
+        if not isinstance(url, str) or not url.strip():
+            return ""
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url.strip())
+        return parsed.path or ""
+
+    @staticmethod
+    def _read_supported_interface_url(card: dict[str, Any]) -> str | None:
+        for item in card.get("supportedInterfaces") or []:
+            if not isinstance(item, dict):
+                continue
+            value = item.get("url")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    @staticmethod
+    def _fallback_capability_id(*, capability_name: str, biz_domain: str) -> str:
+        import re
+
+        slug = re.sub(r"[^a-z0-9]+", ".", capability_name.lower()).strip(".")
+        slug = re.sub(r"\.+", ".", slug) or "agent"
+        return f"nacos.{biz_domain}.{slug}"
