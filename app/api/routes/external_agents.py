@@ -19,6 +19,8 @@ from app.schemas import (
     ExternalAgentRegisterRequest,
     ExternalAgentUpdateRequest,
     AgentTaskSummaryResponse,
+    GovernanceActionRequest,
+    GovernanceActionResponse,
     GovernanceAlertResponse,
 )
 from app.services.external_agent_health_service import ExternalAgentHealthService
@@ -29,6 +31,8 @@ from app.services.external_capability_persistence_service import (
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/external-agents", tags=["external-agents"])
+
+_GOVERNANCE_ACTION_STATE: dict[str, dict[str, str]] = {}
 
 
 @router.get("/alerts", response_model=list[GovernanceAlertResponse])
@@ -69,6 +73,54 @@ def list_governance_alerts(
         )
 
     return external_alerts
+
+
+@router.post("/alerts/{alert_id}/actions", response_model=GovernanceActionResponse)
+def act_on_governance_alert(
+    alert_id: str,
+    request: GovernanceActionRequest,
+) -> GovernanceActionResponse:
+    action = request.action.strip().lower()
+    if action not in {"ack", "ignore", "close"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid action")
+    state = {
+        "action": action,
+        "operator_id": request.operator_id,
+        "comment": request.comment.strip(),
+        "performed_at": datetime.utcnow().isoformat(),
+        "status": "closed" if action == "close" else "acknowledged" if action == "ack" else "ignored",
+    }
+    _GOVERNANCE_ACTION_STATE[alert_id] = state
+    message = {
+        "ack": "告警已确认",
+        "ignore": "告警已忽略",
+        "close": "告警已关闭",
+    }[action]
+    return GovernanceActionResponse(
+        alert_id=alert_id,
+        action=action,
+        operator_id=request.operator_id,
+        status=state["status"],
+        message=message,
+        performed_at=state["performed_at"],
+    )
+
+
+@router.get("/alerts/actions", response_model=list[GovernanceActionResponse])
+def list_governance_alert_actions() -> list[GovernanceActionResponse]:
+    items: list[GovernanceActionResponse] = []
+    for alert_id, state in _GOVERNANCE_ACTION_STATE.items():
+        items.append(
+            GovernanceActionResponse(
+                alert_id=alert_id,
+                action=state.get("action", "ack"),
+                operator_id=state.get("operator_id", "system"),
+                status=state.get("status", "done"),
+                message=state.get("comment", ""),
+                performed_at=state.get("performed_at", ""),
+            )
+        )
+    return items
 
 
 @router.post("/register", response_model=ExternalAgentInfo)

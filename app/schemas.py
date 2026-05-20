@@ -320,6 +320,21 @@ class GovernanceAlertResponse(BaseModel):
     target_api: Optional[str] = None
 
 
+class GovernanceActionRequest(BaseModel):
+    action: str
+    operator_id: str
+    comment: str = ""
+
+
+class GovernanceActionResponse(BaseModel):
+    alert_id: str
+    action: str
+    operator_id: str
+    status: str = "done"
+    message: str = ""
+    performed_at: str = ""
+
+
 class MCPToolInfo(BaseModel):
     tool_id: str
     provider: str

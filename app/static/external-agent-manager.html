@@ -345,7 +345,7 @@
         </div>
         <div id="healthOverview" class="subtle" style="margin-bottom: 8px;">正在加载健康概览...</div>
         <div id="governanceOverview" class="subtle" style="margin-bottom: 12px;">正在加载治理概览...</div>
-        <div class="panel" style="margin-bottom: 12px; padding: 14px;">
+      <div class="panel" style="margin-bottom: 12px; padding: 14px;">
           <h2>告警中心</h2>
           <div id="alertCenter" class="alert-list">
             <div class="empty">正在加载统一告警...</div>
@@ -741,9 +741,35 @@
           <div class="actions">
             ${item.target_ui ? `<a href="${escapeHtml(item.target_ui)}">打开目标</a>` : ""}
             ${item.target_api ? `<a href="${escapeHtml(item.target_api)}" target="_blank" rel="noreferrer">查看 API</a>` : ""}
+            <button data-alert-action="ack" data-alert-id="${escapeHtml(item.alert_id)}">确认</button>
+            <button data-alert-action="ignore" data-alert-id="${escapeHtml(item.alert_id)}">忽略</button>
+            <button data-alert-action="close" data-alert-id="${escapeHtml(item.alert_id)}">关闭</button>
           </div>
         </div>
       `).join("");
+      el.alertCenter.querySelectorAll("[data-alert-action]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const alertId = node.getAttribute("data-alert-id") || "";
+          const action = node.getAttribute("data-alert-action") || "ack";
+          if (!alertId) return;
+          try {
+            setStatus(`执行告警动作 ${action}...`);
+            await requestJson(`/api/external-agents/alerts/${encodeURIComponent(alertId)}/actions`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action,
+                operator_id: "ui-operator",
+                comment: "",
+              }),
+            });
+            setStatus(`告警动作已执行：${action}`, "success");
+            await loadHealthOverview();
+          } catch (error) {
+            setStatus(`告警动作失败：${error.message}`, "danger");
+          }
+        });
+      });
     }
 
     async function loadAgentList() {
