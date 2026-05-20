@@ -1312,6 +1312,17 @@ class AgentGatewayRouteRequest(BaseModel):
     source: Optional[str] = None
 
 
+class AgentGatewayInvokeRequest(BaseModel):
+    user_id: str
+    biz_domain: str
+    message: str
+    requested_agent_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    roles: List[str] = Field(default_factory=list)
+    source: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
 class AgentGatewayRankedCandidateResponse(BaseModel):
     agent_id: str
     agent_name: str
@@ -1337,4 +1348,23 @@ class AgentGatewayRouteResponse(BaseModel):
     filtered_candidates: List[AgentGatewayFilteredCandidateResponse] = Field(default_factory=list)
     ranked_candidates: List[AgentGatewayRankedCandidateResponse] = Field(default_factory=list)
     policy_decision: str = "allow"
+    risk_flags: List[str] = Field(default_factory=list)
+
+
+class AgentGatewayInvokeResponse(BaseModel):
+    task_id: str
+    contact_id: Optional[str] = None
+    selected_agent_id: str
+    selected_agent_name: str
+    matched_skill_ids: List[str] = Field(default_factory=list)
+    route_reason: str = ""
+    policy_decision: str = "allow"
+    declared_skills: List["AgentDeclaredSkillResponse"] = Field(default_factory=list)
+    declared_mcps: List["AgentDeclaredMCPResponse"] = Field(default_factory=list)
+    declared_workflows: List["AgentDeclaredWorkflowResponse"] = Field(default_factory=list)
+    summary: str
+    next_action: str
+    references: List[str] = Field(default_factory=list)
+    audit_tags: List[str] = Field(default_factory=list)
+    routing_trace: Optional[RoutingTrace] = None
     risk_flags: List[str] = Field(default_factory=list)

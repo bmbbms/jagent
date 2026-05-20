@@ -26,6 +26,7 @@ from app.runtimes.agentscope import AgentScopeAgentRuntime
 from app.runtimes.base import AgentRuntime
 from app.runtimes.local import LocalAgentRuntime
 from app.services.audit_service import AuditService
+from app.services.agent_gateway_execution_service import AgentGatewayExecutionService
 from app.services.agent_profile_service import AgentProfileSyncService
 from app.services.agent_gateway_routing_service import AgentGatewayRoutingService
 from app.services.agent_policy_service import AgentPolicyService
@@ -153,6 +154,16 @@ def get_agent_gateway_routing_service() -> AgentGatewayRoutingService:
     return AgentGatewayRoutingService(
         agent_profile_service=get_agent_profile_sync_service(),
         agent_policy_service=get_agent_policy_service(),
+    )
+
+
+@lru_cache
+def get_agent_gateway_execution_service() -> AgentGatewayExecutionService:
+    return AgentGatewayExecutionService(
+        routing_service=get_agent_gateway_routing_service(),
+        agent_profile_service=get_agent_profile_sync_service(),
+        task_service=get_task_service(),
+        audit_service=get_audit_service(),
     )
 
 

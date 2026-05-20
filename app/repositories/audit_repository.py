@@ -20,6 +20,7 @@ class AuditRepository:
         payload: Dict[str, Any],
     ) -> None:
         now = datetime.utcnow()
+        payload_json = _json_safe(payload)
         session.add(
             AuditLogModel(
                 log_id=f"audit_{uuid4().hex[:24]}",
@@ -42,8 +43,8 @@ class AuditRepository:
                 error_code=payload.get("error_code"),
                 error_msg=payload.get("error_msg"),
                 outcome=payload.get("outcome", 0),
-                payload=payload,
-                tags=payload.get("tags"),
+                payload=payload_json,
+                tags=payload_json.get("tags"),
                 request_time=payload.get("request_time", now),
                 response_time=payload.get("response_time"),
                 duration_ms=payload.get("duration_ms"),
@@ -117,3 +118,17 @@ class AuditRepository:
             )
             for item in items
         ]
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, set):
+        return [_json_safe(item) for item in sorted(value, key=lambda item: str(item))]
+    return value

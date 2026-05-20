@@ -537,6 +537,18 @@ class TaskService:
                 return None
             return task.contact_id
 
+    def fail_task(
+        self,
+        *,
+        task_id: str,
+        final_output_summary: str,
+    ) -> None:
+        self._complete_task(
+            task_id=task_id,
+            final_output_summary=final_output_summary,
+            status="failed",
+        )
+
     def _create_final_artifact(
         self,
         *,
