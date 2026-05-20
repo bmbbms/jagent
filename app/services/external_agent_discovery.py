@@ -53,7 +53,7 @@ class ExternalAgentDiscoveryService:
         tags = self._merge_tags(request.tags, transport)
         service_name = request.service_name or self._read_card_value(card, "serviceName")
         service_host = request.service_host or self._read_card_value(card, "serviceHost")
-        service_port = request.service_port or self._read_card_value(card, "servicePort")
+        service_port = request.service_port or self._read_card_number(card, "servicePort")
         extras = {
             **request.extras,
             "source": "generic_add",
@@ -116,8 +116,9 @@ class ExternalAgentDiscoveryService:
         normalized_url: str,
         card: Optional[Dict[str, Any]],
     ) -> str:
-        if request.transport:
-            return request.transport
+        request_transport = str(request.transport or "").strip()
+        if request_transport:
+            return request_transport
         if card:
             return "a2a"
         if normalized_url.endswith("/a2a"):
