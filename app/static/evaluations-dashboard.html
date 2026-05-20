@@ -307,6 +307,14 @@
           <div class="empty">正在加载重点 Agent...</div>
         </div>
 
+        <h2>Agent 治理总览</h2>
+        <div id="governanceOverviewGrid" class="overview-grid">
+          <div class="empty">正在加载 Agent 治理总览...</div>
+        </div>
+        <div id="governanceAgentList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">正在加载 Agent 治理画像...</div>
+        </div>
+
         <h2>评估维度治理</h2>
         <div id="dimensionAnalyticsList" class="list" style="margin-bottom: 18px;">
           <div class="empty">正在加载评估维度治理...</div>
@@ -398,6 +406,7 @@
       evaluations: [],
       analytics: [],
       focusAgents: [],
+      governanceOverview: null,
       dimensionAnalytics: [],
       rootCauseAnalytics: [],
       overview: null,
@@ -430,6 +439,8 @@
       overviewGrid: document.getElementById("overviewGrid"),
       analyticsList: document.getElementById("analyticsList"),
       focusAgentList: document.getElementById("focusAgentList"),
+      governanceOverviewGrid: document.getElementById("governanceOverviewGrid"),
+      governanceAgentList: document.getElementById("governanceAgentList"),
       dimensionAnalyticsList: document.getElementById("dimensionAnalyticsList"),
       rootCauseAnalyticsList: document.getElementById("rootCauseAnalyticsList"),
       trendPanel: document.getElementById("trendPanel"),
@@ -901,6 +912,73 @@
       });
     }
 
+    function renderAgentGovernanceOverview() {
+      if (!state.governanceOverview) {
+        el.governanceOverviewGrid.innerHTML = '<div class="empty">暂无 Agent 治理总览。</div>';
+        el.governanceAgentList.innerHTML = '<div class="empty">暂无 Agent 治理画像。</div>';
+        return;
+      }
+
+      const summaryCards = [
+        ["Agent 总数", state.governanceOverview.total],
+        ["已启用", state.governanceOverview.enabled_count],
+        ["高关注", state.governanceOverview.high_attention_count],
+        ["治理降级", state.governanceOverview.degraded_count],
+        ["平均评估分", state.governanceOverview.average_overall_score],
+        ["平均近期成功率", `${state.governanceOverview.average_recent_success_rate}%`],
+      ];
+      el.governanceOverviewGrid.innerHTML = summaryCards.map(([label, value]) => `
+        <div class="overview-card">
+          <div class="subtle">${escapeHtml(label)}</div>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("");
+
+      const items = state.governanceOverview.items || [];
+      if (!items.length) {
+        el.governanceAgentList.innerHTML = '<div class="empty">暂无 Agent 治理画像。</div>';
+        return;
+      }
+
+      el.governanceAgentList.innerHTML = items.map(item => `
+        <div class="card ${item.agent_id === state.selectedAnalyticsAgentId ? "active" : ""}" data-governance-agent-id="${escapeHtml(item.agent_id)}">
+          <div class="title">${escapeHtml(item.agent_name || item.agent_id)}</div>
+          <div>
+            <span class="tag ${toneByAttention(item.attention_level)}">${escapeHtml(item.attention_level)}</span>
+            <span class="tag ${toneByScore(item.average_overall_score || 0)}">${escapeHtml(item.average_overall_score)}</span>
+            <span class="tag">${escapeHtml(item.governance_status)}</span>
+          </div>
+          <div class="subtle">domain=${escapeHtml(item.biz_domain)} / source=${escapeHtml(item.source)} / transport=${escapeHtml(item.transport)}</div>
+          <div class="subtle">health=${escapeHtml(item.health_status)} / risk=${escapeHtml(item.risk_level)} / enabled=${escapeHtml(item.enabled)}</div>
+          <div class="subtle">declared skills=${escapeHtml(item.declared_skill_count)} / mcps=${escapeHtml(item.declared_mcp_count)} / workflows=${escapeHtml(item.declared_workflow_count)}</div>
+          <div class="subtle">recent tasks=${escapeHtml(item.recent_task_count)} / success=${escapeHtml(item.success_task_count)} / failed=${escapeHtml(item.failed_task_count)}</div>
+          <div class="subtle">evaluation=${escapeHtml(item.evaluation_count)} / poor rate=${escapeHtml(item.poor_rate)}% / avg duration=${escapeHtml(item.average_duration_ms)} ms</div>
+          <div class="subtle">route issues=${escapeHtml(item.route_issue_count)} / contract issues=${escapeHtml(item.contract_issue_count)} / backlog=${escapeHtml(item.backlog_suggestion_count)}</div>
+          <div class="subtle">${escapeHtml(item.focus_reason || "运行平稳")}</div>
+        </div>
+      `).join("");
+
+      el.governanceAgentList.querySelectorAll("[data-governance-agent-id]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const agentId = node.getAttribute("data-governance-agent-id") || "";
+          if (!agentId) return;
+          state.selectedAnalyticsAgentId = agentId;
+          el.agentFilterInput.value = agentId;
+          resetSuggestionView();
+          await loadEvaluationList();
+          await loadSuggestionOverview();
+          await loadExecutionBacklog();
+          await loadExecutionPlan();
+          await loadExecutionRuns();
+          await loadSuggestions();
+          await loadTrend();
+          renderAnalyticsList();
+          renderFocusAgents();
+          renderAgentGovernanceOverview();
+        });
+      });
+    }
+
     function renderDimensionAnalytics() {
       if (!state.dimensionAnalytics.length) {
         el.dimensionAnalyticsList.innerHTML = '<div class="empty">暂无评估维度治理数据。</div>';
@@ -1238,6 +1316,11 @@
       renderFocusAgents();
     }
 
+    async function loadAgentGovernance() {
+      state.governanceOverview = await fetchJson("/api/evaluations/analytics/agent-governance?limit=100");
+      renderAgentGovernanceOverview();
+    }
+
     async function loadDimensionAnalytics() {
       state.dimensionAnalytics = await fetchJson("/api/evaluations/analytics/dimensions");
       renderDimensionAnalytics();
@@ -1377,6 +1460,7 @@
       await loadOverview();
       await loadAnalytics();
       await loadFocusAgents();
+      await loadAgentGovernance();
       await loadDimensionAnalytics();
       await loadRootCauseAnalytics();
       await loadTrend();

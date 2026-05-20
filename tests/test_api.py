@@ -879,11 +879,14 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert 'id="loadSuggestionsBtn"' in response.text
     assert 'id="trendPanel"' in response.text
     assert 'id="focusAgentList"' in response.text
+    assert 'id="governanceOverviewGrid"' in response.text
+    assert 'id="governanceAgentList"' in response.text
     assert 'id="dimensionAnalyticsList"' in response.text
     assert 'id="rootCauseAnalyticsList"' in response.text
     assert "root_cause_signals" in response.text or "governance_summary" in response.text
     assert "openAudit" in response.text or "/ui/audit?" in response.text
     assert response.text.count("function renderSuggestionOverview()") == 1
+    assert response.text.count("function renderAgentGovernanceOverview()") == 1
     assert response.text.count("function renderExecutionBacklogOverview()") == 1
     assert response.text.count("async function loadExecutionBacklog()") == 1
     assert response.text.count("function renderExecutionPlanOverview()") == 1
@@ -891,6 +894,7 @@ def test_evaluations_ui_page(client: TestClient) -> None:
     assert response.text.count("async function applyExecutionPlan()") == 1
     assert response.text.count("function renderExecutionRunOverview()") == 1
     assert response.text.count("async function loadExecutionRuns()") == 1
+    assert response.text.count("async function loadAgentGovernance()") == 1
     assert response.text.count("function isSuggestionOverviewCardActive(item)") == 1
     assert response.text.count("async function loadSuggestions(") == 1
 
@@ -920,6 +924,34 @@ def test_evaluation_focus_agents_api(client: TestClient) -> None:
     assert "completed_ticket_count" in first
     assert "governance_score" in first
     assert "focus_reason" in first
+
+
+def test_evaluation_agent_governance_api(client: TestClient) -> None:
+    response = client.get("/api/evaluations/analytics/agent-governance", params={"limit": 20})
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "enabled_count" in body
+    assert "high_attention_count" in body
+    assert "degraded_count" in body
+    assert "average_overall_score" in body
+    assert "average_recent_success_rate" in body
+    assert "domain_counts" in body
+    assert "health_status_counts" in body
+    assert "attention_level_counts" in body
+    assert "items" in body
+    assert isinstance(body["items"], list)
+    if body["items"]:
+        first = body["items"][0]
+        assert "agent_id" in first
+        assert "agent_name" in first
+        assert "declared_skill_count" in first
+        assert "declared_mcp_count" in first
+        assert "declared_workflow_count" in first
+        assert "recent_task_count" in first
+        assert "evaluation_count" in first
+        assert "route_issue_count" in first
+        assert "contract_issue_count" in first
 
 
 def test_service_tickets_ui_page(client: TestClient) -> None:
