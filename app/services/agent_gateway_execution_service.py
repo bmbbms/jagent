@@ -10,6 +10,7 @@ from app.schemas import BizDomain, ChatRequest, RoutingTrace
 from app.services.agent_gateway_routing_service import AgentGatewayRoutingService
 from app.services.agent_profile_service import AgentProfileSyncService
 from app.services.audit_service import AuditService
+from app.services.evaluation_service import EvaluationService
 from app.services.task_service import TaskService
 
 
@@ -41,11 +42,13 @@ class AgentGatewayExecutionService:
         agent_profile_service: AgentProfileSyncService,
         task_service: TaskService,
         audit_service: AuditService,
+        evaluation_service: EvaluationService,
     ) -> None:
         self._routing_service = routing_service
         self._agent_profile_service = agent_profile_service
         self._task_service = task_service
         self._audit_service = audit_service
+        self._evaluation_service = evaluation_service
 
     def invoke(
         self,
@@ -167,6 +170,12 @@ class AgentGatewayExecutionService:
             response.audit_tags.append("agent_gateway")
 
         self._task_service.finalize_chat_task(task_id=task_id, response=response)
+        response.evaluation_id = self._evaluation_service.evaluate_chat_result(
+            task_id=task_id,
+            contact_id=contact_id,
+            request=chat_request,
+            response=response,
+        )
         self._record_audit(
             user_id=user_id,
             task_id=task_id,

@@ -164,6 +164,7 @@ def get_agent_gateway_execution_service() -> AgentGatewayExecutionService:
         agent_profile_service=get_agent_profile_sync_service(),
         task_service=get_task_service(),
         audit_service=get_audit_service(),
+        evaluation_service=get_evaluation_service(),
     )
 
 
@@ -186,6 +187,7 @@ def get_evaluation_service() -> EvaluationService:
         repository=EvaluationRepository(),
         observation_service=get_observation_service(),
         tool_execution_log_service=get_tool_execution_log_service(),
+        task_repository=TaskRepository(),
     )
 
 

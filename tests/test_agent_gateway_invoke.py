@@ -128,6 +128,7 @@ def test_agent_gateway_invoke_records_route_and_declared_capabilities() -> None:
             assert "gateway target handled" in body["summary"]
             assert "agent_gateway" in body["audit_tags"]
             assert body["routing_trace"]["selected_capability_id"] == "nacos.merchant.gateway.target"
+            assert body["task_id"]
 
             task_id = body["task_id"]
             task_detail_response = client.get(f"/api/tasks/{task_id}")
@@ -138,6 +139,10 @@ def test_agent_gateway_invoke_records_route_and_declared_capabilities() -> None:
             assert task_detail["gateway_summary"]["declared_skills"][0]["skill_id"] == "regulation_query"
             assert task_detail["gateway_summary"]["declared_mcps"][0]["mcp_id"] == "merchant-risk-mcp"
             assert task_detail["gateway_summary"]["declared_workflows"][0]["workflow_id"] == "gateway-review-workflow"
+            assert task_detail["evaluation"] is not None
+            detail_dimension_codes = {item["dimension_code"] for item in task_detail["evaluation"]["details"]}
+            assert "gateway_routing" in detail_dimension_codes
+            assert "gateway_contract" in detail_dimension_codes
             event_types = [item["event_type"] for item in task_detail["events"]]
             assert "gateway_policy_checked" in event_types
             assert "agent_selected" in event_types
@@ -172,6 +177,14 @@ def test_agent_gateway_invoke_records_route_and_declared_capabilities() -> None:
             assert latest["event_type"] == "gateway_invoke"
             assert latest["payload"]["capability_id"] == "nacos.merchant.gateway.target"
             assert latest["payload"]["payload"]["selected_agent_id"] == "nacos.merchant.gateway.target"
+
+            evaluation_response = client.get(f"/api/tasks/{task_id}/evaluation")
+            assert evaluation_response.status_code == 200
+            evaluation = evaluation_response.json()
+            assert evaluation["evaluation_id"]
+            evaluation_codes = {item["dimension_code"] for item in evaluation["details"]}
+            assert "gateway_routing" in evaluation_codes
+            assert "gateway_contract" in evaluation_codes
     finally:
         service._client = original_client
         server.shutdown()

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.models import ServiceTicketModel
 from app.db.session import session_scope
+from app.repositories.task_repository import TaskRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
     AgentEvaluationDimensionAnalyticsResponse,
@@ -53,6 +54,19 @@ class EvaluationRuntimeFacts:
     approved_access_count: int
     planner_observed: bool
     executor_observed: bool
+    gateway_selected_agent_id: str | None
+    gateway_requested_agent_id: str | None
+    gateway_selected_agent_name: str | None
+    gateway_route_reason: str
+    gateway_policy_decision: str
+    gateway_matched_skill_ids: list[str]
+    gateway_declared_skill_count: int
+    gateway_declared_mcp_count: int
+    gateway_declared_workflow_count: int
+    gateway_candidate_count: int
+    gateway_allowed_count: int
+    gateway_filtered_count: int
+    gateway_risk_flags: list[str]
 
 
 class EvaluationService:
@@ -62,11 +76,13 @@ class EvaluationService:
         repository: EvaluationRepository,
         observation_service: ObservationService | None = None,
         tool_execution_log_service: ToolExecutionLogService | None = None,
+        task_repository: TaskRepository | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._repository = repository
         self._observation_service = observation_service
         self._tool_execution_log_service = tool_execution_log_service
+        self._task_repository = task_repository or TaskRepository()
 
     def evaluate_chat_result(
         self,
@@ -1052,6 +1068,7 @@ class EvaluationService:
             if self._tool_execution_log_service is not None
             else []
         )
+        gateway_facts = self._collect_gateway_facts(task_id=task_id)
         fallback_count = sum(1 for item in observations if item.fallback_used)
         total_latency_ms = sum(item.latency_ms or 0 for item in observations)
         sensitive_access_count = sum(
@@ -1069,7 +1086,66 @@ class EvaluationService:
             approved_access_count=approved_access_count,
             planner_observed="planner" in phase_set,
             executor_observed="executor" in phase_set,
+            gateway_selected_agent_id=gateway_facts["selected_agent_id"],
+            gateway_requested_agent_id=gateway_facts["requested_agent_id"],
+            gateway_selected_agent_name=gateway_facts["selected_agent_name"],
+            gateway_route_reason=gateway_facts["route_reason"],
+            gateway_policy_decision=gateway_facts["policy_decision"],
+            gateway_matched_skill_ids=gateway_facts["matched_skill_ids"],
+            gateway_declared_skill_count=gateway_facts["declared_skill_count"],
+            gateway_declared_mcp_count=gateway_facts["declared_mcp_count"],
+            gateway_declared_workflow_count=gateway_facts["declared_workflow_count"],
+            gateway_candidate_count=gateway_facts["candidate_count"],
+            gateway_allowed_count=gateway_facts["allowed_count"],
+            gateway_filtered_count=gateway_facts["filtered_count"],
+            gateway_risk_flags=gateway_facts["risk_flags"],
         )
+
+    def _collect_gateway_facts(self, *, task_id: str) -> dict[str, object]:
+        with self._session_factory() as session:
+            events = self._task_repository.list_events(session, task_id)
+
+        selected_payload: dict[str, object] = {}
+        policy_payload: dict[str, object] = {}
+        contract_payload: dict[str, object] = {}
+        for item in events:
+            payload = item.event_payload if isinstance(item.event_payload, dict) else {}
+            if item.event_type == "agent_selected":
+                selected_payload = payload
+            elif item.event_type == "gateway_policy_checked":
+                policy_payload = payload
+            elif item.event_type == "gateway_declared_contract_loaded":
+                contract_payload = payload
+
+        return {
+            "selected_agent_id": str(
+                selected_payload.get("capability_id")
+                or policy_payload.get("selected_agent_id")
+                or ""
+            )
+            or None,
+            "requested_agent_id": str(selected_payload.get("requested_agent_id") or "") or None,
+            "selected_agent_name": str(
+                selected_payload.get("capability_name")
+                or policy_payload.get("selected_agent_name")
+                or ""
+            )
+            or None,
+            "route_reason": str(selected_payload.get("route_reason") or ""),
+            "policy_decision": str(
+                selected_payload.get("policy_decision")
+                or policy_payload.get("policy_decision")
+                or "allow"
+            ),
+            "matched_skill_ids": list(selected_payload.get("matched_skill_ids") or []),
+            "declared_skill_count": len(list(contract_payload.get("declared_skills") or [])),
+            "declared_mcp_count": len(list(contract_payload.get("declared_mcps") or [])),
+            "declared_workflow_count": len(list(contract_payload.get("declared_workflows") or [])),
+            "candidate_count": len(list(selected_payload.get("candidate_agent_ids") or [])),
+            "allowed_count": len(list(selected_payload.get("allowed_agent_ids") or [])),
+            "filtered_count": len(list(policy_payload.get("filtered_candidates") or [])),
+            "risk_flags": list(policy_payload.get("risk_flags") or []),
+        }
 
     def _build_evaluation_response(
         self,
@@ -1360,7 +1436,7 @@ class EvaluationService:
             compliance_problem_type = "audit_traceability"
         else:
             compliance_problem_type = "risk_governance"
-        return [
+        details = [
             {
                 "dimension_code": "completion",
                 "dimension_name": "任务完成度",
@@ -1420,6 +1496,88 @@ class EvaluationService:
                 "suggestion": "高风险场景继续绑定审批、审计和数据访问留痕策略。",
             },
         ]
+
+        if runtime_facts.gateway_selected_agent_id:
+            gateway_problem_type = "gateway_route_match"
+            if runtime_facts.gateway_policy_decision != "allow":
+                gateway_problem_type = "gateway_policy_risk"
+            elif (
+                runtime_facts.gateway_requested_agent_id
+                and runtime_facts.gateway_requested_agent_id != runtime_facts.gateway_selected_agent_id
+            ):
+                gateway_problem_type = "gateway_route_override"
+            elif not runtime_facts.gateway_matched_skill_ids:
+                gateway_problem_type = "gateway_skill_unmatched"
+
+            gateway_score = 92.0
+            if gateway_problem_type == "gateway_policy_risk":
+                gateway_score = 68.0
+            elif gateway_problem_type == "gateway_route_override":
+                gateway_score = 78.0
+            elif gateway_problem_type == "gateway_skill_unmatched":
+                gateway_score = 74.0
+            elif runtime_facts.gateway_risk_flags:
+                gateway_score = 82.0
+
+            details.append(
+                {
+                    "dimension_code": "gateway_routing",
+                    "dimension_name": "Gateway 路由质量",
+                    "score": gateway_score,
+                    "problem_type": gateway_problem_type,
+                    "evidence": (
+                        f"selected_agent={runtime_facts.gateway_selected_agent_id};"
+                        f" requested_agent={runtime_facts.gateway_requested_agent_id or '-'};"
+                        f" matched_skills={','.join(runtime_facts.gateway_matched_skill_ids) or 'none'};"
+                        f" route_reason={runtime_facts.gateway_route_reason or '-'};"
+                        f" risk_flags={','.join(runtime_facts.gateway_risk_flags) or 'none'}"
+                    ),
+                    "severity": EvaluationService._resolve_detail_severity(
+                        gateway_score,
+                        hard_failure=gateway_problem_type in {
+                            "gateway_policy_risk",
+                            "gateway_skill_unmatched",
+                        },
+                    ),
+                    "suggestion": "优化主 Agent 路由规则、子 Agent 描述与 skill 声明，提升路由解释性和命中率。",
+                }
+            )
+
+            contract_problem_type = "gateway_declared_contract_complete"
+            contract_score = 90.0
+            if runtime_facts.gateway_declared_skill_count == 0:
+                contract_problem_type = "gateway_declared_skill_missing"
+                contract_score = 72.0
+            elif (
+                runtime_facts.gateway_declared_mcp_count == 0
+                and runtime_facts.gateway_declared_workflow_count == 0
+            ):
+                contract_problem_type = "gateway_declared_contract_thin"
+                contract_score = 80.0
+
+            details.append(
+                {
+                    "dimension_code": "gateway_contract",
+                    "dimension_name": "子 Agent 声明契约完整度",
+                    "score": contract_score,
+                    "problem_type": contract_problem_type,
+                    "evidence": (
+                        f"declared_skills={runtime_facts.gateway_declared_skill_count};"
+                        f" declared_mcps={runtime_facts.gateway_declared_mcp_count};"
+                        f" declared_workflows={runtime_facts.gateway_declared_workflow_count};"
+                        f" candidates={runtime_facts.gateway_candidate_count};"
+                        f" allowed={runtime_facts.gateway_allowed_count};"
+                        f" filtered={runtime_facts.gateway_filtered_count}"
+                    ),
+                    "severity": EvaluationService._resolve_detail_severity(
+                        contract_score,
+                        hard_failure=contract_problem_type == "gateway_declared_skill_missing",
+                    ),
+                    "suggestion": "要求子 Agent 在注册卡片中补齐 skills、MCP、workflow 元数据，提升主 Agent 可观察性。",
+                }
+            )
+
+        return details
 
     @staticmethod
     def _resolve_detail_severity(
@@ -1490,6 +1648,40 @@ class EvaluationService:
                     "priority": "medium",
                     "source_type": "evaluation_dimension",
                     "source_ref": "efficiency",
+                }
+            )
+        if runtime_facts.gateway_selected_agent_id and not runtime_facts.gateway_matched_skill_ids:
+            suggestions.append(
+                {
+                    "optimization_type": "routing",
+                    "target_ref": runtime_facts.gateway_selected_agent_id,
+                    "current_value_summary": (
+                        f"route_reason={runtime_facts.gateway_route_reason or '-'}, "
+                        f"matched_skills={','.join(runtime_facts.gateway_matched_skill_ids) or 'none'}"
+                    ),
+                    "suggested_change": "补充子 Agent skill 描述、业务标签和触发词，优化主 Agent 的路由打分与解释规则。",
+                    "priority": "high",
+                    "source_type": "evaluation_dimension",
+                    "source_ref": "gateway_routing",
+                }
+            )
+        if (
+            runtime_facts.gateway_selected_agent_id
+            and runtime_facts.gateway_declared_skill_count == 0
+        ):
+            suggestions.append(
+                {
+                    "optimization_type": "metadata",
+                    "target_ref": runtime_facts.gateway_selected_agent_id,
+                    "current_value_summary": (
+                        f"declared_skills={runtime_facts.gateway_declared_skill_count}, "
+                        f"declared_mcps={runtime_facts.gateway_declared_mcp_count}, "
+                        f"declared_workflows={runtime_facts.gateway_declared_workflow_count}"
+                    ),
+                    "suggested_change": "要求子 Agent 在注册发现信息中补齐 skills、MCP、workflow 元数据，便于主 Agent 路由和治理评估。",
+                    "priority": "high",
+                    "source_type": "evaluation_dimension",
+                    "source_ref": "gateway_contract",
                 }
             )
         return suggestions
