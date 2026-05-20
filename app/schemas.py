@@ -1328,6 +1328,23 @@ class AgentProfileDetailResponse(AgentProfileResponse):
     declared_workflows: List[AgentDeclaredWorkflowResponse] = Field(default_factory=list)
 
 
+class AgentProfileRecentTaskResponse(AgentTaskSummaryResponse):
+    gateway_reason: Optional[str] = None
+
+
+class AgentProfileEvaluationSummaryResponse(BaseModel):
+    agent_id: str
+    evaluation_count: int = 0
+    attention_level: str = "normal"
+    average_overall_score: float = 0.0
+    average_efficiency_score: float = 0.0
+    average_tool_usage_score: float = 0.0
+    poor_rate: float = 0.0
+    focus_reason: str = ""
+    latest_result_label: Optional[str] = None
+    latest_summary: str = ""
+
+
 class AgentProfileSyncResponse(BaseModel):
     sync_id: str
     namespace: str = "public"

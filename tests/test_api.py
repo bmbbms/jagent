@@ -170,6 +170,31 @@ def test_capability_recent_tasks_api(client: TestClient) -> None:
       assert "start_time" in first
 
 
+def test_agent_profile_recent_tasks_api(client: TestClient) -> None:
+    response = client.get("/api/agent-profiles/merchant.qa/recent-tasks", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        first = body[0]
+        assert "task_id" in first
+        assert "selected_agent_id" in first
+        assert first["selected_agent_id"] == "merchant.qa"
+        assert "gateway_reason" in first
+
+
+def test_agent_profile_evaluation_summary_api(client: TestClient) -> None:
+    response = client.get("/api/agent-profiles/merchant.qa/evaluation-summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent_id"] == "merchant.qa"
+    assert "evaluation_count" in body
+    assert "attention_level" in body
+    assert "average_overall_score" in body
+    assert "focus_reason" in body
+    assert "latest_result_label" in body
+
+
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200

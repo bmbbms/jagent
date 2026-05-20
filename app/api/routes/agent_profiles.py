@@ -2,17 +2,25 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.dependencies import get_agent_profile_sync_service
+from app.dependencies import (
+    get_agent_profile_sync_service,
+    get_evaluation_service,
+    get_task_service,
+)
 from app.schemas import (
     AgentDeclaredMCPResponse,
     AgentDeclaredSkillResponse,
     AgentDeclaredWorkflowResponse,
+    AgentProfileEvaluationSummaryResponse,
     AgentProfileDetailResponse,
     AgentProfileResponse,
+    AgentProfileRecentTaskResponse,
     AgentProfileSyncLogResponse,
     AgentProfileSyncResponse,
 )
 from app.services.agent_profile_service import AgentProfileSyncService
+from app.services.evaluation_service import EvaluationService
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/agent-profiles", tags=["agent-profiles"])
 
@@ -89,6 +97,39 @@ def list_agent_declared_workflows(
     if bundle is None:
         raise HTTPException(status_code=404, detail="agent profile not found")
     return [_workflow_to_response(item) for item in bundle["workflows"]]
+
+
+@router.get("/{agent_id}/recent-tasks", response_model=list[AgentProfileRecentTaskResponse])
+def list_agent_recent_tasks(
+    agent_id: str,
+    limit: int = Query(default=10, ge=1, le=50),
+    task_service: TaskService = Depends(get_task_service),
+) -> list[AgentProfileRecentTaskResponse]:
+    task_list = task_service.list_tasks(
+        selected_agent_id=agent_id,
+        page=1,
+        page_size=limit,
+        sort_by="start_time",
+        sort_order="desc",
+    )
+    return [
+        AgentProfileRecentTaskResponse(**item.model_dump(), gateway_reason=_extract_gateway_reason(task_service, item.task_id))
+        for item in task_list.items
+    ]
+
+
+@router.get(
+    "/{agent_id}/evaluation-summary",
+    response_model=AgentProfileEvaluationSummaryResponse,
+)
+def get_agent_evaluation_summary(
+    agent_id: str,
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> AgentProfileEvaluationSummaryResponse:
+    summary = evaluation_service.get_agent_evaluation_summary(agent_id)
+    if summary is None:
+        return AgentProfileEvaluationSummaryResponse(agent_id=agent_id)
+    return AgentProfileEvaluationSummaryResponse(**summary)
 
 
 def _bundle_to_response(bundle: dict) -> AgentProfileDetailResponse:
@@ -183,3 +224,10 @@ def _sync_log_to_response(item) -> AgentProfileSyncLogResponse:  # noqa: ANN001
         start_time=item.start_time.isoformat(),
         end_time=item.end_time.isoformat() if item.end_time else None,
     )
+
+
+def _extract_gateway_reason(task_service: TaskService, task_id: str) -> str | None:
+    detail = task_service.get_task_detail(task_id)
+    if detail is None or detail.gateway_summary is None:
+        return None
+    return detail.gateway_summary.route_reason or None

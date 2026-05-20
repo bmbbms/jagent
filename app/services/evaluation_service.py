@@ -338,6 +338,45 @@ class EvaluationService:
         )
         return ranked[: max(limit, 1)]
 
+    def get_agent_evaluation_summary(self, agent_id: str) -> dict[str, Any] | None:
+        evaluations = self.filter_evaluations(agent_id=agent_id)
+        if not evaluations:
+            return None
+        analytics_map = {item.agent_id: item for item in self.summarize_by_agent()}
+        analytics = analytics_map.get(agent_id)
+        latest = max(evaluations, key=lambda item: item.create_time)
+        total = len(evaluations)
+        poor_count = sum(1 for item in evaluations if item.result_label == "poor")
+        return {
+            "agent_id": agent_id,
+            "evaluation_count": total,
+            "attention_level": analytics.attention_level if analytics else "normal",
+            "average_overall_score": round(
+                sum(item.overall_score for item in evaluations) / total,
+                2,
+            ),
+            "average_efficiency_score": round(
+                sum(item.efficiency_score for item in evaluations) / total,
+                2,
+            ),
+            "average_tool_usage_score": round(
+                sum(item.tool_usage_score for item in evaluations) / total,
+                2,
+            ),
+            "poor_rate": round((poor_count / total) * 100, 2) if total else 0.0,
+            "focus_reason": self._build_focus_reason(
+                attention_level=analytics.attention_level if analytics else "normal",
+                poor_rate=analytics.poor_rate if analytics else 0.0,
+                backlog_suggestion_count=0,
+                high_priority_backlog_count=0,
+                fallback_related_count=analytics.fallback_related_count if analytics else 0,
+            )
+            if analytics
+            else "",
+            "latest_result_label": latest.result_label,
+            "latest_summary": latest.summary,
+        }
+
     def summarize_dimensions(self) -> list[AgentEvaluationDimensionAnalyticsResponse]:
         with self._session_factory() as session:
             details = self._repository.list_all_details(session)
