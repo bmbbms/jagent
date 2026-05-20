@@ -102,12 +102,21 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         return matched[0] if matched else (candidates[0] if candidates else None)
 
     def _build_agent_card(self, metadata: CapabilityMetadata) -> dict[str, Any]:
+        target_url = metadata.endpoint or self._default_agent_url(metadata)
+        service_url = self._join_url(target_url, metadata.service_path)
         return {
             "name": metadata.capability_name,
             "description": metadata.description,
-            "url": metadata.endpoint or self._default_agent_url(metadata),
-            "protocolVersion": metadata.extras.get("protocol_version", "0.3.0"),
+            "url": service_url,
+            "protocolVersion": metadata.extras.get("protocol_version", "1.0.0"),
+            "preferredTransport": "JSONRPC",
             "version": metadata.version,
+            "supportedInterfaces": [
+                {
+                    "transport": "JSONRPC",
+                    "url": service_url,
+                }
+            ],
             "skills": [{"id": skill_id, "name": skill_id} for skill_id in metadata.skills],
             "metadata": {
                 "capability_id": metadata.capability_id,
@@ -192,3 +201,15 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         if metadata.service_host and metadata.service_port:
             return f"http://{metadata.service_host}:{metadata.service_port}"
         return f"http://{self._settings.nacos_service_host}:{self._settings.nacos_service_port}"
+
+    @staticmethod
+    def _join_url(base_url: str, service_path: str) -> str:
+        base = base_url.rstrip("/")
+        path = (service_path or "").strip()
+        if not path:
+            return base
+        if path.startswith("http://") or path.startswith("https://"):
+            return path.rstrip("/")
+        if not path.startswith("/"):
+            path = f"/{path}"
+        return f"{base}{path}"
