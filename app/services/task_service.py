@@ -9,6 +9,7 @@ from app.db.session import session_scope
 from app.repositories.task_repository import TaskRepository
 from app.schemas import (
     AgentCollaborationStepResponse,
+    AgentGatewaySummaryResponse,
     AgentHandoffResponse,
     AgentRecoveryStepResponse,
     AgentTaskArtifactResponse,
@@ -286,6 +287,7 @@ class TaskService:
             data["events"] = [item.model_dump() for item in events]
             data["artifacts"] = [item.model_dump() for item in artifacts]
             data["output_overview"] = None
+            data["gateway_summary"] = None
             data["tool_calls"] = []
             data["data_access_logs"] = []
             data["structured_tool_results"] = []
@@ -323,6 +325,7 @@ class TaskService:
                     for item in data["structured_tool_results"]
                 ],
             ).model_dump()
+            data["gateway_summary"] = self._build_gateway_summary(events=events)
             data["runtime_sessions"] = [
                 item.model_dump()
                 for item in self._build_runtime_sessions(
@@ -1175,6 +1178,67 @@ class TaskService:
             final_output=final_output_summary,
             next_action=next_action,
             deliverables=deliverables,
+        )
+
+    @staticmethod
+    def _build_gateway_summary(
+        *,
+        events: list[AgentTaskEventResponse],
+    ) -> AgentGatewaySummaryResponse | None:
+        selected_event = next(
+            (item for item in events if item.event_type == "agent_selected"),
+            None,
+        )
+        policy_event = next(
+            (item for item in events if item.event_type == "gateway_policy_checked"),
+            None,
+        )
+        contract_event = next(
+            (item for item in events if item.event_type == "gateway_declared_contract_loaded"),
+            None,
+        )
+        if selected_event is None and policy_event is None and contract_event is None:
+            return None
+
+        selected_payload = (
+            selected_event.event_payload if selected_event and isinstance(selected_event.event_payload, dict) else {}
+        )
+        policy_payload = (
+            policy_event.event_payload if policy_event and isinstance(policy_event.event_payload, dict) else {}
+        )
+        contract_payload = (
+            contract_event.event_payload if contract_event and isinstance(contract_event.event_payload, dict) else {}
+        )
+
+        return AgentGatewaySummaryResponse(
+            selected_agent_id=str(
+                selected_payload.get("capability_id")
+                or policy_payload.get("selected_agent_id")
+                or ""
+            )
+            or None,
+            selected_agent_name=str(
+                selected_payload.get("capability_name")
+                or policy_payload.get("selected_agent_name")
+                or selected_event.content if selected_event else ""
+            )
+            or None,
+            requested_agent_id=str(selected_payload.get("requested_agent_id") or "") or None,
+            route_reason=str(selected_payload.get("route_reason") or ""),
+            policy_decision=str(
+                selected_payload.get("policy_decision")
+                or policy_payload.get("policy_decision")
+                or "allow"
+            ),
+            matched_skill_ids=list(selected_payload.get("matched_skill_ids") or []),
+            declared_skills=list(contract_payload.get("declared_skills") or []),
+            declared_mcps=list(contract_payload.get("declared_mcps") or []),
+            declared_workflows=list(contract_payload.get("declared_workflows") or []),
+            candidate_agent_ids=list(selected_payload.get("candidate_agent_ids") or []),
+            allowed_agent_ids=list(selected_payload.get("allowed_agent_ids") or []),
+            ranked_candidates=list(selected_payload.get("ranked_candidates") or []),
+            filtered_candidates=list(policy_payload.get("filtered_candidates") or []),
+            risk_flags=list(policy_payload.get("risk_flags") or []),
         )
 
     @staticmethod

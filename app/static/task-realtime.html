@@ -466,6 +466,13 @@
 
       <main class="stack">
         <section class="panel">
+          <h2>Gateway 路由摘要</h2>
+          <div id="gatewaySummary" class="detail-list">
+            <div class="empty">当前任务暂无 Gateway 路由摘要。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>任务实际产出</h2>
           <div id="outputOverview" class="detail-list">
             <div class="empty">当前任务还没有可展示的结构化产出。</div>
@@ -643,6 +650,7 @@
       summaryMeta: document.getElementById("summaryMeta"),
       runtimeGovernanceOverview: document.getElementById("runtimeGovernanceOverview"),
       summaryStats: document.getElementById("summaryStats"),
+      gatewaySummary: document.getElementById("gatewaySummary"),
       outputOverview: document.getElementById("outputOverview"),
       structuredToolResults: document.getElementById("structuredToolResults"),
       workflowSnapshot: document.getElementById("workflowSnapshot"),
@@ -1011,6 +1019,51 @@
             <div class="detail-item"><div class="label">时间</div><div class="value">${escapeHtml(formatDate(item.create_time))}</div></div>
           </div>
         `).join("")}
+      `;
+    }
+
+    function renderGatewaySummary(summary) {
+      if (!summary) {
+        el.gatewaySummary.innerHTML = `<div class="empty">当前任务暂无 Gateway 路由摘要。</div>`;
+        return;
+      }
+      const matchedSkills = (summary.matched_skill_ids || []).join(", ") || "-";
+      const candidateAgents = (summary.candidate_agent_ids || []).join(", ") || "-";
+      const allowedAgents = (summary.allowed_agent_ids || []).join(", ") || "-";
+      const riskFlags = (summary.risk_flags || []).join(", ") || "-";
+      const declaredSkills = (summary.declared_skills || []).length
+        ? summary.declared_skills.map(item => `${item.skill_name || item.skill_id}(${item.skill_id})`).join(", ")
+        : "-";
+      const declaredMcps = (summary.declared_mcps || []).length
+        ? summary.declared_mcps.map(item => `${item.mcp_name || item.mcp_id}(${item.mcp_id})`).join(", ")
+        : "-";
+      const declaredWorkflows = (summary.declared_workflows || []).length
+        ? summary.declared_workflows.map(item => `${item.workflow_name || item.workflow_id}(${item.workflow_id})`).join(", ")
+        : "-";
+      const rankedCandidates = (summary.ranked_candidates || []).length
+        ? summary.ranked_candidates.map(item => `${item.agent_name || item.agent_id}:${item.score}`).join(" | ")
+        : "-";
+      const filteredCandidates = (summary.filtered_candidates || []).length
+        ? summary.filtered_candidates.map(item => `${item.agent_id}:${item.decision}/${item.reason}`).join(" | ")
+        : "-";
+
+      el.gatewaySummary.innerHTML = `
+        <div class="list-card">
+          <div class="detail-item"><div class="label">选中 Agent</div><div class="value">${escapeHtml(summary.selected_agent_name || summary.selected_agent_id || "-")}</div></div>
+          <div class="detail-item"><div class="label">Agent ID</div><div class="value">${escapeHtml(summary.selected_agent_id || "-")}</div></div>
+          <div class="detail-item"><div class="label">请求 Agent</div><div class="value">${escapeHtml(summary.requested_agent_id || "-")}</div></div>
+          <div class="detail-item"><div class="label">策略决策</div><div class="value"><span class="tag ${summary.policy_decision === 'allow' ? 'success' : 'danger'}">${escapeHtml(summary.policy_decision || "allow")}</span></div></div>
+          <div class="detail-item"><div class="label">路由原因</div><div class="value">${escapeHtml(summary.route_reason || "-")}</div></div>
+          <div class="detail-item"><div class="label">命中 Skills</div><div class="value">${escapeHtml(matchedSkills)}</div></div>
+          <div class="detail-item"><div class="label">声明 Skills</div><div class="value">${escapeHtml(declaredSkills)}</div></div>
+          <div class="detail-item"><div class="label">声明 MCPs</div><div class="value">${escapeHtml(declaredMcps)}</div></div>
+          <div class="detail-item"><div class="label">声明 Workflows</div><div class="value">${escapeHtml(declaredWorkflows)}</div></div>
+          <div class="detail-item"><div class="label">候选 Agent</div><div class="value">${escapeHtml(candidateAgents)}</div></div>
+          <div class="detail-item"><div class="label">允许 Agent</div><div class="value">${escapeHtml(allowedAgents)}</div></div>
+          <div class="detail-item"><div class="label">排序结果</div><div class="value">${escapeHtml(rankedCandidates)}</div></div>
+          <div class="detail-item"><div class="label">过滤结果</div><div class="value">${escapeHtml(filteredCandidates)}</div></div>
+          <div class="detail-item"><div class="label">风险标记</div><div class="value">${escapeHtml(riskFlags)}</div></div>
+        </div>
       `;
     }
 
@@ -1487,6 +1540,7 @@
       state.lastEventSeq = Math.max(0, ...(task.events || []).map(item => item.event_seq || 0));
       renderMeta(task);
       renderStats(task);
+      renderGatewaySummary(task.gateway_summary || null);
       renderOutputOverview(task.output_overview || null);
       renderStructuredToolResults(task.structured_tool_results || []);
       renderWorkflowSnapshot(task);

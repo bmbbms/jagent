@@ -708,6 +708,7 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
     assert 'id="auditCenterBtn"' in response.text
     assert 'id="taskList"' in response.text
     assert 'id="outputOverview"' in response.text
+    assert 'id="gatewaySummary"' in response.text
     assert 'id="runtimeGovernanceOverview"' in response.text
     assert 'id="riskFilter"' in response.text
     assert 'id="stageFilter"' in response.text

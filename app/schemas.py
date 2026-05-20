@@ -561,6 +561,23 @@ class AgentTaskOutputOverviewResponse(BaseModel):
     deliverables: List[AgentTaskDeliverableResponse] = Field(default_factory=list)
 
 
+class AgentGatewaySummaryResponse(BaseModel):
+    selected_agent_id: Optional[str] = None
+    selected_agent_name: Optional[str] = None
+    requested_agent_id: Optional[str] = None
+    route_reason: str = ""
+    policy_decision: str = "allow"
+    matched_skill_ids: List[str] = Field(default_factory=list)
+    declared_skills: List[Dict[str, Any]] = Field(default_factory=list)
+    declared_mcps: List[Dict[str, Any]] = Field(default_factory=list)
+    declared_workflows: List[Dict[str, Any]] = Field(default_factory=list)
+    candidate_agent_ids: List[str] = Field(default_factory=list)
+    allowed_agent_ids: List[str] = Field(default_factory=list)
+    ranked_candidates: List[Dict[str, Any]] = Field(default_factory=list)
+    filtered_candidates: List[Dict[str, Any]] = Field(default_factory=list)
+    risk_flags: List[str] = Field(default_factory=list)
+
+
 class AgentTaskSummaryResponse(BaseModel):
     task_id: str
     contact_id: str
@@ -593,6 +610,7 @@ class AgentTaskDetailResponse(AgentTaskSummaryResponse):
     events: List[AgentTaskEventResponse] = Field(default_factory=list)
     artifacts: List[AgentTaskArtifactResponse] = Field(default_factory=list)
     output_overview: Optional["AgentTaskOutputOverviewResponse"] = None
+    gateway_summary: Optional["AgentGatewaySummaryResponse"] = None
     tool_calls: List["ToolCallLogResponse"] = Field(default_factory=list)
     data_access_logs: List["DataAccessLogResponse"] = Field(default_factory=list)
     structured_tool_results: List["StructuredToolResultResponse"] = Field(default_factory=list)

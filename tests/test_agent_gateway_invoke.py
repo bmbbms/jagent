@@ -133,6 +133,11 @@ def test_agent_gateway_invoke_records_route_and_declared_capabilities() -> None:
             task_detail_response = client.get(f"/api/tasks/{task_id}")
             assert task_detail_response.status_code == 200
             task_detail = task_detail_response.json()
+            assert task_detail["gateway_summary"]["selected_agent_id"] == "nacos.merchant.gateway.target"
+            assert task_detail["gateway_summary"]["policy_decision"] == "allow"
+            assert task_detail["gateway_summary"]["declared_skills"][0]["skill_id"] == "regulation_query"
+            assert task_detail["gateway_summary"]["declared_mcps"][0]["mcp_id"] == "merchant-risk-mcp"
+            assert task_detail["gateway_summary"]["declared_workflows"][0]["workflow_id"] == "gateway-review-workflow"
             event_types = [item["event_type"] for item in task_detail["events"]]
             assert "gateway_policy_checked" in event_types
             assert "agent_selected" in event_types
