@@ -3,7 +3,9 @@ from datetime import date, datetime, time
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_audit_service, get_evaluation_service
+from app.dependencies import get_agent_profile_sync_service, get_task_service
 from app.schemas import (
+    AgentGovernanceOverviewResponse,
     AgentEvaluationAnalyticsOverviewResponse,
     AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationAnalyticsItemResponse,
@@ -22,7 +24,9 @@ from app.schemas import (
     AgentEvaluationSummaryResponse,
 )
 from app.services.audit_service import AuditService
+from app.services.agent_profile_service import AgentProfileSyncService
 from app.services.evaluation_service import EvaluationService
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
@@ -73,6 +77,24 @@ def list_evaluation_focus_agents(
     evaluation_service: EvaluationService = Depends(get_evaluation_service),
 ) -> list[AgentEvaluationFocusAgentResponse]:
     return evaluation_service.list_focus_agents(limit=limit)
+
+
+@router.get("/analytics/agent-governance", response_model=AgentGovernanceOverviewResponse)
+def get_agent_governance_overview(
+    biz_domain: str | None = Query(default=None),
+    enabled: bool | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=300),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+    agent_profile_service: AgentProfileSyncService = Depends(get_agent_profile_sync_service),
+    task_service: TaskService = Depends(get_task_service),
+) -> AgentGovernanceOverviewResponse:
+    return evaluation_service.build_agent_governance_overview(
+        agent_profile_service=agent_profile_service,
+        task_service=task_service,
+        biz_domain=biz_domain,
+        enabled=enabled,
+        limit=limit,
+    )
 
 
 @router.get(

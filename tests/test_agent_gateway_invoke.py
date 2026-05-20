@@ -185,6 +185,20 @@ def test_agent_gateway_invoke_records_route_and_declared_capabilities() -> None:
             evaluation_codes = {item["dimension_code"] for item in evaluation["details"]}
             assert "gateway_routing" in evaluation_codes
             assert "gateway_contract" in evaluation_codes
+
+            governance_response = client.get("/api/evaluations/analytics/agent-governance")
+            assert governance_response.status_code == 200
+            governance = governance_response.json()
+            assert governance["total"] >= 1
+            governance_item = next(
+                item
+                for item in governance["items"]
+                if item["agent_id"] == "nacos.merchant.gateway.target"
+            )
+            assert governance_item["declared_skill_count"] >= 1
+            assert governance_item["declared_mcp_count"] >= 1
+            assert governance_item["declared_workflow_count"] >= 1
+            assert governance_item["evaluation_count"] >= 1
     finally:
         service._client = original_client
         server.shutdown()

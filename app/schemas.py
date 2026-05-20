@@ -1126,6 +1126,51 @@ class AgentEvaluationTrendResponse(BaseModel):
     points: List[AgentEvaluationTrendPointResponse] = Field(default_factory=list)
 
 
+class AgentGovernanceCardResponse(BaseModel):
+    agent_id: str
+    agent_name: str
+    biz_domain: str
+    enabled: bool = True
+    source: str = "nacos"
+    transport: str = "a2a"
+    health_status: str = "unknown"
+    governance_status: str = "healthy"
+    risk_level: str = "low"
+    declared_skill_count: int = 0
+    declared_mcp_count: int = 0
+    declared_workflow_count: int = 0
+    recent_task_count: int = 0
+    success_task_count: int = 0
+    failed_task_count: int = 0
+    average_duration_ms: float = 0.0
+    evaluation_count: int = 0
+    average_overall_score: float = 0.0
+    poor_rate: float = 0.0
+    attention_level: str = "normal"
+    backlog_suggestion_count: int = 0
+    high_priority_backlog_count: int = 0
+    ticket_bound_suggestion_count: int = 0
+    route_issue_count: int = 0
+    contract_issue_count: int = 0
+    latest_sync_time: Optional[str] = None
+    latest_task_time: Optional[str] = None
+    focus_reason: str = ""
+
+
+class AgentGovernanceOverviewResponse(BaseModel):
+    total: int = 0
+    enabled_count: int = 0
+    disabled_count: int = 0
+    high_attention_count: int = 0
+    degraded_count: int = 0
+    average_overall_score: float = 0.0
+    average_recent_success_rate: float = 0.0
+    domain_counts: Dict[str, int] = Field(default_factory=dict)
+    health_status_counts: Dict[str, int] = Field(default_factory=dict)
+    attention_level_counts: Dict[str, int] = Field(default_factory=dict)
+    items: List[AgentGovernanceCardResponse] = Field(default_factory=list)
+
+
 class ServiceTicketResponse(BaseModel):
     ticket_id: str
     merchant_id: Optional[str] = None

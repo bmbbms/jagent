@@ -11,6 +11,8 @@ from app.db.session import session_scope
 from app.repositories.task_repository import TaskRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
+    AgentGovernanceCardResponse,
+    AgentGovernanceOverviewResponse,
     AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationGovernanceSummaryResponse,
     AgentEvaluationAnalyticsItemResponse,
@@ -639,6 +641,180 @@ class EvaluationService:
                 evaluation_id=item.evaluation_id,
                 item=item,
             )
+
+    def build_agent_governance_overview(
+        self,
+        *,
+        agent_profile_service,
+        task_service,
+        biz_domain: str | None = None,
+        enabled: bool | None = None,
+        limit: int = 100,
+    ) -> AgentGovernanceOverviewResponse:
+        profiles = agent_profile_service.list_profiles(
+            biz_domain=biz_domain,
+            enabled=enabled,
+        )
+        evaluation_analytics = {item.agent_id: item for item in self.summarize_by_agent()}
+        focus_agent_map = {
+            item.agent_id: item
+            for item in self.list_focus_agents(limit=max(limit, 10))
+        }
+        suggestions = self.list_optimization_suggestions()
+        suggestion_map: dict[str, list[AgentOptimizationSuggestionResponse]] = {}
+        for item in suggestions:
+            suggestion_map.setdefault(item.agent_id, []).append(item)
+
+        items: list[AgentGovernanceCardResponse] = []
+        domain_counts: dict[str, int] = {}
+        health_status_counts: dict[str, int] = {}
+        attention_level_counts: dict[str, int] = {}
+        enabled_count = 0
+        high_attention_count = 0
+        degraded_count = 0
+        success_rate_values: list[float] = []
+
+        for profile in profiles[: max(limit, 1)]:
+            bundle = agent_profile_service.get_profile_bundle(profile.agent_id) or {}
+            recent_tasks = task_service.list_tasks(
+                selected_agent_id=profile.agent_id,
+                page=1,
+                page_size=20,
+            ).items
+            success_task_count = sum(1 for item in recent_tasks if item.status == "success")
+            failed_task_count = sum(1 for item in recent_tasks if item.status == "failed")
+            duration_values = [
+                item.duration_ms for item in recent_tasks if item.duration_ms is not None
+            ]
+            recent_success_rate = (
+                round((success_task_count / len(recent_tasks)) * 100, 2)
+                if recent_tasks
+                else 0.0
+            )
+            if recent_tasks:
+                success_rate_values.append(recent_success_rate)
+
+            analytics = evaluation_analytics.get(profile.agent_id)
+            focus = focus_agent_map.get(profile.agent_id)
+            agent_suggestions = suggestion_map.get(profile.agent_id, [])
+            backlog_suggestion_count = sum(
+                1 for item in agent_suggestions if item.status != "completed"
+            )
+            high_priority_backlog_count = sum(
+                1
+                for item in agent_suggestions
+                if item.status != "completed" and item.priority == "high"
+            )
+            ticket_bound_suggestion_count = sum(
+                1 for item in agent_suggestions if item.ticket_id
+            )
+            route_issue_count = sum(
+                1 for item in agent_suggestions if item.source_ref == "gateway_routing"
+            )
+            contract_issue_count = sum(
+                1 for item in agent_suggestions if item.source_ref == "gateway_contract"
+            )
+            attention_level = (
+                focus.attention_level
+                if focus is not None
+                else (analytics.attention_level if analytics is not None else "normal")
+            )
+
+            if attention_level == "high":
+                high_attention_count += 1
+            if profile.enabled:
+                enabled_count += 1
+            if profile.governance_status in {"degraded", "blocked"}:
+                degraded_count += 1
+
+            domain_counts[profile.biz_domain] = domain_counts.get(profile.biz_domain, 0) + 1
+            health_status_counts[profile.health_status] = (
+                health_status_counts.get(profile.health_status, 0) + 1
+            )
+            attention_level_counts[attention_level] = (
+                attention_level_counts.get(attention_level, 0) + 1
+            )
+
+            items.append(
+                AgentGovernanceCardResponse(
+                    agent_id=profile.agent_id,
+                    agent_name=profile.agent_name,
+                    biz_domain=profile.biz_domain,
+                    enabled=bool(profile.enabled),
+                    source=profile.source,
+                    transport=profile.transport,
+                    health_status=profile.health_status,
+                    governance_status=profile.governance_status,
+                    risk_level=profile.risk_level,
+                    declared_skill_count=len(bundle.get("skills", [])),
+                    declared_mcp_count=len(bundle.get("mcps", [])),
+                    declared_workflow_count=len(bundle.get("workflows", [])),
+                    recent_task_count=len(recent_tasks),
+                    success_task_count=success_task_count,
+                    failed_task_count=failed_task_count,
+                    average_duration_ms=round(
+                        sum(duration_values) / len(duration_values),
+                        2,
+                    )
+                    if duration_values
+                    else 0.0,
+                    evaluation_count=analytics.evaluation_count if analytics is not None else 0,
+                    average_overall_score=(
+                        analytics.average_overall_score if analytics is not None else 0.0
+                    ),
+                    poor_rate=analytics.poor_rate if analytics is not None else 0.0,
+                    attention_level=attention_level,
+                    backlog_suggestion_count=backlog_suggestion_count,
+                    high_priority_backlog_count=high_priority_backlog_count,
+                    ticket_bound_suggestion_count=ticket_bound_suggestion_count,
+                    route_issue_count=route_issue_count,
+                    contract_issue_count=contract_issue_count,
+                    latest_sync_time=profile.last_sync_time.isoformat()
+                    if profile.last_sync_time
+                    else None,
+                    latest_task_time=recent_tasks[0].start_time if recent_tasks else None,
+                    focus_reason=focus.focus_reason if focus is not None else "",
+                )
+            )
+
+        items.sort(
+            key=lambda item: (
+                0 if item.attention_level == "high" else 1,
+                -item.high_priority_backlog_count,
+                -item.backlog_suggestion_count,
+                item.average_overall_score,
+                item.agent_id,
+            )
+        )
+
+        scored_items = [item for item in items if item.evaluation_count > 0]
+        average_overall_score = (
+            round(
+                sum(item.average_overall_score for item in scored_items) / len(scored_items),
+                2,
+            )
+            if scored_items
+            else 0.0
+        )
+
+        return AgentGovernanceOverviewResponse(
+            total=len(items),
+            enabled_count=enabled_count,
+            disabled_count=max(0, len(items) - enabled_count),
+            high_attention_count=high_attention_count,
+            degraded_count=degraded_count,
+            average_overall_score=average_overall_score,
+            average_recent_success_rate=round(
+                sum(success_rate_values) / len(success_rate_values),
+                2,
+            )
+            if success_rate_values
+            else 0.0,
+            domain_counts=domain_counts,
+            health_status_counts=health_status_counts,
+            attention_level_counts=attention_level_counts,
+            items=items,
+        )
 
     def list_optimization_suggestions(
         self,
