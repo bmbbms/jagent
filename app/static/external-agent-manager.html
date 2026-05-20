@@ -274,6 +274,10 @@
               <input id="skillsInput" value="external_task_execution,regulation_query" placeholder="逗号分隔，例如 external_task_execution,regulation_query" />
             </div>
             <div class="field">
+              <label for="skillFilterInput">Skill 过滤</label>
+              <input id="skillFilterInput" placeholder="输入 skill_id 用于过滤外部 Agent" />
+            </div>
+            <div class="field">
               <label for="tagsInput">标签</label>
               <input id="tagsInput" value="generic-add,a2a" placeholder="逗号分隔，例如 external,a2a" />
             </div>
@@ -376,6 +380,7 @@
             <option value="unhealthy">unhealthy</option>
             <option value="unknown">unknown</option>
           </select>
+          <input id="listSkillFilter" placeholder="按 skill_id 过滤" />
           <input id="listCapabilityFilter" placeholder="按 capability_id 过滤" />
         </div>
         <div id="healthOverview" class="subtle" style="margin-bottom: 8px;">正在加载健康概览...</div>
@@ -445,9 +450,11 @@
       listTransportFilter: document.getElementById("listTransportFilter"),
       listHealthFilter: document.getElementById("listHealthFilter"),
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
+      skillFilterInput: document.getElementById("skillFilterInput"),
       skillDomainFilter: document.getElementById("skillDomainFilter"),
       skillSearchInput: document.getElementById("skillSearchInput"),
       skillList: document.getElementById("skillList"),
+      listSkillFilter: document.getElementById("listSkillFilter"),
       healthOverview: document.getElementById("healthOverview"),
       governanceOverview: document.getElementById("governanceOverview"),
       alertCenter: document.getElementById("alertCenter"),
@@ -863,6 +870,7 @@
         if (el.listApprovalFilter.value) query.set("requires_approval", el.listApprovalFilter.value);
         if (el.listTransportFilter.value) query.set("transport", el.listTransportFilter.value);
         if (el.listHealthFilter.value) query.set("health_status", el.listHealthFilter.value);
+        if (el.listSkillFilter.value.trim()) query.set("skill_id", el.listSkillFilter.value.trim());
         if (el.listCapabilityFilter.value.trim()) query.set("capability_id", el.listCapabilityFilter.value.trim());
         const items = await requestJson(`/api/external-agents?${query.toString()}`);
         renderAgentList(items);
@@ -1077,6 +1085,11 @@
       node.addEventListener("change", async () => {
         await loadAgentList();
         await loadHealthOverview();
+      });
+    });
+    [el.listSkillFilter, el.skillFilterInput].forEach(node => {
+      node.addEventListener("keydown", async event => {
+        if (event.key === "Enter") await loadAgentList();
       });
     });
     el.listCapabilityFilter.addEventListener("keydown", async event => {
