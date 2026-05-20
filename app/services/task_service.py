@@ -10,6 +10,7 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas import (
     AgentCollaborationStepResponse,
     AgentHandoffResponse,
+    AgentRecoveryStepResponse,
     AgentTaskArtifactResponse,
     AgentTaskDeliverableResponse,
     AgentTaskDetailResponse,
@@ -27,6 +28,7 @@ from app.schemas import (
     TaskRuntimeGovernanceOverviewResponse,
     TaskRuntimeGovernanceSummaryResponse,
     StructuredToolResultResponse,
+    TaskRuntimeRecoveryViewResponse,
     ToolCallLogResponse,
 )
 from app.services.mcp_service import MCPService
@@ -709,6 +711,10 @@ class TaskService:
             events=events,
             runtime_sessions=runtime_sessions,
         )
+        recovery_view = TaskService._build_runtime_recovery_view(
+            events=events,
+            observations=observations,
+        )
         return TaskRuntimeGovernanceSummaryResponse(
             runtime_session_count=len(runtime_sessions),
             observation_count=len(observations),
@@ -726,6 +732,96 @@ class TaskService:
             fallback_reasons=fallback_reasons,
             risk_flags=risk_flags,
             collaboration_view=collaboration_view,
+            recovery_view=recovery_view,
+        )
+
+    @staticmethod
+    def _build_runtime_recovery_view(
+        *,
+        events: list[AgentTaskEventResponse],
+        observations: list[AgentObservationLogResponse],
+    ) -> TaskRuntimeRecoveryViewResponse:
+        fallback_reasons = sorted(
+            {
+                reason
+                for item in observations
+                for reason in ([item.fallback_reason] if item.fallback_reason else [])
+            }
+        )
+        steps: list[AgentRecoveryStepResponse] = []
+        recovery_path: list[str] = []
+        retry_count = 0
+        degrade_count = 0
+        recovery_success_count = 0
+        recovery_failed_count = 0
+
+        for event in events:
+            payload = event.event_payload if isinstance(event.event_payload, dict) else {}
+            session_id = payload.get("runtime_session_id")
+            if not isinstance(session_id, str) or not session_id:
+                session_id = None
+            source_agent_id = payload.get("previous_agent_id")
+            if not isinstance(source_agent_id, str) or not source_agent_id:
+                source_agent_id = None
+            target_agent_id = event.agent_id
+
+            recovery_type = ""
+            if event.event_type == "runtime_fallback":
+                recovery_type = "fallback"
+                degrade_count += 1
+            elif event.event_type == "external_agent_call_failed":
+                recovery_type = "failure"
+                recovery_failed_count += 1
+                retry_count += int(payload.get("retry_count") or 0)
+            elif event.event_type == "external_agent_call_finished" and source_agent_id:
+                recovery_type = "recovered"
+                recovery_success_count += 1
+
+            if not recovery_type:
+                continue
+
+            path_marker = target_agent_id or str(payload.get("fallback") or payload.get("degrade_strategy") or event.event_type)
+            if source_agent_id:
+                if not recovery_path:
+                    recovery_path.append(source_agent_id)
+                elif recovery_path[-1] != source_agent_id:
+                    recovery_path.append(source_agent_id)
+            if path_marker:
+                recovery_path.append(path_marker)
+
+            if event.event_type == "runtime_fallback":
+                fallback_target = str(payload.get("fallback") or "local_capability_agent")
+                if fallback_target not in fallback_reasons:
+                    fallback_reasons.append(fallback_target)
+
+            steps.append(
+                AgentRecoveryStepResponse(
+                    order_no=len(steps) + 1,
+                    event_type=event.event_type,
+                    recovery_type=recovery_type,
+                    title=event.title,
+                    event_status=event.event_status,
+                    source_agent_id=source_agent_id,
+                    target_agent_id=target_agent_id,
+                    session_id=session_id,
+                    timestamp=event.start_time,
+                    summary=event.content or "",
+                    metadata=payload,
+                )
+            )
+
+        fallback_count = sum(1 for item in observations if item.fallback_used) + sum(
+            1 for item in events if item.event_type == "runtime_fallback"
+        )
+        return TaskRuntimeRecoveryViewResponse(
+            fallback_count=fallback_count,
+            retry_count=retry_count,
+            degrade_count=degrade_count,
+            recovery_success_count=recovery_success_count,
+            recovery_failed_count=recovery_failed_count,
+            fallback_reasons=fallback_reasons,
+            recovery_path=recovery_path,
+            steps=steps,
         )
 
     @staticmethod

@@ -479,6 +479,13 @@
         </section>
 
         <section class="panel">
+          <h2>失败恢复链路</h2>
+          <div id="runtimeRecoveryView" class="detail-list">
+            <div class="empty">当前任务暂无可展示的失败恢复链路。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>执行时间线</h2>
           <div id="timeline" class="timeline">
             <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
@@ -605,6 +612,7 @@
       skillSnapshot: document.getElementById("skillSnapshot"),
       agentCollaborationView: document.getElementById("agentCollaborationView"),
       agentHandoffView: document.getElementById("agentHandoffView"),
+      runtimeRecoveryView: document.getElementById("runtimeRecoveryView"),
       timeline: document.getElementById("timeline"),
         evaluation: document.getElementById("evaluation"),
         toolCalls: document.getElementById("toolCalls"),
@@ -1289,6 +1297,42 @@
       `;
     }
 
+    function renderRuntimeRecoveryView(recoveryView) {
+      const steps = recoveryView?.steps || [];
+      if (!steps.length) {
+        el.runtimeRecoveryView.innerHTML = `<div class="empty">当前任务暂无可展示的失败恢复链路。</div>`;
+        return;
+      }
+      const recoveryPath = (recoveryView.recovery_path || []).join(" -> ") || "-";
+      el.runtimeRecoveryView.innerHTML = `
+        <div class="list-card">
+          <h3>恢复总览</h3>
+          <div class="detail-item"><div class="label">Fallback</div><div class="value">${escapeHtml(recoveryView.fallback_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">Retry</div><div class="value">${escapeHtml(recoveryView.retry_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">Degrade</div><div class="value">${escapeHtml(recoveryView.degrade_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">恢复成功</div><div class="value">${escapeHtml(recoveryView.recovery_success_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">恢复失败</div><div class="value">${escapeHtml(recoveryView.recovery_failed_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">恢复路径</div><div class="value handoff-path">${escapeHtml(recoveryPath)}</div></div>
+          <div class="detail-item"><div class="label">恢复原因</div><div class="value">${escapeHtml((recoveryView.fallback_reasons || []).join(", ") || "-")}</div></div>
+        </div>
+        ${steps.map(item => `
+          <div class="list-card">
+            <h3>#${escapeHtml(item.order_no)} / ${escapeHtml(item.recovery_type || item.event_type)}</h3>
+            <div>
+              <span class="tag ${toneByStatus(item.event_status)}">${escapeHtml(item.event_status || "success")}</span>
+              <span class="tag">${escapeHtml(item.event_type || "-")}</span>
+            </div>
+            <div class="detail-item"><div class="label">来源 Agent</div><div class="value">${escapeHtml(item.source_agent_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">目标 Agent</div><div class="value">${escapeHtml(item.target_agent_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">Session</div><div class="value">${escapeHtml(item.session_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">时间</div><div class="value">${escapeHtml(formatDate(item.timestamp))}</div></div>
+            <div class="subtle">${escapeHtml(item.summary || "-")}</div>
+            ${item.metadata && Object.keys(item.metadata).length ? `<div class="payload-box"><pre>${escapeHtml(prettyJson(item.metadata))}</pre></div>` : ""}
+          </div>
+        `).join("")}
+      `;
+    }
+
     function renderDataAccess(logs = []) {
       if (!logs.length) {
         el.dataAccess.innerHTML = `<div class="empty">暂无数据访问明细。</div>`;
@@ -1393,6 +1437,7 @@
       renderSkillSnapshot(task);
       renderAgentCollaborationView(task.runtime_governance?.collaboration_view || null);
       renderAgentHandoffView(task.runtime_governance?.collaboration_view || null);
+      renderRuntimeRecoveryView(task.runtime_governance?.recovery_view || null);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);

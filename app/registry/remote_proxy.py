@@ -71,12 +71,18 @@ class RemoteCapabilityProxy(CapabilityAgent):
                 event_status="failed",
                 event_payload={
                     "capability_id": self._metadata.capability_id,
+                    "capability_name": self._metadata.capability_name,
+                    "source_agent_id": runtime_context.get("source_agent_id"),
+                    "source_agent_name": runtime_context.get("source_agent_name"),
                     "transport": self._metadata.transport,
                     "endpoint": base_url,
                     "service_path": endpoint,
                     "url": url,
                     "latency_ms": latency_ms,
                     "error": str(exc),
+                    "retry_count": int(runtime_context.get("retry_count") or 0),
+                    "degrade_strategy": str(runtime_context.get("degrade_strategy") or "manual_intervention"),
+                    "failure_stage": "external_agent_execution",
                 },
             )
             raise

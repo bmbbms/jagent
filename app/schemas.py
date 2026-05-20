@@ -701,6 +701,31 @@ class TaskAgentCollaborationViewResponse(BaseModel):
     steps: List["AgentCollaborationStepResponse"] = Field(default_factory=list)
 
 
+class AgentRecoveryStepResponse(BaseModel):
+    order_no: int
+    event_type: str = ""
+    recovery_type: str = ""
+    title: str = ""
+    event_status: str = "success"
+    source_agent_id: Optional[str] = None
+    target_agent_id: Optional[str] = None
+    session_id: Optional[str] = None
+    timestamp: str = ""
+    summary: str = ""
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TaskRuntimeRecoveryViewResponse(BaseModel):
+    fallback_count: int = 0
+    retry_count: int = 0
+    degrade_count: int = 0
+    recovery_success_count: int = 0
+    recovery_failed_count: int = 0
+    fallback_reasons: List[str] = Field(default_factory=list)
+    recovery_path: List[str] = Field(default_factory=list)
+    steps: List["AgentRecoveryStepResponse"] = Field(default_factory=list)
+
+
 class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     runtime_session_count: int = 0
     observation_count: int = 0
@@ -718,6 +743,7 @@ class TaskRuntimeGovernanceSummaryResponse(BaseModel):
     fallback_reasons: List[str] = Field(default_factory=list)
     risk_flags: List[str] = Field(default_factory=list)
     collaboration_view: Optional["TaskAgentCollaborationViewResponse"] = None
+    recovery_view: Optional["TaskRuntimeRecoveryViewResponse"] = None
 
 
 class TaskRuntimeGovernanceFocusTaskResponse(BaseModel):

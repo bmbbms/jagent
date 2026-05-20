@@ -658,6 +658,8 @@ class AgentScopeAgentRuntime:
                 event_payload={
                     "runtime_session_id": session.session_id,
                     "fallback": "local_capability_agent",
+                    "degrade_strategy": "use_local_capability_agent",
+                    "failure_stage": "runtime_preparation",
                 },
                 current_stage="planning",
             )
