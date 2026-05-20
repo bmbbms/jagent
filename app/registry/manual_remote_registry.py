@@ -24,6 +24,12 @@ class ManualRemoteCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         return
 
     def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
+        return self._register_metadata(metadata)
+
+    def unregister_remote(self, capability_id: str) -> bool:
+        return self.unregister(capability_id)
+
+    def _register_metadata(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
         if not metadata.endpoint and not (
             metadata.service_host and metadata.service_port
         ):
@@ -42,7 +48,7 @@ class ManualRemoteCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             raise KeyError(f"External capability not found: {capability_id}")
         if metadata.capability_id != capability_id:
             raise ValueError("capability_id in path and payload must match.")
-        return self.register_remote(metadata)
+        return self._register_metadata(metadata)
 
     def unregister(self, capability_id: str) -> bool:
         return self._capabilities.pop(capability_id, None) is not None

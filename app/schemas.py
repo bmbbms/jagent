@@ -207,6 +207,9 @@ class ExternalAgentAddRequest(BaseModel):
     requires_approval: bool = False
     tags: List[str] = Field(default_factory=list)
     transport: Optional[str] = None
+    service_name: Optional[str] = None
+    service_host: Optional[str] = None
+    service_port: Optional[int] = None
     service_path: Optional[str] = None
     extras: Dict[str, str] = Field(default_factory=dict)
 
@@ -1155,3 +1158,13 @@ class HomeResponse(BaseModel):
     api_prefix: str
     capabilities: List[str]
     endpoints: List[str]
+
+
+class NacosRegistryOverviewResponse(BaseModel):
+    backend: str = "local"
+    enabled: bool = False
+    server_address: str = ""
+    namespace: str = "public"
+    agent_count: int = 0
+    skill_count: int = 0
+    mcp_count: int = 0

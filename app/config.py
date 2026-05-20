@@ -49,6 +49,8 @@ class Settings(BaseSettings):
 
     nacos_enabled: bool = False
     nacos_server_address: str = "127.0.0.1:8848"
+    nacos_username: str = ""
+    nacos_password: str = ""
     nacos_namespace: str = "public"
     nacos_group: str = "DEFAULT_GROUP"
     nacos_service_prefix: str = "agent"
@@ -57,6 +59,12 @@ class Settings(BaseSettings):
     nacos_service_path: str = "/api/chat"
     nacos_service_cluster: str = "DEFAULT"
     nacos_service_weight: float = 1.0
+    nacos_ai_enabled: bool = False
+    nacos_ai_namespace: str = "public"
+    nacos_ai_server_address: str = ""
+    nacos_ai_username: str = ""
+    nacos_ai_password: str = ""
+    nacos_ai_page_size: int = 100
 
     model_config = SettingsConfigDict(
         env_prefix="ACQUIRING_AI_",

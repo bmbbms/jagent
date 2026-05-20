@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from datetime import datetime
 
 from app.dependencies import (
+    get_capability_registry,
     get_external_capability_persistence_service,
     get_external_agent_discovery_service,
     get_external_agent_health_service,
@@ -9,6 +10,7 @@ from app.dependencies import (
     get_task_service,
 )
 from app.registry.base import CapabilityMetadata
+from app.registry.composite_registry import CompositeCapabilityRegistry
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.schemas import (
     ExternalAgentAddRequest,
@@ -128,6 +130,7 @@ def list_governance_alert_actions() -> list[GovernanceActionResponse]:
 def register_external_agent(
     request: ExternalAgentRegisterRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
     ),
@@ -157,6 +160,10 @@ def register_external_agent(
             )
         )
         persistence_service.save(metadata)
+        try:
+            capability_registry.register_remote(metadata)
+        except Exception:
+            pass
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -186,6 +193,7 @@ def discover_external_agent(
 def add_external_agent(
     request: ExternalAgentAddRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
     ),
@@ -197,6 +205,10 @@ def add_external_agent(
         metadata = discovery_service.discover(request)
         metadata = registry.register_remote(metadata)
         persistence_service.save(metadata)
+        try:
+            capability_registry.register_remote(metadata)
+        except Exception:
+            pass
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -437,6 +449,7 @@ def update_external_agent(
     capability_id: str,
     request: ExternalAgentUpdateRequest,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
     ),
@@ -467,6 +480,10 @@ def update_external_agent(
             ),
         )
         persistence_service.save(metadata)
+        try:
+            capability_registry.register_remote(metadata)
+        except Exception:
+            pass
     except KeyError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -484,6 +501,7 @@ def update_external_agent(
 def delete_external_agent(
     capability_id: str,
     registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
     persistence_service: ExternalCapabilityPersistenceService = Depends(
         get_external_capability_persistence_service
     ),
@@ -495,6 +513,10 @@ def delete_external_agent(
             detail=f"External agent not found: {capability_id}",
         )
     persistence_service.delete(capability_id)
+    try:
+        capability_registry.unregister_remote(capability_id)
+    except Exception:
+        pass
 
 
 @router.get("/{capability_id}/health", response_model=ExternalAgentHealthResponse)

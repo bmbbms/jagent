@@ -46,6 +46,12 @@ class CapabilityRegistrar(ABC):
     def register_local(self, agent: CapabilityAgent) -> None:
         raise NotImplementedError
 
+    def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
+        raise NotImplementedError
+
+    def unregister_remote(self, capability_id: str) -> bool:
+        raise NotImplementedError
+
 
 class CapabilityResolver(ABC):
     @abstractmethod

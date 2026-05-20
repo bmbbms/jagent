@@ -30,6 +30,12 @@ class LocalCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             key=lambda item: item.definition.priority
         )
 
+    def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
+        raise NotImplementedError("Local registry does not support remote registration")
+
+    def unregister_remote(self, capability_id: str) -> bool:
+        raise NotImplementedError("Local registry does not support remote unregister")
+
     def resolve(self, request: ChatRequest) -> CapabilityAgent:
         requested_agent_id = str(request.metadata.get("requested_agent_id") or "").strip()
         if requested_agent_id:

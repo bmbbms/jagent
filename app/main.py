@@ -12,6 +12,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.home import router as home_router
 from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.mcp import router as mcp_router
+from app.api.routes.nacos import router as nacos_router
 from app.api.routes.skills import router as skills_router
 from app.api.routes.service_tickets import router as service_tickets_router
 from app.api.routes.tasks import router as tasks_router
@@ -50,6 +51,7 @@ app.include_router(evaluations_router, prefix=settings.api_prefix)
 app.include_router(capabilities_router, prefix=settings.api_prefix)
 app.include_router(external_agents_router, prefix=settings.api_prefix)
 app.include_router(mcp_router, prefix=settings.api_prefix)
+app.include_router(nacos_router, prefix=settings.api_prefix)
 app.include_router(skills_router, prefix=settings.api_prefix)
 app.include_router(workflows_router, prefix=settings.api_prefix)
 app.include_router(knowledge_router, prefix=settings.api_prefix)

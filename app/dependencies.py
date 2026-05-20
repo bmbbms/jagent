@@ -37,6 +37,7 @@ from app.services.internal_tool_provider import InternalToolProvider, LocalDbInt
 from app.services.knowledge_service import KnowledgeService
 from app.services.mcp_catalog_service import MCPCatalogService
 from app.services.mcp_service import MCPService
+from app.services.nacos_registry_service import NacosRegistryService
 from app.services.observation_service import ObservationService
 from app.services.service_ticket_service import ServiceTicketService
 from app.services.skill_registry import SkillRegistry
@@ -72,21 +73,9 @@ def get_manual_remote_registry() -> ManualRemoteCapabilityRegistry:
 def get_capability_registry() -> CompositeCapabilityRegistry:
     settings = get_settings()
     local_registry = LocalCapabilityRegistry()
-    secondary_registries = [
-        get_manual_remote_registry(),
-        NacosCapabilityRegistry(
-            server_address=settings.nacos_server_address,
-            namespace=settings.nacos_namespace,
-            group=settings.nacos_group,
-            service_prefix=settings.nacos_service_prefix,
-            enabled=settings.nacos_enabled,
-            service_host=settings.nacos_service_host,
-            service_port=settings.nacos_service_port,
-            service_path=settings.nacos_service_path,
-            service_cluster=settings.nacos_service_cluster,
-            service_weight=settings.nacos_service_weight,
-        )
-    ]
+    secondary_registries = [get_manual_remote_registry()]
+    if settings.capability_registry_backend == "nacos" or settings.nacos_ai_enabled:
+        secondary_registries.append(NacosCapabilityRegistry(settings))
 
     registry = CompositeCapabilityRegistry(
         local_registry=local_registry,
@@ -257,6 +246,12 @@ def get_service_ticket_service() -> ServiceTicketService:
 def get_skill_registry() -> SkillRegistry:
     settings = get_settings()
     return SkillRegistry.from_directory(settings.skill_root)
+
+
+@lru_cache
+def get_nacos_registry_service() -> NacosRegistryService:
+    settings = get_settings()
+    return NacosRegistryService(settings, get_skill_registry())
 
 
 @lru_cache

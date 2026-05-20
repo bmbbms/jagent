@@ -47,3 +47,9 @@ def test_skill_registry_loads_runtime_spec() -> None:
     assert "merchant_id" in runtime_spec.required_inputs
     assert "merchant_profile_query" in runtime_spec.allowed_tools
     assert runtime_spec.steps
+
+
+def test_capability_registry_supports_skill_filtering() -> None:
+    registry = get_capability_registry()
+    items = registry.describe_capabilities(BizDomain.merchant)
+    assert any("merchant_qa" in item.skills for item in items)

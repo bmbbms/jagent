@@ -35,6 +35,24 @@ class CompositeCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         for registry in self._secondary_registries:
             registry.register_local(agent)
 
+    def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
+        result = metadata
+        for registry in self._secondary_registries:
+            try:
+                result = registry.register_remote(metadata)
+            except Exception:
+                continue
+        return result
+
+    def unregister_remote(self, capability_id: str) -> bool:
+        removed = False
+        for registry in self._secondary_registries:
+            try:
+                removed = bool(registry.unregister_remote(capability_id)) or removed
+            except Exception:
+                continue
+        return removed
+
     def resolve(self, request: ChatRequest) -> CapabilityAgent:
         requested_agent_id = self._requested_agent_id(request)
         if requested_agent_id:

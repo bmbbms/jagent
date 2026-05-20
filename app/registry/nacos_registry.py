@@ -1,112 +1,169 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from app.agents.base import CapabilityAgent
+from app.config import Settings
 from app.registry.base import CapabilityMetadata, CapabilityRegistrar, CapabilityResolver
-from app.registry.nacos_client import NacosHttpClient, NacosInstance
+from app.registry.nacos_ai_client import NacosAiHttpClient
 from app.registry.remote_proxy import RemoteCapabilityProxy
 from app.schemas import BizDomain, ChatRequest
 
 
 class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
-    """
-    Nacos-backed capability registry.
-
-    Phase 1 behavior:
-    - publish local capability metadata to Nacos when enabled
-    - discover remote capability instances from Nacos when asked to resolve
-    - if no remote endpoint exists, remain metadata-only
-    """
-
-    def __init__(
-        self,
-        server_address: str,
-        namespace: str,
-        group: str,
-        service_prefix: str = "agent",
-        enabled: bool = False,
-        service_host: str = "127.0.0.1",
-        service_port: int = 8000,
-        service_path: str = "/api/chat",
-        service_cluster: str = "DEFAULT",
-        service_weight: float = 1.0,
-    ) -> None:
-        self.server_address = server_address
-        self.namespace = namespace
-        self.group = group
-        self.service_prefix = service_prefix
-        self.enabled = enabled
-        self.service_host = service_host
-        self.service_port = service_port
-        self.service_path = service_path
-        self.service_cluster = service_cluster
-        self.service_weight = service_weight
-        self._published_metadata: List[CapabilityMetadata] = []
-        self._client = NacosHttpClient(f"http://{self.server_address}")
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+        self._client = NacosAiHttpClient(
+            settings.nacos_ai_server_address or settings.nacos_server_address,
+            namespace_id=settings.nacos_ai_namespace or settings.nacos_namespace,
+            username=settings.nacos_ai_username or settings.nacos_username,
+            password=settings.nacos_ai_password or settings.nacos_password,
+        )
+        self._local_cache: dict[str, CapabilityMetadata] = {}
 
     def register_local(self, agent: CapabilityAgent) -> None:
-        metadata = self._build_metadata(agent)
-        self._published_metadata.append(metadata)
-        if not self.enabled:
-            return
-        instance = NacosInstance(
-            service_name=metadata.service_name or self._service_name(metadata.capability_id),
-            ip=metadata.service_host or self.service_host,
-            port=metadata.service_port or self.service_port,
-            healthy=True,
-            weight=self.service_weight,
-            cluster_name=self.service_cluster,
-            metadata=self._metadata_payload(metadata),
-            ephemeral=True,
-        )
-        self._client.register_instance(
-            namespace_id=self.namespace,
-            group_name=self.group,
-            instance=instance,
-        )
+        metadata = self._to_metadata(agent)
+        self._local_cache[metadata.capability_id] = metadata
+        if self._settings.nacos_ai_enabled:
+            self._publish_agent_card(metadata)
+
+    def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
+        self._local_cache[metadata.capability_id] = metadata
+        if self._settings.nacos_ai_enabled:
+            self._publish_agent_card(metadata)
+        return metadata
+
+    def unregister_remote(self, capability_id: str) -> bool:
+        removed = self._local_cache.pop(capability_id, None) is not None
+        if self._settings.nacos_ai_enabled:
+            try:
+                self._client.delete_agent_card(capability_id)
+            except Exception:
+                pass
+        return removed
 
     def resolve(self, request: ChatRequest) -> CapabilityAgent:
         metadata = self._select_metadata(request)
         if metadata is None:
-            raise NotImplementedError(
-                "No Nacos capability metadata matched the request."
-            )
-        if not self.enabled:
-            raise NotImplementedError(
-                "Nacos discovery is disabled. Use local registry for resolution."
-            )
-        service_name = metadata.service_name or self._service_name(metadata.capability_id)
-        instances = self._client.list_instances(
-            namespace_id=self.namespace,
-            group_name=self.group,
-            service_name=service_name,
-            healthy_only=True,
-        )
-        for instance in instances:
-            proxy = self._to_proxy(metadata, instance)
-            if proxy is not None:
-                return proxy
-        raise RuntimeError(f"No healthy Nacos instance found for {service_name}")
+            raise ValueError(f"No Nacos capability matched domain={request.biz_domain.value}")
+        return RemoteCapabilityProxy(metadata)
 
     def list_capabilities(self, biz_domain: Optional[BizDomain] = None) -> List[str]:
-        items = self._published_metadata
-        if biz_domain is not None:
-            items = [item for item in items if item.biz_domain == biz_domain]
-        return [item.capability_id for item in items]
-
-    def describe_published(self) -> List[CapabilityMetadata]:
-        return list(self._published_metadata)
+        return [item.capability_id for item in self.describe_capabilities(biz_domain)]
 
     def describe_capabilities(
         self, biz_domain: Optional[BizDomain] = None
     ) -> List[CapabilityMetadata]:
-        items = self._published_metadata
+        items = list(self._local_cache.values())
+        if self._settings.nacos_ai_enabled and self._settings.nacos_ai_server_address:
+            items.extend(self._load_remote_agent_cards())
         if biz_domain is not None:
             items = [item for item in items if item.biz_domain == biz_domain]
-        return list(items)
+        merged: dict[str, CapabilityMetadata] = {}
+        for item in items:
+            existing = merged.get(item.capability_id)
+            if existing is None or item.priority < existing.priority:
+                merged[item.capability_id] = item
+        return sorted(merged.values(), key=lambda item: (item.priority, item.capability_id))
 
-    def _build_metadata(self, agent: CapabilityAgent) -> CapabilityMetadata:
+    def _publish_agent_card(self, metadata: CapabilityMetadata) -> None:
+        agent_card = self._build_agent_card(metadata)
+        self._client.publish_agent_card(agent_card)
+
+    def _load_remote_agent_cards(self) -> list[CapabilityMetadata]:
+        cards = self._client.list_agent_cards(page_size=self._settings.nacos_ai_page_size)
+        items: list[CapabilityMetadata] = []
+        for card in cards:
+            item = self._from_agent_card(card)
+            if item is not None:
+                items.append(item)
+        return items
+
+    def _select_metadata(self, request: ChatRequest) -> CapabilityMetadata | None:
+        requested_agent_id = str(request.metadata.get("requested_agent_id") or "").strip()
+        candidates = [
+            item
+            for item in self.describe_capabilities(request.biz_domain)
+            if item.biz_domain == request.biz_domain
+        ]
+        if requested_agent_id:
+            for item in candidates:
+                if item.capability_id == requested_agent_id:
+                    return item
+            return None
+        lowered_message = request.message.lower()
+        matched = [
+            item
+            for item in candidates
+            if not item.triggers
+            or any(trigger.lower() in lowered_message for trigger in item.triggers)
+        ]
+        matched.sort(key=lambda item: (item.priority, item.capability_id))
+        return matched[0] if matched else (candidates[0] if candidates else None)
+
+    def _build_agent_card(self, metadata: CapabilityMetadata) -> dict[str, Any]:
+        return {
+            "name": metadata.capability_name,
+            "description": metadata.description,
+            "url": metadata.endpoint or self._default_agent_url(metadata),
+            "protocolVersion": metadata.extras.get("protocol_version", "0.3.0"),
+            "version": metadata.version,
+            "skills": [{"id": skill_id, "name": skill_id} for skill_id in metadata.skills],
+            "metadata": {
+                "capability_id": metadata.capability_id,
+                "biz_domain": metadata.biz_domain.value,
+                "priority": metadata.priority,
+                "risk_level": metadata.risk_level,
+                "requires_approval": metadata.requires_approval,
+                "tags": metadata.tags,
+                "transport": metadata.transport,
+                "service_path": metadata.service_path,
+                "endpoint": metadata.endpoint,
+                "service_name": metadata.service_name,
+                "service_host": metadata.service_host,
+                "service_port": metadata.service_port,
+                "extras": metadata.extras,
+                "source": metadata.source,
+            },
+        }
+
+    def _from_agent_card(self, card: dict[str, Any]) -> CapabilityMetadata | None:
+        metadata = card.get("metadata") or {}
+        capability_id = str(metadata.get("capability_id") or "").strip()
+        if not capability_id:
+            return None
+        skills = []
+        for item in card.get("skills") or []:
+            if isinstance(item, dict) and isinstance(item.get("id"), str):
+                skills.append(item["id"])
+        transport = str(metadata.get("transport") or "a2a")
+        endpoint = metadata.get("endpoint") or card.get("url")
+        service_path = str(metadata.get("service_path") or "/a2a")
+        biz_domain = metadata.get("biz_domain") or "merchant"
+        return CapabilityMetadata(
+            capability_id=capability_id,
+            capability_name=str(card.get("name") or capability_id),
+            biz_domain=BizDomain(str(biz_domain)),
+            description=str(card.get("description") or ""),
+            priority=int(metadata.get("priority") or 100),
+            triggers=list(metadata.get("triggers") or []),
+            skills=skills,
+            version=str(card.get("version") or metadata.get("version") or "v1"),
+            risk_level=str(metadata.get("risk_level") or "low"),
+            requires_approval=bool(metadata.get("requires_approval") or False),
+            tags=list(metadata.get("tags") or []),
+            transport=transport,
+            endpoint=str(endpoint) if endpoint else None,
+            service_name=metadata.get("service_name"),
+            service_host=metadata.get("service_host"),
+            service_port=metadata.get("service_port"),
+            service_path=service_path,
+            extras={k: str(v) for k, v in (metadata.get("extras") or {}).items()},
+            source=str(metadata.get("source") or "nacos_ai"),
+        )
+
+    @staticmethod
+    def _to_metadata(agent: CapabilityAgent) -> CapabilityMetadata:
         return CapabilityMetadata(
             capability_id=agent.definition.capability_id,
             capability_name=agent.definition.name,
@@ -115,85 +172,23 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             priority=agent.definition.priority,
             triggers=agent.definition.triggers,
             skills=agent.definition.skills,
-            version="v1",
-            risk_level="high" if agent.definition.biz_domain == BizDomain.operations else "low",
-            requires_approval=agent.definition.biz_domain == BizDomain.operations,
-            tags=["phase1", "registered"],
-            transport="http",
-            endpoint=f"http://{self.service_host}:{self.service_port}",
-            service_name=self._service_name(agent.definition.capability_id),
-            service_host=self.service_host,
-            service_port=self.service_port,
-            service_path=self.service_path,
-            extras={
-                "registry": "nacos",
-                "namespace": self.namespace,
-                "group": self.group,
-            },
-            source="nacos",
+            version=agent.definition.version,
+            risk_level=agent.definition.risk_level,
+            requires_approval=agent.definition.requires_approval,
+            tags=agent.definition.tags,
+            transport=agent.definition.transport,
+            endpoint=agent.definition.endpoint,
+            service_name=agent.definition.service_name,
+            service_host=agent.definition.service_host,
+            service_port=agent.definition.service_port,
+            service_path=agent.definition.service_path,
+            extras=agent.definition.extras,
+            source="local",
         )
 
-    def _metadata_payload(self, metadata: CapabilityMetadata) -> dict[str, str]:
-        return {
-            "capability_id": metadata.capability_id,
-            "capability_name": metadata.capability_name,
-            "biz_domain": metadata.biz_domain.value,
-            "priority": str(metadata.priority),
-            "triggers": ",".join(metadata.triggers),
-            "skills": ",".join(metadata.skills),
-            "version": metadata.version,
-            "risk_level": metadata.risk_level,
-            "requires_approval": str(metadata.requires_approval).lower(),
-            "transport": metadata.transport,
-            "endpoint": metadata.endpoint or "",
-            "service_path": metadata.service_path,
-        }
-
-    def _select_metadata(self, request: ChatRequest) -> Optional[CapabilityMetadata]:
-        candidates = [item for item in self._published_metadata if item.biz_domain == request.biz_domain]
-        if not candidates:
-            return None
-        message = request.message.lower()
-        matched = [
-            item for item in candidates if not item.triggers or any(trigger.lower() in message for trigger in item.triggers)
-        ]
-        if not matched:
-            matched = candidates
-        matched.sort(key=lambda item: item.priority)
-        return matched[0]
-
-    def _to_proxy(self, metadata: CapabilityMetadata, instance: dict) -> Optional[RemoteCapabilityProxy]:
-        ip = instance.get("ip") or instance.get("instanceId")
-        port = instance.get("port")
-        endpoint = None
-        if ip and port:
-            endpoint = f"http://{ip}:{port}"
-        instance_metadata = instance.get("metadata") or {}
-        resolved = CapabilityMetadata(
-            capability_id=metadata.capability_id,
-            capability_name=metadata.capability_name,
-            biz_domain=metadata.biz_domain,
-            description=metadata.description,
-            priority=metadata.priority,
-            triggers=metadata.triggers,
-            skills=metadata.skills,
-            version=metadata.version,
-            risk_level=metadata.risk_level,
-            requires_approval=metadata.requires_approval,
-            tags=metadata.tags,
-            transport=instance_metadata.get("transport", metadata.transport),
-            endpoint=instance_metadata.get("endpoint", endpoint or metadata.endpoint),
-            service_name=metadata.service_name,
-            service_host=ip or metadata.service_host,
-            service_port=int(port) if port is not None else metadata.service_port,
-            service_path=instance_metadata.get("service_path", metadata.service_path),
-            extras={**metadata.extras, **{k: str(v) for k, v in instance_metadata.items()}},
-            source=metadata.source,
-        )
-        if not resolved.endpoint and not (resolved.service_host and resolved.service_port):
-            return None
-        return RemoteCapabilityProxy(resolved)
-
-    def _service_name(self, capability_id: str) -> str:
-        sanitized = capability_id.replace(".", "-")
-        return f"{self.service_prefix}-{sanitized}"
+    def _default_agent_url(self, metadata: CapabilityMetadata) -> str:
+        if metadata.endpoint:
+            return metadata.endpoint.rstrip("/")
+        if metadata.service_host and metadata.service_port:
+            return f"http://{metadata.service_host}:{metadata.service_port}"
+        return f"http://{self._settings.nacos_service_host}:{self._settings.nacos_service_port}"
