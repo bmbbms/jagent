@@ -195,3 +195,4 @@ def test_nacos_registry_maps_remote_agent_without_capability_metadata() -> None:
     assert items
     assert items[0].capability_id == "nacos.merchant.payment.regulation.agent"
     assert items[0].service_path == "/a2a"
+    assert items[0].priority == 1000

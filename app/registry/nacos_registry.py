@@ -65,7 +65,9 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         self, biz_domain: Optional[BizDomain] = None
     ) -> List[CapabilityMetadata]:
         items = list(self._local_cache.values())
-        if self._settings.nacos_ai_enabled and self._settings.nacos_ai_server_address:
+        if self._settings.nacos_ai_enabled and (
+            self._settings.nacos_ai_server_address or self._settings.nacos_server_address
+        ):
             items.extend(self._load_remote_agent_cards())
         if biz_domain is not None:
             items = [item for item in items if item.biz_domain == biz_domain]
@@ -185,12 +187,13 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
             or "/a2a"
         )
         biz_domain = metadata.get("biz_domain") or "merchant"
+        priority = int(metadata.get("priority") or 1000)
         return CapabilityMetadata(
             capability_id=capability_id,
             capability_name=capability_name or capability_id,
             biz_domain=BizDomain(str(biz_domain)),
             description=str(card.get("description") or ""),
-            priority=int(metadata.get("priority") or 100),
+            priority=priority,
             triggers=list(metadata.get("triggers") or []),
             skills=skills,
             version=str(card.get("version") or metadata.get("version") or "v1"),
