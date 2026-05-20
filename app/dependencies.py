@@ -15,6 +15,7 @@ from app.registry.nacos_registry import NacosCapabilityRegistry
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
+from app.repositories.agent_profile_repository import AgentProfileRepository
 from app.repositories.external_capability_repository import ExternalCapabilityRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.service_ticket_repository import ServiceTicketRepository
@@ -24,6 +25,7 @@ from app.runtimes.agentscope import AgentScopeAgentRuntime
 from app.runtimes.base import AgentRuntime
 from app.runtimes.local import LocalAgentRuntime
 from app.services.audit_service import AuditService
+from app.services.agent_profile_service import AgentProfileSyncService
 from app.services.chat_service import ChatService
 from app.services.evaluation_service import EvaluationService
 from app.services.external_capability_persistence_service import (
@@ -123,6 +125,15 @@ def get_chat_service() -> ChatService:
     return ChatService(
         session_factory=get_session_factory(),
         repository=ChatRepository(),
+    )
+
+
+@lru_cache
+def get_agent_profile_sync_service() -> AgentProfileSyncService:
+    return AgentProfileSyncService(
+        settings=get_settings(),
+        session_factory=get_session_factory(),
+        repository=AgentProfileRepository(),
     )
 
 

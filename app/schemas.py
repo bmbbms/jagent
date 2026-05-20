@@ -1168,3 +1168,92 @@ class NacosRegistryOverviewResponse(BaseModel):
     agent_count: int = 0
     skill_count: int = 0
     mcp_count: int = 0
+
+
+class AgentDeclaredSkillResponse(BaseModel):
+    skill_id: str
+    skill_name: str
+    description: str = ""
+    tags: List[str] = Field(default_factory=list)
+    examples: List[str] = Field(default_factory=list)
+    input_modes: List[str] = Field(default_factory=list)
+    output_modes: List[str] = Field(default_factory=list)
+    raw_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentDeclaredMCPResponse(BaseModel):
+    mcp_id: str
+    mcp_name: str
+    description: str = ""
+    transport: Optional[str] = None
+    endpoint: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    raw_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentDeclaredWorkflowResponse(BaseModel):
+    workflow_id: str
+    workflow_name: str
+    description: str = ""
+    steps: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
+    raw_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentProfileResponse(BaseModel):
+    agent_id: str
+    source_agent_name: str
+    agent_name: str
+    description: str = ""
+    endpoint: Optional[str] = None
+    protocol: str = "a2a"
+    transport: str = "a2a"
+    version: str = "v1"
+    namespace: str = "public"
+    source: str = "nacos"
+    biz_domain: str = "merchant"
+    tags: List[str] = Field(default_factory=list)
+    health_status: str = "unknown"
+    governance_status: str = "healthy"
+    risk_level: str = "low"
+    enabled: bool = True
+    declared_skill_count: int = 0
+    declared_mcp_count: int = 0
+    declared_workflow_count: int = 0
+    last_sync_time: Optional[str] = None
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
+
+
+class AgentProfileDetailResponse(AgentProfileResponse):
+    raw_card: Dict[str, Any] = Field(default_factory=dict)
+    normalized_card: Dict[str, Any] = Field(default_factory=dict)
+    declared_skills: List[AgentDeclaredSkillResponse] = Field(default_factory=list)
+    declared_mcps: List[AgentDeclaredMCPResponse] = Field(default_factory=list)
+    declared_workflows: List[AgentDeclaredWorkflowResponse] = Field(default_factory=list)
+
+
+class AgentProfileSyncResponse(BaseModel):
+    sync_id: str
+    namespace: str = "public"
+    source: str = "nacos"
+    status: str
+    pulled_count: int = 0
+    upserted_count: int = 0
+    failed_count: int = 0
+    error_message: Optional[str] = None
+    start_time: str
+    end_time: str
+
+
+class AgentProfileSyncLogResponse(BaseModel):
+    sync_id: str
+    namespace: str
+    source: str = "nacos"
+    status: str
+    pulled_count: int = 0
+    upserted_count: int = 0
+    failed_count: int = 0
+    error_message: Optional[str] = None
+    start_time: str
+    end_time: Optional[str] = None

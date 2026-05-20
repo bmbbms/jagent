@@ -4,6 +4,7 @@ import traceback
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.api.routes.agent_profiles import router as agent_profiles_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.capabilities import router as capabilities_router
 from app.api.routes.chat import router as chat_router
@@ -66,6 +67,7 @@ app = FastAPI(
 app.include_router(home_router)
 app.include_router(health_router)
 app.include_router(chat_router, prefix=settings.api_prefix)
+app.include_router(agent_profiles_router, prefix=settings.api_prefix)
 app.include_router(evaluations_router, prefix=settings.api_prefix)
 app.include_router(capabilities_router, prefix=settings.api_prefix)
 app.include_router(external_agents_router, prefix=settings.api_prefix)

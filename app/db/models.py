@@ -94,6 +94,103 @@ class ExternalCapabilityRegistryModel(Base):
     )
 
 
+class AgentProfileModel(Base):
+    __tablename__ = "t_agent_profile"
+
+    agent_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    source_agent_name: Mapped[str] = mapped_column(String(128), index=True)
+    agent_name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    endpoint: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    protocol: Mapped[str] = mapped_column(String(32), default="a2a")
+    transport: Mapped[str] = mapped_column(String(32), default="a2a")
+    version: Mapped[str] = mapped_column(String(32), default="v1")
+    namespace: Mapped[str] = mapped_column(String(64), default="public", index=True)
+    source: Mapped[str] = mapped_column(String(32), default="nacos")
+    biz_domain: Mapped[str] = mapped_column(String(64), default="merchant", index=True)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    raw_card: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    normalized_card: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    health_status: Mapped[str] = mapped_column(String(32), default="unknown")
+    governance_status: Mapped[str] = mapped_column(String(32), default="healthy")
+    risk_level: Mapped[str] = mapped_column(String(16), default="low")
+    enabled: Mapped[bool] = mapped_column(default=True)
+    last_sync_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class AgentDeclaredSkillModel(Base):
+    __tablename__ = "t_agent_declared_skill"
+
+    id: Mapped[int] = mapped_column(AUTO_ID_TYPE, primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), index=True)
+    skill_id: Mapped[str] = mapped_column(String(128), index=True)
+    skill_name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    examples: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    input_modes: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    output_modes: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class AgentDeclaredMCPModel(Base):
+    __tablename__ = "t_agent_declared_mcp"
+
+    id: Mapped[int] = mapped_column(AUTO_ID_TYPE, primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), index=True)
+    mcp_id: Mapped[str] = mapped_column(String(128), index=True)
+    mcp_name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    transport: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    endpoint: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class AgentDeclaredWorkflowModel(Base):
+    __tablename__ = "t_agent_declared_workflow"
+
+    id: Mapped[int] = mapped_column(AUTO_ID_TYPE, primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), index=True)
+    workflow_id: Mapped[str] = mapped_column(String(128), index=True)
+    workflow_name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    steps: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class AgentProfileSyncLogModel(Base):
+    __tablename__ = "t_agent_profile_sync_log"
+
+    sync_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    namespace: Mapped[str] = mapped_column(String(64), default="public", index=True)
+    source: Mapped[str] = mapped_column(String(32), default="nacos")
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    pulled_count: Mapped[int] = mapped_column(Integer, default=0)
+    upserted_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ContactModel(Base):
     __tablename__ = "t_contact_list"
 
