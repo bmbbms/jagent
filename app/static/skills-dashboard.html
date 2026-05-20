@@ -478,7 +478,10 @@
             </div>
             <div class="subtle">${escapeHtml(item.description || "-")}</div>
             <div class="subtle">health: ${escapeHtml(item.health_status || "unknown")} / governance: ${escapeHtml(item.governance_status || "healthy")}</div>
-            <div><button class="secondary" type="button" data-open-external-agent="${escapeHtml(item.capability_id)}">打开外部 Agent</button></div>
+            <div class="actions">
+              <button class="secondary" type="button" data-open-external-agent="${escapeHtml(item.capability_id)}">打开外部 Agent</button>
+              <button class="secondary" type="button" data-open-skill-from-agent="${escapeHtml(skillId)}">回到 Skill</button>
+            </div>
           </div>
         `).join("");
         target.querySelectorAll("[data-open-external-agent]").forEach(node => {
@@ -486,6 +489,13 @@
             const capabilityId = node.getAttribute("data-open-external-agent") || "";
             if (!capabilityId) return;
             window.location.href = `/ui/external-agents?capability_id=${encodeURIComponent(capabilityId)}`;
+          });
+        });
+        target.querySelectorAll("[data-open-skill-from-agent]").forEach(node => {
+          node.addEventListener("click", () => {
+            const skillId = node.getAttribute("data-open-skill-from-agent") || "";
+            if (!skillId) return;
+            window.location.href = `/ui/skills?skill_id=${encodeURIComponent(skillId)}`;
           });
         });
       } catch (error) {
