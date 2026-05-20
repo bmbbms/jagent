@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 from dataclasses import dataclass
 from typing import Any, Dict
@@ -31,6 +30,7 @@ class NacosAiHttpClient:
         self.timeout = timeout
         self.username = username
         self.password = password
+        self._access_token: str = ""
 
     def publish_agent_card(
         self,
@@ -207,17 +207,21 @@ class NacosAiHttpClient:
             )
 
         request.add_header("Accept", "application/json")
-        if self.username or self.password:
-            token = base64.b64encode(
-                f"{self.username}:{self.password}".encode("utf-8")
-            ).decode("ascii")
-            request.add_header("Authorization", f"Basic {token}")
+        self._attach_auth_header(request)
 
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 body = response.read()
         except HTTPError as exc:
             body = exc.read()
+            if exc.code in {401, 403} and self.username and self.password:
+                if self._refresh_access_token():
+                    return self._request(
+                        method,
+                        path,
+                        params=params,
+                        expect_json=expect_json,
+                    )
             if expect_json:
                 raise RuntimeError(
                     f"Nacos API error {exc.code}: {body.decode('utf-8', errors='ignore')}"
@@ -232,6 +236,46 @@ class NacosAiHttpClient:
             text = body.decode("utf-8")
             return json.loads(text)
         return body
+
+    def _attach_auth_header(self, request: Request) -> None:
+        if not (self.username or self.password):
+            return
+        if not self._access_token:
+            self._refresh_access_token()
+        if self._access_token:
+            request.add_header("Authorization", f"Bearer {self._access_token}")
+
+    def _refresh_access_token(self) -> bool:
+        if not (self.username and self.password):
+            return False
+        login_url = urljoin(self.base_url + "/", "/nacos/v1/auth/users/login")
+        payload = urlencode(
+            {
+                "username": self.username,
+                "password": self.password,
+            }
+        ).encode("utf-8")
+        request = Request(login_url, data=payload, method="POST")
+        request.add_header(
+            "Content-Type", "application/x-www-form-urlencoded; charset=utf-8"
+        )
+        request.add_header("Accept", "application/json")
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                body = response.read().decode("utf-8")
+        except HTTPError:
+            self._access_token = ""
+            return False
+        except URLError:
+            self._access_token = ""
+            return False
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            self._access_token = ""
+            return False
+        self._access_token = str(payload.get("accessToken") or "").strip()
+        return bool(self._access_token)
 
     @staticmethod
     def _extract_page_items(data: Any) -> list[dict[str, Any]]:
