@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import datetime
 
 from app.dependencies import (
     get_external_capability_persistence_service,
@@ -243,6 +244,23 @@ def list_external_agents(
         items = [item for item in items if item.transport == transport]
     if health_status:
         items = [item for item in items if item.health_status == health_status]
+    return items
+
+
+@router.get("/skills/{skill_id}", response_model=list[ExternalAgentInfo])
+def list_external_agents_by_skill(
+    skill_id: str,
+    registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
+) -> list[ExternalAgentInfo]:
+    health_map = {item.capability_id: item for item in persistence_service.list_items()}
+    items = [
+        _to_response(item, health_item=health_map.get(item.capability_id))
+        for item in registry.describe_capabilities()
+        if skill_id in item.skills
+    ]
     return items
 
 

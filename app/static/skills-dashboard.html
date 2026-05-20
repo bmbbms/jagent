@@ -185,6 +185,14 @@
       padding-top: 18px;
       border-top: 1px solid #eadcca;
     }
+    .agent-card {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
     .chips {
       display: flex;
       flex-wrap: wrap;
@@ -251,6 +259,7 @@
       capabilities: [],
       skillId: "",
       selectedSkill: null,
+      externalAgents: [],
     };
 
     const el = {
@@ -427,6 +436,13 @@
             `).join("")}</div>`
             : '<div class="empty">当前还没有 Agent 声明依赖这个 Skill。</div>'}
         </div>
+
+        <div class="section-split">
+          <h2>External Agents</h2>
+          <div id="externalAgentList" class="stack">
+            <div class="empty">正在加载外部 Agent...</div>
+          </div>
+        </div>
       `;
 
       el.skillDetail.querySelectorAll("[data-open-capability]").forEach(node => {
@@ -438,6 +454,43 @@
           window.location.href = `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`;
         });
       });
+
+      loadExternalAgentsBySkill(item.skill_id);
+    }
+
+    async function loadExternalAgentsBySkill(skillId) {
+      const target = document.getElementById("externalAgentList");
+      if (!target) return;
+      try {
+        const items = await fetchJson(`/api/external-agents/skills/${encodeURIComponent(skillId)}`);
+        state.externalAgents = items;
+        if (!items.length) {
+          target.innerHTML = '<div class="empty">当前没有外部 Agent 绑定该 Skill。</div>';
+          return;
+        }
+        target.innerHTML = items.map(item => `
+          <div class="agent-card">
+            <div class="title">${escapeHtml(item.capability_name)}</div>
+            <div>
+              <span class="tag">${escapeHtml(item.capability_id)}</span>
+              <span class="tag">${escapeHtml(item.transport)}</span>
+              <span class="tag">${escapeHtml(item.source || "-")}</span>
+            </div>
+            <div class="subtle">${escapeHtml(item.description || "-")}</div>
+            <div class="subtle">health: ${escapeHtml(item.health_status || "unknown")} / governance: ${escapeHtml(item.governance_status || "healthy")}</div>
+            <div><button class="secondary" type="button" data-open-external-agent="${escapeHtml(item.capability_id)}">打开外部 Agent</button></div>
+          </div>
+        `).join("");
+        target.querySelectorAll("[data-open-external-agent]").forEach(node => {
+          node.addEventListener("click", () => {
+            const capabilityId = node.getAttribute("data-open-external-agent") || "";
+            if (!capabilityId) return;
+            window.location.href = `/ui/external-agents?capability_id=${encodeURIComponent(capabilityId)}`;
+          });
+        });
+      } catch (error) {
+        target.innerHTML = `<div class="empty">外部 Agent 加载失败：${escapeHtml(error.message)}</div>`;
+      }
     }
 
     async function loadSkills() {
