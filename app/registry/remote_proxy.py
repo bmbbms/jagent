@@ -39,6 +39,8 @@ class RemoteCapabilityProxy(CapabilityAgent):
             event_payload={
                 "capability_id": self._metadata.capability_id,
                 "capability_name": self._metadata.capability_name,
+                "source_agent_id": runtime_context.get("source_agent_id"),
+                "source_agent_name": runtime_context.get("source_agent_name"),
                 "transport": self._metadata.transport,
                 "endpoint": base_url,
                 "service_path": endpoint,

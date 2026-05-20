@@ -661,6 +661,21 @@ class RuntimeSessionViewResponse(BaseModel):
     observations: List["AgentObservationLogResponse"] = Field(default_factory=list)
 
 
+class AgentHandoffResponse(BaseModel):
+    order_no: int
+    handoff_type: str = "execution"
+    from_agent_id: Optional[str] = None
+    from_agent_label: str = ""
+    to_agent_id: Optional[str] = None
+    to_agent_label: str = ""
+    trigger_event_type: str = ""
+    handoff_status: str = "success"
+    session_id: Optional[str] = None
+    timestamp: str = ""
+    summary: str = ""
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
 class AgentCollaborationStepResponse(BaseModel):
     order_no: int
     event_type: str
@@ -676,9 +691,13 @@ class AgentCollaborationStepResponse(BaseModel):
 class TaskAgentCollaborationViewResponse(BaseModel):
     agent_count: int = 0
     handoff_count: int = 0
+    route_handoff_count: int = 0
+    total_handoff_count: int = 0
     external_agent_step_count: int = 0
     mcp_step_count: int = 0
     collaboration_path: List[str] = Field(default_factory=list)
+    handoff_path: List[str] = Field(default_factory=list)
+    handoffs: List["AgentHandoffResponse"] = Field(default_factory=list)
     steps: List["AgentCollaborationStepResponse"] = Field(default_factory=list)
 
 

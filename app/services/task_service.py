@@ -9,6 +9,7 @@ from app.db.session import session_scope
 from app.repositories.task_repository import TaskRepository
 from app.schemas import (
     AgentCollaborationStepResponse,
+    AgentHandoffResponse,
     AgentTaskArtifactResponse,
     AgentTaskDeliverableResponse,
     AgentTaskDetailResponse,
@@ -109,6 +110,10 @@ class TaskService:
             task = self._repository.get_task(session, task_id)
             if task is None:
                 return None
+            event_payload = dict(event_payload or {})
+            previous_agent_id = task.current_agent_id
+            if previous_agent_id and "previous_agent_id" not in event_payload:
+                event_payload["previous_agent_id"] = previous_agent_id
             if current_stage or task_status or agent_id is not None:
                 self._repository.update_task_stage(
                     session,
@@ -750,8 +755,52 @@ class TaskService:
 
         steps: list[AgentCollaborationStepResponse] = []
         collaboration_path: list[str] = []
+        handoff_path: list[str] = []
+        handoffs: list[AgentHandoffResponse] = []
         external_agent_step_count = 0
         mcp_step_count = 0
+        route_handoff_count = 0
+
+        def append_handoff(
+            *,
+            handoff_type: str,
+            from_agent_id: str | None,
+            from_agent_label: str,
+            to_agent_id: str | None,
+            to_agent_label: str,
+            trigger_event_type: str,
+            handoff_status: str,
+            session_id: str | None,
+            timestamp: str,
+            summary: str,
+            metadata: dict[str, Any],
+        ) -> None:
+            nonlocal route_handoff_count
+            from_marker = from_agent_id or from_agent_label or "unknown"
+            to_marker = to_agent_id or to_agent_label or "unknown"
+            if not handoff_path:
+                handoff_path.append(from_marker)
+            if handoff_path[-1] != from_marker:
+                handoff_path.append(from_marker)
+            handoff_path.append(to_marker)
+            if handoff_type == "routing":
+                route_handoff_count += 1
+            handoffs.append(
+                AgentHandoffResponse(
+                    order_no=len(handoffs) + 1,
+                    handoff_type=handoff_type,
+                    from_agent_id=from_agent_id,
+                    from_agent_label=from_agent_label,
+                    to_agent_id=to_agent_id,
+                    to_agent_label=to_agent_label,
+                    trigger_event_type=trigger_event_type,
+                    handoff_status=handoff_status,
+                    session_id=session_id,
+                    timestamp=timestamp,
+                    summary=summary,
+                    metadata=metadata,
+                )
+            )
 
         for index, item in enumerate(events, start=1):
             if item.event_type not in collaboration_event_types:
@@ -764,10 +813,78 @@ class TaskService:
             agent_id = item.agent_id or session_agent_map.get(session_id or "")
             if agent_id and (not collaboration_path or collaboration_path[-1] != agent_id):
                 collaboration_path.append(agent_id)
+            previous_agent_id = payload.get("previous_agent_id")
+            if not isinstance(previous_agent_id, str) or not previous_agent_id:
+                previous_agent_id = None
             if item.event_type.startswith("external_agent_call"):
                 external_agent_step_count += 1
             if item.event_type.startswith("mcp_call"):
                 mcp_step_count += 1
+
+            if item.event_type == "agent_selected":
+                selected_agent_id = (
+                    payload.get("capability_id")
+                    if isinstance(payload.get("capability_id"), str)
+                    else agent_id
+                )
+                selected_agent_label = (
+                    str(payload.get("capability_name") or item.content or selected_agent_id or "")
+                )
+                requested_agent_id = (
+                    payload.get("requested_agent_id")
+                    if isinstance(payload.get("requested_agent_id"), str)
+                    else None
+                )
+                requested_agent_label = str(
+                    payload.get("requested_agent_name")
+                    or requested_agent_id
+                    or "router"
+                )
+                if selected_agent_id and selected_agent_id != requested_agent_id:
+                    append_handoff(
+                        handoff_type="routing",
+                        from_agent_id=requested_agent_id,
+                        from_agent_label=requested_agent_label,
+                        to_agent_id=selected_agent_id,
+                        to_agent_label=selected_agent_label,
+                        trigger_event_type=item.event_type,
+                        handoff_status=item.event_status,
+                        session_id=session_id,
+                        timestamp=item.start_time,
+                        summary=item.content or f"router selected {selected_agent_label}",
+                        metadata=payload,
+                    )
+
+            if item.event_type == "external_agent_call_started":
+                external_capability_id = (
+                    payload.get("capability_id")
+                    if isinstance(payload.get("capability_id"), str)
+                    else agent_id
+                )
+                external_capability_name = str(
+                    payload.get("capability_name") or external_capability_id or item.content or ""
+                )
+                source_agent_id = previous_agent_id
+                source_agent_label = str(
+                    payload.get("source_agent_name")
+                    or source_agent_id
+                    or "runtime"
+                )
+                if external_capability_id and external_capability_id != source_agent_id:
+                    append_handoff(
+                        handoff_type="execution",
+                        from_agent_id=source_agent_id,
+                        from_agent_label=source_agent_label,
+                        to_agent_id=external_capability_id,
+                        to_agent_label=external_capability_name,
+                        trigger_event_type=item.event_type,
+                        handoff_status=item.event_status,
+                        session_id=session_id,
+                        timestamp=item.start_time,
+                        summary=item.content
+                        or f"{source_agent_label} handed off to {external_capability_name}",
+                        metadata=payload,
+                    )
 
             stage_label = collaboration_event_types[item.event_type]
             summary = item.content or ""
@@ -787,13 +904,17 @@ class TaskService:
                 )
             )
 
-        handoff_count = max(0, len(collaboration_path) - 1)
+        execution_handoff_count = max(0, len(collaboration_path) - 1)
         return TaskAgentCollaborationViewResponse(
             agent_count=len(collaboration_path),
-            handoff_count=handoff_count,
+            handoff_count=execution_handoff_count,
+            route_handoff_count=route_handoff_count,
+            total_handoff_count=len(handoffs),
             external_agent_step_count=external_agent_step_count,
             mcp_step_count=mcp_step_count,
             collaboration_path=collaboration_path,
+            handoff_path=handoff_path,
+            handoffs=handoffs,
             steps=steps,
         )
 

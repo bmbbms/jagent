@@ -175,6 +175,15 @@ class AgentScopeAgentRuntime:
             agent_id=agent.definition.capability_id,
             event_payload={
                 "capability_id": agent.definition.capability_id,
+                "capability_name": agent.definition.name,
+                "requested_agent_id": str(request.metadata.get("requested_agent_id") or ""),
+                "requested_agent_name": str(
+                    request.metadata.get("requested_agent_name")
+                    or request.metadata.get("requested_agent_id")
+                    or "router"
+                ),
+                "route_strategy": context.route_plan.strategy,
+                "route_reason": context.route_plan.reason,
                 "skills": context.skill_ids,
                 "runtime_session_id": session.session_id,
             },

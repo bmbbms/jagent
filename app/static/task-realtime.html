@@ -319,6 +319,13 @@
       margin-top: 12px;
     }
 
+    .handoff-path {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+      word-break: break-word;
+    }
+
     @media (max-width: 1280px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -465,6 +472,13 @@
         </section>
 
         <section class="panel">
+          <h2>Agent Handoff</h2>
+          <div id="agentHandoffView" class="detail-list">
+            <div class="empty">当前任务暂无可展示的 Agent 交接记录。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>执行时间线</h2>
           <div id="timeline" class="timeline">
             <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
@@ -590,6 +604,7 @@
       workflowSnapshot: document.getElementById("workflowSnapshot"),
       skillSnapshot: document.getElementById("skillSnapshot"),
       agentCollaborationView: document.getElementById("agentCollaborationView"),
+      agentHandoffView: document.getElementById("agentHandoffView"),
       timeline: document.getElementById("timeline"),
         evaluation: document.getElementById("evaluation"),
         toolCalls: document.getElementById("toolCalls"),
@@ -1230,12 +1245,47 @@
         <div class="list-card">
           <h3>协作总览</h3>
           <div class="detail-item"><div class="label">参与 Agent</div><div class="value">${escapeHtml(collaborationView.agent_count)}</div></div>
-          <div class="detail-item"><div class="label">切换次数</div><div class="value">${escapeHtml(collaborationView.handoff_count)}</div></div>
+          <div class="detail-item"><div class="label">执行交接</div><div class="value">${escapeHtml(collaborationView.handoff_count)}</div></div>
+          <div class="detail-item"><div class="label">路由交接</div><div class="value">${escapeHtml(collaborationView.route_handoff_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">总交接数</div><div class="value">${escapeHtml(collaborationView.total_handoff_count || 0)}</div></div>
           <div class="detail-item"><div class="label">外部 Agent 步骤</div><div class="value">${escapeHtml(collaborationView.external_agent_step_count)}</div></div>
           <div class="detail-item"><div class="label">MCP 步骤</div><div class="value">${escapeHtml(collaborationView.mcp_step_count)}</div></div>
           <div class="detail-item"><div class="label">协作路径</div><div class="value">${escapeHtml(collaborationPath)}</div></div>
         </div>
         ${stepsHtml}
+      `;
+    }
+
+    function renderAgentHandoffView(collaborationView) {
+      const handoffs = collaborationView?.handoffs || [];
+      if (!handoffs.length) {
+        el.agentHandoffView.innerHTML = `<div class="empty">当前任务暂无可展示的 Agent 交接记录。</div>`;
+        return;
+      }
+      const handoffPath = (collaborationView.handoff_path || []).join(" -> ") || "-";
+      el.agentHandoffView.innerHTML = `
+        <div class="list-card">
+          <h3>Handoff 总览</h3>
+          <div class="detail-item"><div class="label">总交接数</div><div class="value">${escapeHtml(collaborationView.total_handoff_count || handoffs.length)}</div></div>
+          <div class="detail-item"><div class="label">路由交接</div><div class="value">${escapeHtml(collaborationView.route_handoff_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">执行交接</div><div class="value">${escapeHtml(collaborationView.handoff_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">交接路径</div><div class="value handoff-path">${escapeHtml(handoffPath)}</div></div>
+        </div>
+        ${handoffs.map(item => `
+          <div class="list-card">
+            <h3>#${escapeHtml(item.order_no)} / ${escapeHtml(item.handoff_type || "execution")}</h3>
+            <div>
+              <span class="tag ${toneByStatus(item.handoff_status)}">${escapeHtml(item.handoff_status || "success")}</span>
+              <span class="tag">${escapeHtml(item.trigger_event_type || "-")}</span>
+            </div>
+            <div class="detail-item"><div class="label">From</div><div class="value">${escapeHtml(item.from_agent_label || item.from_agent_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">To</div><div class="value">${escapeHtml(item.to_agent_label || item.to_agent_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">Session</div><div class="value">${escapeHtml(item.session_id || "-")}</div></div>
+            <div class="detail-item"><div class="label">时间</div><div class="value">${escapeHtml(formatDate(item.timestamp))}</div></div>
+            <div class="subtle">${escapeHtml(item.summary || "-")}</div>
+            ${item.metadata && Object.keys(item.metadata).length ? `<div class="payload-box"><pre>${escapeHtml(prettyJson(item.metadata))}</pre></div>` : ""}
+          </div>
+        `).join("")}
       `;
     }
 
@@ -1342,6 +1392,7 @@
       renderWorkflowSnapshot(task);
       renderSkillSnapshot(task);
       renderAgentCollaborationView(task.runtime_governance?.collaboration_view || null);
+      renderAgentHandoffView(task.runtime_governance?.collaboration_view || null);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);
