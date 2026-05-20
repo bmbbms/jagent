@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.dependencies import get_capability_registry, get_skill_registry
+from app.dependencies import get_capability_registry, get_skill_catalog_service
 from app.registry.composite_registry import CompositeCapabilityRegistry
 
 from app.schemas import BizDomain, SkillDetailInfo, SkillInfo
-from app.services.skill_registry import SkillRegistry
+from app.services.skill_catalog_service import SkillCatalogService
 
 router = APIRouter(prefix="/skills", tags=["skills"])
 
@@ -15,7 +15,7 @@ def list_skills(
     allowed_tool: str | None = Query(default=None),
     has_human_escalation: bool | None = Query(default=None),
     capability_id: str | None = Query(default=None),
-    registry: SkillRegistry = Depends(get_skill_registry),
+    service: SkillCatalogService = Depends(get_skill_catalog_service),
     capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
 ) -> list[SkillInfo]:
     bound_skill_ids: list[str] | None = None
@@ -31,7 +31,7 @@ def list_skills(
         if metadata is None:
             return []
         bound_skill_ids = metadata.skills
-    return registry.describe_skills(
+    return service.list_skills(
         biz_domain,
         allowed_tool=allowed_tool,
         has_human_escalation=has_human_escalation,
@@ -42,9 +42,9 @@ def list_skills(
 @router.get("/{skill_id}", response_model=SkillDetailInfo)
 def get_skill(
     skill_id: str,
-    registry: SkillRegistry = Depends(get_skill_registry),
+    service: SkillCatalogService = Depends(get_skill_catalog_service),
 ) -> SkillDetailInfo:
-    item = registry.describe_skill(skill_id)
+    item = service.get_skill(skill_id)
     if item is None:
         raise HTTPException(status_code=404, detail="skill not found")
     return item

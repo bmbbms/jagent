@@ -40,6 +40,7 @@ from app.services.mcp_service import MCPService
 from app.services.nacos_registry_service import NacosRegistryService
 from app.services.observation_service import ObservationService
 from app.services.service_ticket_service import ServiceTicketService
+from app.services.skill_catalog_service import SkillCatalogService
 from app.services.skill_registry import SkillRegistry
 from app.services.task_service import TaskService
 from app.services.tool_execution_service import ToolExecutionService
@@ -183,6 +184,7 @@ def get_mcp_catalog_service() -> MCPCatalogService:
     return MCPCatalogService(
         session_factory=get_session_factory(),
         repository=ToolExecutionRepository(),
+        nacos_registry_service=get_nacos_registry_service(),
     )
 
 
@@ -246,6 +248,14 @@ def get_service_ticket_service() -> ServiceTicketService:
 def get_skill_registry() -> SkillRegistry:
     settings = get_settings()
     return SkillRegistry.from_directory(settings.skill_root)
+
+
+@lru_cache
+def get_skill_catalog_service() -> SkillCatalogService:
+    return SkillCatalogService(
+        registry=get_skill_registry(),
+        nacos_registry_service=get_nacos_registry_service(),
+    )
 
 
 @lru_cache

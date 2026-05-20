@@ -5,6 +5,7 @@ from collections import defaultdict
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.repositories.tool_execution_repository import ToolExecutionRepository
+from app.services.nacos_registry_service import NacosRegistryService
 from app.schemas import MCPToolGovernanceIssueResponse, MCPToolInfo, MCPToolOverviewResponse
 from app.tools import list_mcp_tool_specs
 
@@ -14,9 +15,11 @@ class MCPCatalogService:
         self,
         session_factory: sessionmaker[Session],
         repository: ToolExecutionRepository,
+        nacos_registry_service: NacosRegistryService | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._repository = repository
+        self._nacos_registry_service = nacos_registry_service
 
     def list_tools(
         self,
@@ -48,6 +51,12 @@ class MCPCatalogService:
             )
             items.append(item)
 
+        if self._nacos_registry_service is not None:
+            existing_ids = {item.tool_id for item in items}
+            for item in self._nacos_registry_service.list_remote_mcp_tools(usage_map):
+                if item.tool_id not in existing_ids:
+                    items.append(item)
+
         if provider:
             items = [item for item in items if item.provider == provider]
         if transport:
@@ -56,6 +65,7 @@ class MCPCatalogService:
             items = [item for item in items if item.enabled == enabled]
         if only_called:
             items = [item for item in items if item.call_count > 0]
+        items.sort(key=lambda item: item.tool_id)
         return items
 
     def get_overview(self) -> MCPToolOverviewResponse:

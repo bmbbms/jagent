@@ -8,6 +8,9 @@ from app.registry.base import CapabilityMetadata
 from app.registry.nacos_ai_client import NacosAiHttpClient
 from app.registry.nacos_registry import NacosCapabilityRegistry
 from app.schemas import BizDomain, ChatRequest
+from app.services.nacos_registry_service import NacosRegistryService
+from app.services.skill_catalog_service import SkillCatalogService
+from app.services.skill_registry import SkillRegistry
 
 
 def test_nacos_registry_can_register_and_resolve_local_cache() -> None:
@@ -196,3 +199,127 @@ def test_nacos_registry_maps_remote_agent_without_capability_metadata() -> None:
     assert items[0].capability_id == "nacos.merchant.payment.regulation.agent"
     assert items[0].service_path == "/a2a"
     assert items[0].priority == 1000
+
+
+def test_nacos_registry_service_maps_remote_skills() -> None:
+    service = NacosRegistryService(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        ),
+        SkillRegistry([]),
+    )
+    remote_skills = [
+        {
+            "name": "dialog",
+            "description": "Supports natural language chat",
+            "version": "1.0.0",
+            "metadata": {
+                "biz_domain": "operations",
+                "allowed_tools": ["merchant_profile_query"],
+                "human_escalation": ["missing_customer_context"],
+                "required_inputs": ["merchant_id"],
+                "steps": ["analyze", "answer"],
+            },
+        }
+    ]
+
+    with patch.object(service, "_safe_list_skills", return_value=remote_skills):
+        items = service.list_remote_skill_infos(
+            biz_domain=BizDomain.operations,
+            allowed_tool="merchant_profile_query",
+            has_human_escalation=True,
+        )
+
+    assert len(items) == 1
+    assert items[0].skill_id == "dialog"
+    assert items[0].biz_domain == BizDomain.operations
+    assert items[0].path == "nacos://skills/dialog:1.0.0"
+
+
+def test_nacos_registry_service_maps_remote_mcp_servers() -> None:
+    service = NacosRegistryService(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        ),
+        SkillRegistry([]),
+    )
+    remote_servers = [
+        {
+            "name": "risk-engine",
+            "description": "Risk scoring MCP",
+            "transportType": "sse",
+            "version": "1.0.1",
+            "url": "http://127.0.0.1:9001/mcp",
+        }
+    ]
+
+    with patch.object(service, "_safe_list_mcp_servers", return_value=remote_servers):
+        items = service.list_remote_mcp_tools(
+            {"nacos_mcp_risk_engine": {"call_count": 2, "success_count": 2}}
+        )
+
+    assert len(items) == 1
+    assert items[0].tool_id == "nacos_mcp_risk_engine"
+    assert items[0].transport == "sse"
+    assert items[0].command == "http://127.0.0.1:9001/mcp"
+    assert items[0].config_path == "nacos://mcp/risk-engine:1.0.1"
+    assert items[0].call_count == 2
+
+
+def test_skill_catalog_service_merges_local_and_remote_skills() -> None:
+    local_registry = SkillRegistry([])
+    nacos_service = NacosRegistryService(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        ),
+        local_registry,
+    )
+    catalog = SkillCatalogService(
+        registry=local_registry,
+        nacos_registry_service=nacos_service,
+    )
+
+    remote_items = [
+        type(
+            "RemoteSkill",
+            (),
+            {
+                "skill_id": "remote_dialog",
+                "biz_domain": BizDomain.merchant,
+                "name": "Remote Dialog",
+                "path": "nacos://skills/remote_dialog",
+                "purpose": "remote",
+                "when_to_use": [],
+            },
+        )()
+    ]
+    remote_detail = type(
+        "RemoteDetail",
+        (),
+        {
+            "skill_id": "remote_dialog",
+            "biz_domain": BizDomain.merchant,
+            "name": "Remote Dialog",
+            "path": "nacos://skills/remote_dialog",
+            "purpose": "remote",
+            "when_to_use": [],
+            "required_inputs": [],
+            "steps": [],
+            "output_fields": [],
+            "allowed_tools": [],
+            "human_escalation": [],
+        },
+    )()
+
+    with (
+        patch.object(nacos_service, "list_remote_skill_infos", return_value=remote_items),
+        patch.object(nacos_service, "get_remote_skill_detail", return_value=remote_detail),
+    ):
+        items = catalog.list_skills(BizDomain.merchant)
+        detail = catalog.get_skill("remote_dialog")
+
+    assert [item.skill_id for item in items] == ["remote_dialog"]
+    assert detail is remote_detail
