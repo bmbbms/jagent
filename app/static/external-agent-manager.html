@@ -157,6 +157,24 @@
       gap: 12px;
       margin-bottom: 12px;
     }
+    .skill-list {
+      display: grid;
+      gap: 10px;
+    }
+    .skill-card {
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fffaf4;
+      display: grid;
+      gap: 8px;
+    }
+    .skill-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
     @media (max-width: 1180px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -292,6 +310,23 @@
         </section>
 
         <section class="panel">
+          <h2>Skill 目录</h2>
+          <div class="actions" style="margin-bottom: 12px;">
+            <select id="skillDomainFilter">
+              <option value="">全部业务域</option>
+              <option value="merchant">merchant</option>
+              <option value="operations">operations</option>
+              <option value="data_support">data_support</option>
+              <option value="partner">partner</option>
+            </select>
+            <input id="skillSearchInput" placeholder="按 skill_id / 名称 / 工具检索" />
+          </div>
+          <div id="skillList" class="skill-list">
+            <div class="empty">正在加载 Skill 目录...</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>最近结果</h2>
           <pre id="resultBox" class="payload">等待发现、添加、编辑或验证结果...</pre>
         </section>
@@ -410,6 +445,9 @@
       listTransportFilter: document.getElementById("listTransportFilter"),
       listHealthFilter: document.getElementById("listHealthFilter"),
       listCapabilityFilter: document.getElementById("listCapabilityFilter"),
+      skillDomainFilter: document.getElementById("skillDomainFilter"),
+      skillSearchInput: document.getElementById("skillSearchInput"),
+      skillList: document.getElementById("skillList"),
       healthOverview: document.getElementById("healthOverview"),
       governanceOverview: document.getElementById("governanceOverview"),
       alertCenter: document.getElementById("alertCenter"),
@@ -772,6 +810,50 @@
       });
     }
 
+    function renderSkillList(items) {
+      if (!items.length) {
+        el.skillList.innerHTML = '<div class="empty">当前没有匹配的 Skill。</div>';
+        return;
+      }
+      el.skillList.innerHTML = items.map(item => `
+        <div class="skill-card">
+          <div class="skill-card-head">
+            <div>
+              <div class="card-title">${escapeHtml(item.name || item.skill_id)}</div>
+              <div class="subtle">${escapeHtml(item.skill_id)}</div>
+            </div>
+            <div class="actions">
+              <button data-skill-use="${escapeHtml(item.skill_id)}">用于新增</button>
+            </div>
+          </div>
+          <div class="tags">
+            <span class="tag">${escapeHtml(item.biz_domain)}</span>
+            ${item.allowed_tools?.length ? `<span class="tag">tools:${escapeHtml(item.allowed_tools.join(", "))}</span>` : ""}
+            ${item.human_escalation?.length ? `<span class="tag warning">human</span>` : ""}
+          </div>
+          <div class="subtle">${escapeHtml(item.purpose || item.description || "-")}</div>
+        </div>
+      `).join("");
+      el.skillList.querySelectorAll("[data-skill-use]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const skillId = node.getAttribute("data-skill-use") || "";
+          if (!skillId) return;
+          const current = parseCsv(el.skillsInput.value);
+          if (!current.includes(skillId)) {
+            current.push(skillId);
+            el.skillsInput.value = current.join(",");
+          }
+          if (!el.capabilityNameInput.value.trim()) {
+            el.capabilityNameInput.value = skillId.replaceAll("_", " ").replaceAll(".", " ");
+          }
+          if (!el.descriptionInput.value.trim()) {
+            el.descriptionInput.value = `基于 ${skillId} 的通用外部 Agent`;
+          }
+          setStatus(`已加入 skill：${skillId}`, "success");
+        });
+      });
+    }
+
     async function loadAgentList() {
       try {
         const query = new URLSearchParams();
@@ -838,6 +920,37 @@
         el.governanceOverview.textContent = `治理概览加载失败：${error.message}`;
         el.alertCenter.innerHTML = `<div class="empty">统一告警加载失败：${escapeHtml(error.message)}</div>`;
         el.governanceIssueList.innerHTML = `<div class="empty">治理问题清单加载失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function loadSkillList() {
+      try {
+        const query = new URLSearchParams();
+        if (el.skillDomainFilter.value) query.set("biz_domain", el.skillDomainFilter.value);
+        const skillSearch = el.skillSearchInput.value.trim();
+        const [skills, agents] = await Promise.all([
+          requestJson(`/api/skills${query.toString() ? `?${query.toString()}` : ""}`),
+          requestJson("/api/external-agents"),
+        ]);
+        const selectedSkillIds = new Set();
+        agents.forEach(item => (item.skills || []).forEach(skill => selectedSkillIds.add(skill)));
+        const filtered = skills.filter(item => {
+          if (!skillSearch) return true;
+          const haystack = [
+            item.skill_id,
+            item.name,
+            item.path,
+            item.purpose,
+            ...(item.when_to_use || []),
+          ].join(" ").toLowerCase();
+          return haystack.includes(skillSearch.toLowerCase());
+        });
+        renderSkillList(filtered.map(item => ({
+          ...item,
+          selected: selectedSkillIds.has(item.skill_id),
+        })));
+      } catch (error) {
+        el.skillList.innerHTML = `<div class="empty">Skill 目录加载失败：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -969,10 +1082,19 @@
     el.listCapabilityFilter.addEventListener("keydown", async event => {
       if (event.key === "Enter") await loadAgentList();
     });
+    [el.skillDomainFilter, el.skillSearchInput].forEach(node => {
+      node.addEventListener("input", async () => {
+        await loadSkillList();
+      });
+      node.addEventListener("change", async () => {
+        await loadSkillList();
+      });
+    });
 
     resetForm();
     loadHealthOverview();
     loadAgentList();
+    loadSkillList();
     loadRecentTasks(getQueryCapabilityId());
   </script>
 </body>

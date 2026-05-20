@@ -209,6 +209,7 @@ def list_external_agents(
     biz_domain: str | None = Query(default=None),
     source: str | None = Query(default=None),
     capability_id: str | None = Query(default=None),
+    skill_id: str | None = Query(default=None),
     risk_level: str | None = Query(default=None),
     requires_approval: bool | None = Query(default=None),
     transport: str | None = Query(default=None),
@@ -232,6 +233,8 @@ def list_external_agents(
         items = [item for item in items if item.source == source]
     if capability_id:
         items = [item for item in items if item.capability_id == capability_id]
+    if skill_id:
+        items = [item for item in items if skill_id in item.skills]
     if risk_level:
         items = [item for item in items if item.risk_level == risk_level]
     if requires_approval is not None:
