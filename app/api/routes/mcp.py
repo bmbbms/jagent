@@ -6,6 +6,7 @@ from app.schemas import (
     MCPToolInfo,
     MCPToolOverviewResponse,
     ToolCallLogResponse,
+    GovernanceAlertResponse,
 )
 from app.services.mcp_catalog_service import MCPCatalogService
 from app.services.tool_execution_log_service import ToolExecutionLogService
@@ -41,6 +42,34 @@ def list_mcp_governance_issues(
     service: MCPCatalogService = Depends(get_mcp_catalog_service),
 ) -> list[MCPToolGovernanceIssueResponse]:
     return service.list_governance_issues()
+
+
+@router.get("/alerts", response_model=list[GovernanceAlertResponse])
+def list_mcp_governance_alerts(
+    service: MCPCatalogService = Depends(get_mcp_catalog_service),
+) -> list[GovernanceAlertResponse]:
+    alerts: list[GovernanceAlertResponse] = []
+    for item in service.list_governance_issues():
+        alerts.append(
+            GovernanceAlertResponse(
+                alert_id=f"mcp-{item.tool_id}",
+                alert_type="mcp_tool",
+                source=item.provider,
+                target_id=item.tool_id,
+                target_name=item.tool_id,
+                severity="critical" if item.governance_status == "blocked" else "high",
+                status=item.governance_status,
+                title=f"MCP Tool {item.tool_id} 出现治理告警",
+                summary="; ".join(item.reasons) or item.recommended_action,
+                reasons=item.reasons,
+                recommended_action=item.recommended_action,
+                last_latency_ms=item.average_duration_ms,
+                consecutive_failures=item.failure_count,
+                target_ui=f"/ui/mcp?tool_id={item.tool_id}",
+                target_api=f"/api/mcp/tools/{item.tool_id}/recent-calls",
+            )
+        )
+    return alerts
 
 
 @router.get("/tools/{tool_id}/recent-calls", response_model=list[ToolCallLogResponse])

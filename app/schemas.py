@@ -300,6 +300,26 @@ class ExternalAgentGovernanceIssueResponse(BaseModel):
     target_api: Optional[str] = None
 
 
+class GovernanceAlertResponse(BaseModel):
+    alert_id: str
+    alert_type: str
+    source: str
+    target_id: str
+    target_name: str
+    biz_domain: Optional[BizDomain] = None
+    severity: str = "medium"
+    status: str = "open"
+    title: str = ""
+    summary: str = ""
+    reasons: List[str] = Field(default_factory=list)
+    recommended_action: str = ""
+    last_check_time: Optional[str] = None
+    last_latency_ms: Optional[int] = None
+    consecutive_failures: int = 0
+    target_ui: Optional[str] = None
+    target_api: Optional[str] = None
+
+
 class MCPToolInfo(BaseModel):
     tool_id: str
     provider: str

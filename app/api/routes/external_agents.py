@@ -19,6 +19,7 @@ from app.schemas import (
     ExternalAgentRegisterRequest,
     ExternalAgentUpdateRequest,
     AgentTaskSummaryResponse,
+    GovernanceAlertResponse,
 )
 from app.services.external_agent_health_service import ExternalAgentHealthService
 from app.services.external_agent_discovery import ExternalAgentDiscoveryService
@@ -28,6 +29,46 @@ from app.services.external_capability_persistence_service import (
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/external-agents", tags=["external-agents"])
+
+
+@router.get("/alerts", response_model=list[GovernanceAlertResponse])
+def list_governance_alerts(
+    registry: ManualRemoteCapabilityRegistry = Depends(get_manual_remote_registry),
+    persistence_service: ExternalCapabilityPersistenceService = Depends(
+        get_external_capability_persistence_service
+    ),
+    health_service: ExternalAgentHealthService = Depends(get_external_agent_health_service),
+) -> list[GovernanceAlertResponse]:
+    external_alerts: list[GovernanceAlertResponse] = []
+    health_map = {item.capability_id: item for item in persistence_service.list_items()}
+    for metadata in registry.describe_capabilities():
+        health = health_service.get_health(metadata.capability_id)
+        if health is None or health.governance_status == "healthy":
+            continue
+        severity = _resolve_governance_issue_severity(health)
+        external_alerts.append(
+            GovernanceAlertResponse(
+                alert_id=f"ext-{metadata.capability_id}",
+                alert_type="external_agent",
+                source=metadata.source,
+                target_id=metadata.capability_id,
+                target_name=metadata.capability_name,
+                biz_domain=metadata.biz_domain,
+                severity=severity,
+                status=health.governance_status,
+                title=f"External Agent {metadata.capability_name} 出现治理告警",
+                summary="; ".join(health.governance_reasons) or health.last_error or "",
+                reasons=health.governance_reasons,
+                recommended_action=health.recommended_action,
+                last_check_time=health.last_check_time,
+                last_latency_ms=health.last_latency_ms,
+                consecutive_failures=health.consecutive_failures,
+                target_ui=f"/ui/external-agents?capability_id={metadata.capability_id}",
+                target_api=f"/api/external-agents/{metadata.capability_id}/health",
+            )
+        )
+
+    return external_alerts
 
 
 @router.post("/register", response_model=ExternalAgentInfo)
