@@ -298,6 +298,7 @@
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="mcpPageBtn" class="secondary">MCP Center</button>
         <button id="workflowPageBtn" class="secondary">Workflow Center</button>
         <button id="capabilityPageBtn" class="secondary">Capability Center</button>
         <input id="actionFilterInput" placeholder="按 action 过滤" />
@@ -361,6 +362,7 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
+      mcpPageBtn: document.getElementById("mcpPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       capabilityPageBtn: document.getElementById("capabilityPageBtn"),
       actionFilterInput: document.getElementById("actionFilterInput"),
@@ -831,6 +833,9 @@
     }
 
     el.taskPageBtn.addEventListener("click", openTaskPage);
+    el.mcpPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/mcp";
+    });
     el.workflowPageBtn.addEventListener("click", openWorkflowPage);
     el.capabilityPageBtn.addEventListener("click", openCapabilityPage);
     el.loadBtn.addEventListener("click", loadAudit);

@@ -132,11 +132,12 @@
     <div class="header">
       <div>
         <h1>MCP 治理中心</h1>
-        <p>集中查看平台当前识别到的 MCP 工具目录、provider 与 transport 分布，以及历史调用情况，帮助判断哪些接入已经被真实任务使用、哪些 provider 存在失败风险。</p>
+        <p>集中查看平台识别到的 MCP 资源目录，包含本地配置 MCP 与从 Nacos AI 注册中心拉取的远端 MCP。这里的展示与 `ACQUIRING_AI_MCP_ENABLED` 本地执行开关解耦，方便统一做发现、盘点与治理。</p>
       </div>
       <div class="nav">
         <a href="/ui/tasks">任务面板</a>
         <a href="/ui/capabilities">Capability 中心</a>
+        <a href="/ui/skills">Skill 中心</a>
         <a href="/ui/external-agents">外部 Agent</a>
         <a href="/api/mcp/tools">MCP API</a>
       </div>

@@ -215,6 +215,7 @@
         <button id="agentPageBtn" class="secondary">外部 Agent</button>
         <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
         <button id="capabilityPageBtn" class="secondary">Capability 中心</button>
+        <button id="mcpPageBtn" class="secondary">MCP 中心</button>
         <select id="domainFilter">
           <option value="">全部业务域</option>
           <option value="merchant">merchant</option>
@@ -267,6 +268,7 @@
       agentPageBtn: document.getElementById("agentPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       capabilityPageBtn: document.getElementById("capabilityPageBtn"),
+      mcpPageBtn: document.getElementById("mcpPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
       toolFilterInput: document.getElementById("toolFilterInput"),
       escalationFilter: document.getElementById("escalationFilter"),
@@ -586,6 +588,9 @@
         ? `/ui/capabilities?capability_id=${encodeURIComponent(capabilityId)}`
         : "/ui/capabilities";
       window.location.href = target;
+    });
+    el.mcpPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/mcp";
     });
     el.domainFilter.addEventListener("change", bootstrap);
     el.escalationFilter.addEventListener("change", bootstrap);

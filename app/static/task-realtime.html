@@ -368,6 +368,7 @@
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="mcpCenterBtn" class="secondary">MCP 中心</button>
         <button id="capabilityCenterBtn" class="secondary">Capability 中心</button>
         <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
         <button id="skillCenterBtn" class="secondary">Skill 中心</button>
@@ -613,6 +614,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      mcpCenterBtn: document.getElementById("mcpCenterBtn"),
       capabilityCenterBtn: document.getElementById("capabilityCenterBtn"),
       workflowCenterBtn: document.getElementById("workflowCenterBtn"),
       skillCenterBtn: document.getElementById("skillCenterBtn"),
@@ -1674,6 +1676,9 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.mcpCenterBtn.addEventListener("click", () => {
+      window.location.href = "/ui/mcp";
     });
     el.capabilityCenterBtn.addEventListener("click", () => {
       const capabilityId = state.task?.selected_agent_id || "";

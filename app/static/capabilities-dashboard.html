@@ -206,6 +206,7 @@
         <button id="agentPageBtn" class="secondary">外部 Agent</button>
         <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
         <button id="skillPageBtn" class="secondary">Skill 中心</button>
+        <button id="mcpPageBtn" class="secondary">MCP 中心</button>
         <select id="domainFilter">
           <option value="">全部业务域</option>
           <option value="merchant">merchant</option>
@@ -290,6 +291,7 @@
       agentPageBtn: document.getElementById("agentPageBtn"),
       workflowPageBtn: document.getElementById("workflowPageBtn"),
       skillPageBtn: document.getElementById("skillPageBtn"),
+      mcpPageBtn: document.getElementById("mcpPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
       sourceFilter: document.getElementById("sourceFilter"),
       riskFilter: document.getElementById("riskFilter"),
@@ -657,6 +659,9 @@
     });
     el.skillPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/skills";
+    });
+    el.mcpPageBtn.addEventListener("click", () => {
+      window.location.href = "/ui/mcp";
     });
     [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter, el.healthFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
