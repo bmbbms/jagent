@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import traceback
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -29,9 +30,27 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    get_engine()
-    get_capability_registry()
-    get_external_capability_persistence_service().restore_into_registry()
+    try:
+        print("[startup] begin initialization", flush=True)
+        print("[startup] step=engine", flush=True)
+        get_engine()
+        print("[startup] step=engine ok", flush=True)
+
+        print("[startup] step=capability_registry", flush=True)
+        get_capability_registry()
+        print("[startup] step=capability_registry ok", flush=True)
+
+        print("[startup] step=restore_external_capabilities", flush=True)
+        restored = get_external_capability_persistence_service().restore_into_registry()
+        print(
+            f"[startup] step=restore_external_capabilities ok restored={restored}",
+            flush=True,
+        )
+        print("[startup] initialization complete", flush=True)
+    except Exception as exc:
+        print(f"[startup] initialization failed: {exc!r}", flush=True)
+        traceback.print_exc()
+        raise
     yield
 
 

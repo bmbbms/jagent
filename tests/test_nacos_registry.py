@@ -99,3 +99,31 @@ def test_nacos_ai_client_refreshes_access_token() -> None:
         result = client.list_agent_cards(page_size=5)
     assert result == []
     assert requests[0].endswith("/nacos/v1/auth/users/login")
+
+
+def test_nacos_registry_treats_conflict_as_idempotent() -> None:
+    registry = NacosCapabilityRegistry(
+        Settings(
+            nacos_ai_enabled=True,
+            nacos_ai_server_address="http://127.0.0.1:8848",
+        )
+    )
+    metadata = CapabilityMetadata(
+        capability_id="merchant.review.agent",
+        capability_name="Merchant Review Agent",
+        biz_domain=BizDomain.merchant,
+        description="review",
+        priority=1,
+        transport="http",
+        endpoint="http://127.0.0.1:8001",
+        service_path="/api/chat",
+    )
+
+    with patch.object(
+        registry._client,
+        "publish_agent_card",
+        return_value=type("R", (), {"code": 20005, "message": "resource conflict"})(),
+    ):
+        registry.register_remote(metadata)
+
+    assert "merchant.review.agent" in registry._local_cache

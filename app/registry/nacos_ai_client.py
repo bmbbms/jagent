@@ -222,6 +222,12 @@ class NacosAiHttpClient:
                         params=params,
                         expect_json=expect_json,
                     )
+            if exc.code == 409 and expect_json:
+                text = body.decode("utf-8", errors="ignore")
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    pass
             if expect_json:
                 raise RuntimeError(
                     f"Nacos API error {exc.code}: {body.decode('utf-8', errors='ignore')}"

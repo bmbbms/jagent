@@ -25,11 +25,21 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
         metadata = self._to_metadata(agent)
         self._local_cache[metadata.capability_id] = metadata
         if self._settings.nacos_ai_enabled:
+            print(
+                f"[nacos] publish local capability capability_id={metadata.capability_id} "
+                f"name={metadata.capability_name}",
+                flush=True,
+            )
             self._publish_agent_card(metadata)
 
     def register_remote(self, metadata: CapabilityMetadata) -> CapabilityMetadata:
         self._local_cache[metadata.capability_id] = metadata
         if self._settings.nacos_ai_enabled:
+            print(
+                f"[nacos] publish remote capability capability_id={metadata.capability_id} "
+                f"name={metadata.capability_name}",
+                flush=True,
+            )
             self._publish_agent_card(metadata)
         return metadata
 
@@ -68,7 +78,24 @@ class NacosCapabilityRegistry(CapabilityRegistrar, CapabilityResolver):
 
     def _publish_agent_card(self, metadata: CapabilityMetadata) -> None:
         agent_card = self._build_agent_card(metadata)
-        self._client.publish_agent_card(agent_card)
+        result = self._client.publish_agent_card(agent_card)
+        if int(result.code) in {0, 20005}:
+            status = "created" if int(result.code) == 0 else "conflict_ignored"
+            print(
+                f"[nacos] publish agent card status={status} "
+                f"capability_id={metadata.capability_id} "
+                f"name={metadata.capability_name} code={result.code}",
+                flush=True,
+            )
+            return
+        print(
+            f"[nacos] publish agent card failed capability_id={metadata.capability_id} "
+            f"name={metadata.capability_name} code={result.code} message={result.message}",
+            flush=True,
+        )
+        raise RuntimeError(
+            f"Unexpected Nacos publish result: code={result.code}, message={result.message}"
+        )
 
     def _load_remote_agent_cards(self) -> list[CapabilityMetadata]:
         cards = self._client.list_agent_cards(page_size=self._settings.nacos_ai_page_size)
