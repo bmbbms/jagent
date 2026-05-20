@@ -773,7 +773,20 @@ class TaskRuntimeGovernanceOverviewResponse(BaseModel):
     multi_session_task_count: int = 0
     risk_flag_counts: Dict[str, int] = Field(default_factory=dict)
     active_agent_counts: Dict[str, int] = Field(default_factory=dict)
+    trend_points: List["TaskRuntimeGovernanceTrendPointResponse"] = Field(default_factory=list)
     focus_tasks: List["TaskRuntimeGovernanceFocusTaskResponse"] = Field(default_factory=list)
+
+
+class TaskRuntimeGovernanceTrendPointResponse(BaseModel):
+    stat_date: str = ""
+    task_count: int = 0
+    completed_task_count: int = 0
+    failed_task_count: int = 0
+    fallback_task_count: int = 0
+    mcp_error_task_count: int = 0
+    external_agent_error_task_count: int = 0
+    multi_agent_task_count: int = 0
+    avg_duration_ms: float = 0.0
 
 
 class AgentEvaluationDetailResponse(BaseModel):

@@ -326,6 +326,34 @@
       word-break: break-word;
     }
 
+    .trend-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .trend-row {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .trend-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(180, 94, 45, 0.12);
+      overflow: hidden;
+    }
+
+    .trend-bar > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #b45e2d, #d28a5b);
+    }
+
     @media (max-width: 1280px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -486,6 +514,13 @@
         </section>
 
         <section class="panel">
+          <h2>运行趋势</h2>
+          <div id="runtimeTrendView" class="trend-list">
+            <div class="empty">当前暂无运行趋势数据。</div>
+          </div>
+        </section>
+
+        <section class="panel">
           <h2>执行时间线</h2>
           <div id="timeline" class="timeline">
             <div class="empty">请先从左侧选择任务，或手动输入 task_id。</div>
@@ -613,6 +648,7 @@
       agentCollaborationView: document.getElementById("agentCollaborationView"),
       agentHandoffView: document.getElementById("agentHandoffView"),
       runtimeRecoveryView: document.getElementById("runtimeRecoveryView"),
+      runtimeTrendView: document.getElementById("runtimeTrendView"),
       timeline: document.getElementById("timeline"),
         evaluation: document.getElementById("evaluation"),
         toolCalls: document.getElementById("toolCalls"),
@@ -1333,6 +1369,24 @@
       `;
     }
 
+    function renderRuntimeTrendView(trendPoints = []) {
+      if (!trendPoints.length) {
+        el.runtimeTrendView.innerHTML = `<div class="empty">当前暂无运行趋势数据。</div>`;
+        return;
+      }
+      const maxTaskCount = Math.max(...trendPoints.map(item => item.task_count || 0), 1);
+      el.runtimeTrendView.innerHTML = trendPoints.map(item => `
+        <div class="trend-row">
+          <div class="detail-item"><div class="label">日期</div><div class="value">${escapeHtml(item.stat_date || "-")}</div></div>
+          <div class="detail-item"><div class="label">任务 / 成功 / 失败</div><div class="value">${escapeHtml(item.task_count || 0)} / ${escapeHtml(item.completed_task_count || 0)} / ${escapeHtml(item.failed_task_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">Fallback / 外部错误</div><div class="value">${escapeHtml(item.fallback_task_count || 0)} / ${escapeHtml(item.external_agent_error_task_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">MCP / 多 Agent</div><div class="value">${escapeHtml(item.mcp_error_task_count || 0)} / ${escapeHtml(item.multi_agent_task_count || 0)}</div></div>
+          <div class="detail-item"><div class="label">平均耗时</div><div class="value">${escapeHtml(item.avg_duration_ms || 0)} ms</div></div>
+          <div class="trend-bar"><span style="width: ${Math.max(4, Math.round(((item.task_count || 0) / maxTaskCount) * 100))}%"></span></div>
+        </div>
+      `).join("");
+    }
+
     function renderDataAccess(logs = []) {
       if (!logs.length) {
         el.dataAccess.innerHTML = `<div class="empty">暂无数据访问明细。</div>`;
@@ -1438,6 +1492,7 @@
       renderAgentCollaborationView(task.runtime_governance?.collaboration_view || null);
       renderAgentHandoffView(task.runtime_governance?.collaboration_view || null);
       renderRuntimeRecoveryView(task.runtime_governance?.recovery_view || null);
+      renderRuntimeTrendView(state.runtimeGovernanceOverview?.trend_points || []);
       renderTimeline(task.events || []);
       renderToolCalls(task.tool_calls || []);
       renderObservations(task.observations || []);

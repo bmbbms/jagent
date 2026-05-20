@@ -27,6 +27,7 @@ from app.schemas import (
     TaskRuntimeGovernanceFocusTaskResponse,
     TaskRuntimeGovernanceOverviewResponse,
     TaskRuntimeGovernanceSummaryResponse,
+    TaskRuntimeGovernanceTrendPointResponse,
     StructuredToolResultResponse,
     TaskRuntimeRecoveryViewResponse,
     ToolCallLogResponse,
@@ -384,6 +385,7 @@ class TaskService:
         risk_flag_counts: dict[str, int] = {}
         active_agent_counts: dict[str, int] = {}
         focus_tasks: list[TaskRuntimeGovernanceFocusTaskResponse] = []
+        trend_map: dict[str, dict[str, Any]] = {}
         completed_task_count = 0
         failed_task_count = 0
         fallback_task_count = 0
@@ -394,6 +396,30 @@ class TaskService:
 
         for item in valid_details:
             summary = item.runtime_governance
+            stat_date = item.start_time[:10] if item.start_time else ""
+            bucket = trend_map.setdefault(
+                stat_date,
+                {
+                    "stat_date": stat_date,
+                    "task_count": 0,
+                    "completed_task_count": 0,
+                    "failed_task_count": 0,
+                    "fallback_task_count": 0,
+                    "mcp_error_task_count": 0,
+                    "external_agent_error_task_count": 0,
+                    "multi_agent_task_count": 0,
+                    "duration_total_ms": 0,
+                    "duration_count": 0,
+                },
+            )
+            bucket["task_count"] += 1
+            if item.status == "success":
+                bucket["completed_task_count"] += 1
+            elif item.status == "failed":
+                bucket["failed_task_count"] += 1
+            if item.duration_ms is not None:
+                bucket["duration_total_ms"] += item.duration_ms
+                bucket["duration_count"] += 1
             if item.status == "success":
                 completed_task_count += 1
             elif item.status == "failed":
@@ -403,12 +429,16 @@ class TaskService:
                 continue
             if summary.fallback_count > 0:
                 fallback_task_count += 1
+                bucket["fallback_task_count"] += 1
             if summary.mcp_error_count > 0:
                 mcp_error_task_count += 1
+                bucket["mcp_error_task_count"] += 1
             if summary.external_agent_error_count > 0:
                 external_agent_error_task_count += 1
+                bucket["external_agent_error_task_count"] += 1
             if summary.agent_handoff_count > 0 or summary.unique_agent_count > 1:
                 multi_agent_task_count += 1
+                bucket["multi_agent_task_count"] += 1
             if summary.runtime_session_count > 1:
                 multi_session_task_count += 1
 
@@ -465,6 +495,24 @@ class TaskService:
             multi_session_task_count=multi_session_task_count,
             risk_flag_counts=risk_flag_counts,
             active_agent_counts=active_agent_counts,
+            trend_points=[
+                TaskRuntimeGovernanceTrendPointResponse(
+                    stat_date=item["stat_date"],
+                    task_count=item["task_count"],
+                    completed_task_count=item["completed_task_count"],
+                    failed_task_count=item["failed_task_count"],
+                    fallback_task_count=item["fallback_task_count"],
+                    mcp_error_task_count=item["mcp_error_task_count"],
+                    external_agent_error_task_count=item["external_agent_error_task_count"],
+                    multi_agent_task_count=item["multi_agent_task_count"],
+                    avg_duration_ms=round(
+                        item["duration_total_ms"] / item["duration_count"], 2
+                    )
+                    if item["duration_count"]
+                    else 0.0,
+                )
+                for item in sorted(trend_map.values(), key=lambda x: x["stat_date"])
+            ],
             focus_tasks=focus_tasks[:10],
         )
 
