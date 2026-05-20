@@ -368,6 +368,7 @@
       </div>
       <div class="toolbar">
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="agentProfileBtn" class="secondary">Agent Profile</button>
         <button id="mcpCenterBtn" class="secondary">MCP 中心</button>
         <button id="capabilityCenterBtn" class="secondary">Capability 中心</button>
         <button id="workflowCenterBtn" class="secondary">Workflow 中心</button>
@@ -621,6 +622,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      agentProfileBtn: document.getElementById("agentProfileBtn"),
       mcpCenterBtn: document.getElementById("mcpCenterBtn"),
       capabilityCenterBtn: document.getElementById("capabilityCenterBtn"),
       workflowCenterBtn: document.getElementById("workflowCenterBtn"),
@@ -1730,6 +1732,13 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.agentProfileBtn.addEventListener("click", () => {
+      const agentId = state.task?.selected_agent_id || "";
+      const target = agentId
+        ? `/ui/agent-profiles?agent_id=${encodeURIComponent(agentId)}`
+        : "/ui/agent-profiles";
+      window.location.href = target;
     });
     el.mcpCenterBtn.addEventListener("click", () => {
       window.location.href = "/ui/mcp";

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Profile 中心</title>
+  <style>
+    :root {
+      --bg: #f5f1ea;
+      --panel: #fffdf9;
+      --line: #e5d7c6;
+      --text: #221a13;
+      --muted: #6f6559;
+      --accent: #a15a2f;
+      --accent-2: #4f6f5e;
+      --shadow: 0 18px 40px rgba(74, 42, 19, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, #fff7ed 0, #fff7ed 18%, transparent 19%),
+        linear-gradient(180deg, #faf5ed 0%, var(--bg) 100%);
+    }
+    .page { max-width: 1480px; margin: 0 auto; padding: 24px; }
+    .header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 10px 0 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .toolbar input, .toolbar button, .toolbar select, a.btn {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+      text-decoration: none;
+    }
+    .toolbar button, a.btn.primary {
+      background: var(--accent);
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .toolbar a.btn.secondary { background: #efe1d0; }
+    .layout { display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 20px; }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .panel h2 { margin: 0 0 14px; font-size: 18px; }
+    .card, .overview-card, .item {
+      background: var(--panel);
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .grid { display: grid; gap: 12px; }
+    .overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .overview-card strong { display: block; margin-top: 8px; font-size: 26px; color: var(--accent); }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f1e2d3;
+      color: #6e573f;
+    }
+    .row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dashed rgba(229, 215, 198, 0.95); padding-bottom: 8px; }
+    .row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .label { color: var(--muted); flex: 0 0 130px; }
+    .value { text-align: right; word-break: break-word; }
+    .list { display: grid; gap: 10px; }
+    .empty { color: var(--muted); font-size: 13px; }
+    @media (max-width: 1180px) { .layout { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Agent Profile 中心</h1>
+        <p>围绕主 Agent 的“子 Agent 画像”看板，集中查看声明技能、MCP、Workflow、近期任务和评估摘要。</p>
+      </div>
+      <div class="toolbar">
+        <a class="btn secondary" href="/ui/tasks">任务看板</a>
+        <a class="btn secondary" href="/ui/evaluations">评估中心</a>
+        <a class="btn secondary" href="/ui/external-agents">外部 Agent</a>
+        <input id="agentIdInput" placeholder="输入 agent_id，例如 merchant.qa" />
+        <button id="loadBtn">加载</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>Profile 概览</h2>
+        <div id="profileOverview" class="overview-grid">
+          <div class="empty">请输入 agent_id 后加载...</div>
+        </div>
+        <h2>声明能力</h2>
+        <div id="declaredSummary" class="grid">
+          <div class="empty">等待加载...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>最近任务</h2>
+        <div id="recentTaskList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">等待加载...</div>
+        </div>
+
+        <h2>评估摘要</h2>
+        <div id="evaluationSummary" class="card">
+          <div class="empty">等待加载...</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const el = {
+      agentIdInput: document.getElementById("agentIdInput"),
+      loadBtn: document.getElementById("loadBtn"),
+      profileOverview: document.getElementById("profileOverview"),
+      declaredSummary: document.getElementById("declaredSummary"),
+      recentTaskList: document.getElementById("recentTaskList"),
+      evaluationSummary: document.getElementById("evaluationSummary"),
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const presetAgentId = params.get("agent_id") || "";
+    if (presetAgentId) {
+      el.agentIdInput.value = presetAgentId;
+      loadProfile().catch(() => {});
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    function renderOverview(profile) {
+      el.profileOverview.innerHTML = [
+        ["agent_id", profile.agent_id],
+        ["agent_name", profile.agent_name],
+        ["biz_domain", profile.biz_domain],
+        ["health_status", profile.health_status],
+        ["governance_status", profile.governance_status],
+        ["risk_level", profile.risk_level],
+      ].map(([k, v]) => `<div class="overview-card"><div class="muted">${k}</div><strong>${esc(v)}</strong></div>`).join("");
+    }
+
+    function renderDeclared(profile) {
+      el.declaredSummary.innerHTML = `
+        <div class="item"><div class="row"><span class="label">描述</span><span class="value">${esc(profile.description || "-")}</span></div></div>
+        <div class="item"><div class="row"><span class="label">Declared Skills</span><span class="value">${profile.declared_skill_count || 0}</span></div></div>
+        <div class="item"><div class="row"><span class="label">Declared MCPs</span><span class="value">${profile.declared_mcp_count || 0}</span></div></div>
+        <div class="item"><div class="row"><span class="label">Declared Workflows</span><span class="value">${profile.declared_workflow_count || 0}</span></div></div>
+      `;
+    }
+
+    function renderRecentTasks(items) {
+      if (!items.length) {
+        el.recentTaskList.innerHTML = `<div class="empty">暂无近期任务。</div>`;
+        return;
+      }
+      el.recentTaskList.innerHTML = items.map((item) => `
+        <div class="item">
+          <div class="row"><span class="label">task_id</span><span class="value">${esc(item.task_id)}</span></div>
+          <div class="row"><span class="label">状态</span><span class="value">${esc(item.status)}</span></div>
+          <div class="row"><span class="label">开始时间</span><span class="value">${esc(item.start_time)}</span></div>
+          <div class="row"><span class="label">路由原因</span><span class="value">${esc(item.gateway_reason || "-")}</span></div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="tag" href="/ui/tasks?task_id=${encodeURIComponent(item.task_id)}">查看任务</a>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderEvaluationSummary(data) {
+      el.evaluationSummary.innerHTML = `
+        <div class="row"><span class="label">evaluation_count</span><span class="value">${data.evaluation_count || 0}</span></div>
+        <div class="row"><span class="label">attention_level</span><span class="value">${esc(data.attention_level || "normal")}</span></div>
+        <div class="row"><span class="label">average_overall_score</span><span class="value">${data.average_overall_score ?? 0}</span></div>
+        <div class="row"><span class="label">average_efficiency_score</span><span class="value">${data.average_efficiency_score ?? 0}</span></div>
+        <div class="row"><span class="label">average_tool_usage_score</span><span class="value">${data.average_tool_usage_score ?? 0}</span></div>
+        <div class="row"><span class="label">poor_rate</span><span class="value">${data.poor_rate ?? 0}%</span></div>
+        <div class="row"><span class="label">focus_reason</span><span class="value">${esc(data.focus_reason || "-")}</span></div>
+        <div class="row"><span class="label">latest_result_label</span><span class="value">${esc(data.latest_result_label || "-")}</span></div>
+        <div class="row"><span class="label">latest_summary</span><span class="value">${esc(data.latest_summary || "-")}</span></div>
+      `;
+    }
+
+    async function loadProfile() {
+      const agentId = el.agentIdInput.value.trim();
+      if (!agentId) return;
+      const [profileResp, tasksResp, evalResp] = await Promise.all([
+        fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}`),
+        fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}/recent-tasks?limit=10`),
+        fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}/evaluation-summary`),
+      ]);
+      if (!profileResp.ok) throw new Error("profile not found");
+      const profile = await profileResp.json();
+      renderOverview(profile);
+      renderDeclared(profile);
+      renderRecentTasks(tasksResp.ok ? await tasksResp.json() : []);
+      renderEvaluationSummary(evalResp.ok ? await evalResp.json() : { agent_id: agentId });
+    }
+
+    el.loadBtn.addEventListener("click", () => loadProfile().catch((err) => {
+      alert(err.message || "加载失败");
+    }));
+  </script>
+</body>
+</html>

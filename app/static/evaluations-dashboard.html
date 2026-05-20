@@ -273,6 +273,7 @@
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
+        <button id="agentProfilePageBtn" class="secondary">Agent Profile</button>
         <button id="ticketPageBtn" class="secondary">工单中心</button>
         <input id="evaluationIdInput" placeholder="输入 evaluation_id 可直接打开" />
         <input id="agentFilterInput" placeholder="按 agent_id 过滤" />
@@ -426,6 +427,7 @@
 
     const el = {
       taskPageBtn: document.getElementById("taskPageBtn"),
+      agentProfilePageBtn: document.getElementById("agentProfilePageBtn"),
       ticketPageBtn: document.getElementById("ticketPageBtn"),
       evaluationIdInput: document.getElementById("evaluationIdInput"),
       agentFilterInput: document.getElementById("agentFilterInput"),
@@ -1481,6 +1483,13 @@
 
     el.taskPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/tasks";
+    });
+    el.agentProfilePageBtn.addEventListener("click", () => {
+      const agentId = el.agentFilterInput.value.trim();
+      const target = agentId
+        ? `/ui/agent-profiles?agent_id=${encodeURIComponent(agentId)}`
+        : "/ui/agent-profiles";
+      window.location.href = target;
     });
     el.ticketPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/service-tickets";

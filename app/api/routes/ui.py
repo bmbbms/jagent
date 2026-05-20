@@ -27,6 +27,12 @@ def evaluations_page() -> FileResponse:
     return FileResponse(page_path)
 
 
+@router.get("/agent-profiles")
+def agent_profiles_page() -> FileResponse:
+    page_path = Path(__file__).resolve().parents[2] / "static" / "agent-profile-center.html"
+    return FileResponse(page_path)
+
+
 @router.get("/audit")
 def audit_page() -> FileResponse:
     page_path = Path(__file__).resolve().parents[2] / "static" / "audit-dashboard.html"
