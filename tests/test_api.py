@@ -954,6 +954,70 @@ def test_evaluation_agent_governance_api(client: TestClient) -> None:
         assert "contract_issue_count" in first
 
 
+def test_agent_governance_overview_api(client: TestClient) -> None:
+    response = client.get("/api/agent-governance/overview", params={"limit": 20})
+    assert response.status_code == 200
+    body = response.json()
+    assert "total" in body
+    assert "enabled_count" in body
+    assert "high_attention_count" in body
+    assert "degraded_count" in body
+    assert "average_overall_score" in body
+    assert "average_recent_success_rate" in body
+    assert "items" in body
+
+
+def test_agent_governance_issues_api_and_actions(client: TestClient) -> None:
+    response = client.get("/api/agent-governance/issues", params={"limit": 50})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        first = body[0]
+        assert "issue_id" in first
+        assert "agent_id" in first
+        assert "issue_type" in first
+        assert "severity" in first
+        assert "summary" in first
+        assert "recommended_action" in first
+        assert "target_ui" in first
+        assert "target_api" in first
+
+        filtered = client.get(
+            "/api/agent-governance/issues",
+            params={
+                "agent_id": first["agent_id"],
+                "severity": first["severity"],
+                "issue_type": first["issue_type"],
+            },
+        )
+        assert filtered.status_code == 200
+        filtered_body = filtered.json()
+        assert filtered_body
+        assert all(item["agent_id"] == first["agent_id"] for item in filtered_body)
+        assert all(item["severity"] == first["severity"] for item in filtered_body)
+        assert all(item["issue_type"] == first["issue_type"] for item in filtered_body)
+
+        action_response = client.post(
+            f"/api/agent-governance/issues/{first['issue_id']}/actions",
+            json={"action": "ack", "operator_id": "tester", "comment": "follow up"},
+        )
+        assert action_response.status_code == 200
+        action_body = action_response.json()
+        assert action_body["issue_id"] == first["issue_id"]
+        assert action_body["action"] == "ack"
+        assert action_body["status"] == "acknowledged"
+
+        history_response = client.get(
+            f"/api/agent-governance/issues/{first['issue_id']}/actions"
+        )
+        assert history_response.status_code == 200
+        history = history_response.json()
+        assert history
+        assert history[-1]["issue_id"] == first["issue_id"]
+        assert history[-1]["action"] == "ack"
+
+
 def test_service_tickets_ui_page(client: TestClient) -> None:
     response = client.get("/ui/service-tickets")
     assert response.status_code == 200

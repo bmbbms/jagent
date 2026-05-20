@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.agent_gateway import router as agent_gateway_router
+from app.api.routes.agent_governance import router as agent_governance_router
 from app.api.routes.agent_policies import router as agent_policies_router
 from app.api.routes.agent_profiles import router as agent_profiles_router
 from app.api.routes.audit import router as audit_router
@@ -70,6 +71,7 @@ app.include_router(home_router)
 app.include_router(health_router)
 app.include_router(chat_router, prefix=settings.api_prefix)
 app.include_router(agent_gateway_router, prefix=settings.api_prefix)
+app.include_router(agent_governance_router, prefix=settings.api_prefix)
 app.include_router(agent_policies_router, prefix=settings.api_prefix)
 app.include_router(agent_profiles_router, prefix=settings.api_prefix)
 app.include_router(evaluations_router, prefix=settings.api_prefix)

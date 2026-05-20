@@ -12,6 +12,7 @@ from app.repositories.task_repository import TaskRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.schemas import (
     AgentGovernanceCardResponse,
+    AgentGovernanceIssueResponse,
     AgentGovernanceOverviewResponse,
     AgentEvaluationDimensionAnalyticsResponse,
     AgentEvaluationGovernanceSummaryResponse,
@@ -814,6 +815,98 @@ class EvaluationService:
             health_status_counts=health_status_counts,
             attention_level_counts=attention_level_counts,
             items=items,
+        )
+
+    def build_agent_governance_issues(
+        self,
+        *,
+        agent_profile_service,
+        task_service,
+        biz_domain: str | None = None,
+        enabled: bool | None = None,
+        limit: int = 100,
+    ) -> list[AgentGovernanceIssueResponse]:
+        overview = self.build_agent_governance_overview(
+            agent_profile_service=agent_profile_service,
+            task_service=task_service,
+            biz_domain=biz_domain,
+            enabled=enabled,
+            limit=limit,
+        )
+        issues: list[AgentGovernanceIssueResponse] = []
+        for item in overview.items:
+            issue_type = ""
+            severity = "medium"
+            summary = ""
+            recommended_action = ""
+
+            if item.governance_status in {"blocked", "degraded"}:
+                issue_type = "governance_status"
+                severity = "high" if item.governance_status == "blocked" else "medium"
+                summary = f"治理状态为 {item.governance_status}"
+                recommended_action = "优先排查子 Agent 健康状态、路由策略和能力声明，必要时临时降权。"
+            elif item.attention_level == "high":
+                issue_type = "high_attention"
+                severity = "high"
+                summary = f"高关注 Agent，poor_rate={item.poor_rate}%"
+                recommended_action = "优先处理高优积压建议，并结合近期任务样本复盘路由与执行质量。"
+            elif item.route_issue_count > 0:
+                issue_type = "routing_issue"
+                severity = "medium"
+                summary = f"存在 {item.route_issue_count} 条路由质量相关建议"
+                recommended_action = "优化主 Agent 路由评分、子 Agent 标签和 skill 描述，提升命中率。"
+            elif item.contract_issue_count > 0:
+                issue_type = "contract_issue"
+                severity = "medium"
+                summary = f"存在 {item.contract_issue_count} 条声明契约相关建议"
+                recommended_action = "补齐 skills、MCP、workflow 元数据，增强可发现性和可评估性。"
+            elif item.failed_task_count > 0 and item.success_task_count == 0:
+                issue_type = "task_failure"
+                severity = "high"
+                summary = "近期任务全部失败"
+                recommended_action = "优先检查远程可达性、鉴权配置和下游子 Agent 响应协议。"
+
+            if not issue_type:
+                continue
+
+            issues.append(
+                AgentGovernanceIssueResponse(
+                    issue_id=f"{item.agent_id}:{issue_type}",
+                    agent_id=item.agent_id,
+                    agent_name=item.agent_name,
+                    biz_domain=item.biz_domain,
+                    issue_type=issue_type,
+                    severity=severity,
+                    attention_level=item.attention_level,
+                    health_status=item.health_status,
+                    governance_status=item.governance_status,
+                    summary=summary,
+                    recommended_action=recommended_action,
+                    evidence={
+                        "recent_task_count": item.recent_task_count,
+                        "success_task_count": item.success_task_count,
+                        "failed_task_count": item.failed_task_count,
+                        "evaluation_count": item.evaluation_count,
+                        "average_overall_score": item.average_overall_score,
+                        "poor_rate": item.poor_rate,
+                        "backlog_suggestion_count": item.backlog_suggestion_count,
+                        "high_priority_backlog_count": item.high_priority_backlog_count,
+                        "route_issue_count": item.route_issue_count,
+                        "contract_issue_count": item.contract_issue_count,
+                    },
+                    target_ui=f"/ui/evaluations?agent_id={item.agent_id}",
+                    target_api=f"/api/agent-governance/issues?agent_id={item.agent_id}",
+                )
+            )
+
+        severity_rank = {"high": 0, "medium": 1, "low": 2}
+        return sorted(
+            issues,
+            key=lambda issue: (
+                severity_rank.get(issue.severity, 3),
+                issue.agent_id,
+                issue.issue_type,
+            ),
         )
 
     def list_optimization_suggestions(

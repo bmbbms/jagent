@@ -1171,6 +1171,38 @@ class AgentGovernanceOverviewResponse(BaseModel):
     items: List[AgentGovernanceCardResponse] = Field(default_factory=list)
 
 
+class AgentGovernanceIssueResponse(BaseModel):
+    issue_id: str
+    agent_id: str
+    agent_name: str
+    biz_domain: str
+    issue_type: str
+    severity: str = "medium"
+    attention_level: str = "normal"
+    health_status: str = "unknown"
+    governance_status: str = "healthy"
+    summary: str = ""
+    recommended_action: str = ""
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    target_ui: Optional[str] = None
+    target_api: Optional[str] = None
+
+
+class AgentGovernanceIssueActionRequest(BaseModel):
+    action: str
+    operator_id: str
+    comment: str = ""
+
+
+class AgentGovernanceIssueActionResponse(BaseModel):
+    issue_id: str
+    action: str
+    operator_id: str
+    status: str = "done"
+    message: str = ""
+    performed_at: str = ""
+
+
 class ServiceTicketResponse(BaseModel):
     ticket_id: str
     merchant_id: Optional[str] = None

@@ -24,6 +24,7 @@ def home(
             f"{settings.api_prefix}/chat",
             f"{settings.api_prefix}/agent-gateway/route",
             f"{settings.api_prefix}/agent-gateway/invoke",
+            f"{settings.api_prefix}/agent-governance/overview",
             f"{settings.api_prefix}/agent-policies",
             f"{settings.api_prefix}/agent-profiles",
             f"{settings.api_prefix}/capabilities",
