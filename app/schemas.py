@@ -1257,3 +1257,84 @@ class AgentProfileSyncLogResponse(BaseModel):
     error_message: Optional[str] = None
     start_time: str
     end_time: Optional[str] = None
+
+
+class AgentPolicyResponse(BaseModel):
+    policy_id: str
+    agent_id: str
+    tenant_id: Optional[str] = None
+    allowed_users: List[str] = Field(default_factory=list)
+    allowed_roles: List[str] = Field(default_factory=list)
+    allowed_sources: List[str] = Field(default_factory=list)
+    default_decision: str = "allow"
+    rate_limit: Optional[int] = None
+    audit_required: bool = True
+    enabled: bool = True
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
+
+
+class AgentPolicyUpdateRequest(BaseModel):
+    tenant_id: Optional[str] = None
+    allowed_users: List[str] = Field(default_factory=list)
+    allowed_roles: List[str] = Field(default_factory=list)
+    allowed_sources: List[str] = Field(default_factory=list)
+    default_decision: str = "allow"
+    rate_limit: Optional[int] = None
+    audit_required: bool = True
+    enabled: bool = True
+
+
+class AgentPolicyCheckRequest(BaseModel):
+    agent_id: str
+    tenant_id: Optional[str] = None
+    user_id: str
+    roles: List[str] = Field(default_factory=list)
+    source: Optional[str] = None
+
+
+class AgentPolicyCheckResponse(BaseModel):
+    agent_id: str
+    allowed: bool
+    decision: str
+    reason: str
+    audit_required: bool = True
+    matched_policy_id: Optional[str] = None
+
+
+class AgentGatewayRouteRequest(BaseModel):
+    user_id: str
+    biz_domain: str
+    message: str
+    requested_agent_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    roles: List[str] = Field(default_factory=list)
+    source: Optional[str] = None
+
+
+class AgentGatewayRankedCandidateResponse(BaseModel):
+    agent_id: str
+    agent_name: str
+    score: int
+    matched_skill_ids: List[str] = Field(default_factory=list)
+    reasons: List[str] = Field(default_factory=list)
+    policy_decision: str = "allow"
+
+
+class AgentGatewayFilteredCandidateResponse(BaseModel):
+    agent_id: str
+    decision: str
+    reason: str
+
+
+class AgentGatewayRouteResponse(BaseModel):
+    selected_agent_id: Optional[str] = None
+    selected_agent_name: Optional[str] = None
+    matched_skill_ids: List[str] = Field(default_factory=list)
+    route_reason: str = ""
+    candidate_agent_ids: List[str] = Field(default_factory=list)
+    allowed_agent_ids: List[str] = Field(default_factory=list)
+    filtered_candidates: List[AgentGatewayFilteredCandidateResponse] = Field(default_factory=list)
+    ranked_candidates: List[AgentGatewayRankedCandidateResponse] = Field(default_factory=list)
+    policy_decision: str = "allow"
+    risk_flags: List[str] = Field(default_factory=list)

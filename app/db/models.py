@@ -191,6 +191,25 @@ class AgentProfileSyncLogModel(Base):
     end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class AgentPolicyModel(Base):
+    __tablename__ = "t_agent_policy"
+
+    policy_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(128), index=True)
+    tenant_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    allowed_users: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    allowed_roles: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    allowed_sources: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    default_decision: Mapped[str] = mapped_column(String(16), default="allow")
+    rate_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    audit_required: Mapped[bool] = mapped_column(default=True)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
 class ContactModel(Base):
     __tablename__ = "t_contact_list"
 

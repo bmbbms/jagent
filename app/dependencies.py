@@ -16,6 +16,7 @@ from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.repositories.agent_profile_repository import AgentProfileRepository
+from app.repositories.agent_policy_repository import AgentPolicyRepository
 from app.repositories.external_capability_repository import ExternalCapabilityRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.service_ticket_repository import ServiceTicketRepository
@@ -26,6 +27,8 @@ from app.runtimes.base import AgentRuntime
 from app.runtimes.local import LocalAgentRuntime
 from app.services.audit_service import AuditService
 from app.services.agent_profile_service import AgentProfileSyncService
+from app.services.agent_gateway_routing_service import AgentGatewayRoutingService
+from app.services.agent_policy_service import AgentPolicyService
 from app.services.chat_service import ChatService
 from app.services.evaluation_service import EvaluationService
 from app.services.external_capability_persistence_service import (
@@ -134,6 +137,22 @@ def get_agent_profile_sync_service() -> AgentProfileSyncService:
         settings=get_settings(),
         session_factory=get_session_factory(),
         repository=AgentProfileRepository(),
+    )
+
+
+@lru_cache
+def get_agent_policy_service() -> AgentPolicyService:
+    return AgentPolicyService(
+        session_factory=get_session_factory(),
+        repository=AgentPolicyRepository(),
+    )
+
+
+@lru_cache
+def get_agent_gateway_routing_service() -> AgentGatewayRoutingService:
+    return AgentGatewayRoutingService(
+        agent_profile_service=get_agent_profile_sync_service(),
+        agent_policy_service=get_agent_policy_service(),
     )
 
 
