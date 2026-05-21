@@ -120,6 +120,11 @@
           <div class="empty">等待加载...</div>
         </div>
 
+        <h2>最近评估</h2>
+        <div id="recentEvaluationList" class="list" style="margin-bottom: 18px;">
+          <div class="empty">等待加载...</div>
+        </div>
+
         <h2>评估摘要</h2>
         <div id="evaluationSummary" class="card">
           <div class="empty">等待加载...</div>
@@ -135,6 +140,7 @@
       profileOverview: document.getElementById("profileOverview"),
       declaredSummary: document.getElementById("declaredSummary"),
       recentTaskList: document.getElementById("recentTaskList"),
+      recentEvaluationList: document.getElementById("recentEvaluationList"),
       evaluationSummary: document.getElementById("evaluationSummary"),
     };
 
@@ -203,12 +209,30 @@
       `;
     }
 
+    function renderRecentEvaluations(items) {
+      if (!items.length) {
+        el.recentEvaluationList.innerHTML = `<div class="empty">暂无近期评估。</div>`;
+        return;
+      }
+      el.recentEvaluationList.innerHTML = items.map((item) => `
+        <div class="item">
+          <div class="row"><span class="label">evaluation_id</span><span class="value">${esc(item.evaluation_id)}</span></div>
+          <div class="row"><span class="label">结果</span><span class="value">${esc(item.result_label)}</span></div>
+          <div class="row"><span class="label">总分</span><span class="value">${item.overall_score}</span></div>
+          <div class="row"><span class="label">score_band</span><span class="value">${esc(item.score_band || "-")}</span></div>
+          <div class="row"><span class="label">创建时间</span><span class="value">${esc(item.create_time)}</span></div>
+          <div class="row"><span class="label">摘要</span><span class="value">${esc(item.summary || "-")}</span></div>
+        </div>
+      `).join("");
+    }
+
     async function loadProfile() {
       const agentId = el.agentIdInput.value.trim();
       if (!agentId) return;
-      const [profileResp, tasksResp, evalResp] = await Promise.all([
+      const [profileResp, tasksResp, recentEvalResp, summaryResp] = await Promise.all([
         fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}`),
         fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}/recent-tasks?limit=10`),
+        fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}/recent-evaluations?limit=10`),
         fetch(`/api/agent-profiles/${encodeURIComponent(agentId)}/evaluation-summary`),
       ]);
       if (!profileResp.ok) throw new Error("profile not found");
@@ -216,7 +240,8 @@
       renderOverview(profile);
       renderDeclared(profile);
       renderRecentTasks(tasksResp.ok ? await tasksResp.json() : []);
-      renderEvaluationSummary(evalResp.ok ? await evalResp.json() : { agent_id: agentId });
+      renderRecentEvaluations(recentEvalResp.ok ? await recentEvalResp.json() : []);
+      renderEvaluationSummary(summaryResp.ok ? await summaryResp.json() : { agent_id: agentId });
     }
 
     el.loadBtn.addEventListener("click", () => loadProfile().catch((err) => {

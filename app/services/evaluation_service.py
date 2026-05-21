@@ -377,6 +377,16 @@ class EvaluationService:
             "latest_summary": latest.summary,
         }
 
+    def list_agent_recent_evaluations(
+        self,
+        agent_id: str,
+        *,
+        limit: int = 10,
+    ) -> list[AgentEvaluationSummaryResponse]:
+        evaluations = self.filter_evaluations(agent_id=agent_id)
+        evaluations.sort(key=lambda item: item.create_time, reverse=True)
+        return evaluations[: max(limit, 1)]
+
     def summarize_dimensions(self) -> list[AgentEvaluationDimensionAnalyticsResponse]:
         with self._session_factory() as session:
             details = self._repository.list_all_details(session)

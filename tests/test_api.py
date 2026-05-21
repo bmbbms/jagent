@@ -195,6 +195,19 @@ def test_agent_profile_evaluation_summary_api(client: TestClient) -> None:
     assert "latest_result_label" in body
 
 
+def test_agent_profile_recent_evaluations_api(client: TestClient) -> None:
+    response = client.get("/api/agent-profiles/merchant.qa/recent-evaluations", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        first = body[0]
+        assert "evaluation_id" in first
+        assert "task_id" in first
+        assert "agent_id" in first
+        assert "score_band" in first
+
+
 def test_skills(client: TestClient) -> None:
     response = client.get("/api/skills", params={"biz_domain": "merchant"})
     assert response.status_code == 200

@@ -14,6 +14,7 @@ from app.schemas import (
     AgentProfileEvaluationSummaryResponse,
     AgentProfileDetailResponse,
     AgentProfileResponse,
+    AgentProfileRecentEvaluationResponse,
     AgentProfileRecentTaskResponse,
     AgentProfileSyncLogResponse,
     AgentProfileSyncResponse,
@@ -130,6 +131,32 @@ def get_agent_evaluation_summary(
     if summary is None:
         return AgentProfileEvaluationSummaryResponse(agent_id=agent_id)
     return AgentProfileEvaluationSummaryResponse(**summary)
+
+
+@router.get(
+    "/{agent_id}/recent-evaluations",
+    response_model=list[AgentProfileRecentEvaluationResponse],
+)
+def list_agent_recent_evaluations(
+    agent_id: str,
+    limit: int = Query(default=10, ge=1, le=50),
+    evaluation_service: EvaluationService = Depends(get_evaluation_service),
+) -> list[AgentProfileRecentEvaluationResponse]:
+    evaluations = evaluation_service.list_agent_recent_evaluations(agent_id, limit=limit)
+    result: list[AgentProfileRecentEvaluationResponse] = []
+    for item in evaluations:
+        score_band = "excellent"
+        if item.result_label == "poor" or item.overall_score < 70:
+            score_band = "poor"
+        elif item.result_label == "good" or item.overall_score < 85:
+            score_band = "good"
+        result.append(
+            AgentProfileRecentEvaluationResponse(
+                **item.model_dump(),
+                score_band=score_band,
+            )
+        )
+    return result
 
 
 def _bundle_to_response(bundle: dict) -> AgentProfileDetailResponse:

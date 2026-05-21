@@ -1345,6 +1345,10 @@ class AgentProfileEvaluationSummaryResponse(BaseModel):
     latest_summary: str = ""
 
 
+class AgentProfileRecentEvaluationResponse(AgentEvaluationSummaryResponse):
+    score_band: str = "unknown"
+
+
 class AgentProfileSyncResponse(BaseModel):
     sync_id: str
     namespace: str = "public"
