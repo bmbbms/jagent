@@ -268,17 +268,16 @@ def test_nacos_registry_service_maps_remote_mcp_servers() -> None:
     assert items[0].call_count == 2
 
 
-def test_skill_catalog_service_merges_local_and_remote_skills() -> None:
-    local_registry = SkillRegistry([])
+def test_skill_catalog_service_uses_remote_skills_in_nacos_mode() -> None:
     nacos_service = NacosRegistryService(
         Settings(
             nacos_ai_enabled=True,
             nacos_ai_server_address="http://127.0.0.1:8848",
         ),
-        local_registry,
+        None,
     )
     catalog = SkillCatalogService(
-        registry=local_registry,
+        registry=SkillRegistry([]),
         nacos_registry_service=nacos_service,
     )
 

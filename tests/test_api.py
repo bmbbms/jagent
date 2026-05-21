@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import app
 
 
@@ -235,8 +236,12 @@ def test_skills(client: TestClient) -> None:
     )
     assert capability_filtered_response.status_code == 200
     capability_filtered_body = capability_filtered_response.json()
-    assert capability_filtered_body
-    assert {item["skill_id"] for item in capability_filtered_body} == {"quota_review"}
+    if get_settings().nacos_ai_enabled:
+        assert capability_filtered_body
+        assert {item["skill_id"] for item in capability_filtered_body} == {"quota_review"}
+    else:
+        assert capability_filtered_body
+        assert {item["skill_id"] for item in capability_filtered_body} == {"quota_review"}
 
 
 def test_skill_detail(client: TestClient) -> None:

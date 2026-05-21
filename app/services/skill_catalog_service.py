@@ -25,29 +25,21 @@ class SkillCatalogService:
         skill_ids: Iterable[str] | None = None,
     ) -> list[SkillInfo]:
         skill_id_set = set(skill_ids) if skill_ids is not None else None
-        local_items = self._registry.describe_skills(
+        if self._nacos_registry_service is not None:
+            return self._nacos_registry_service.list_remote_skill_infos(
+                biz_domain=biz_domain,
+                allowed_tool=allowed_tool,
+                has_human_escalation=has_human_escalation,
+                skill_ids=skill_id_set,
+            )
+        return self._registry.describe_skills(
             biz_domain,
             allowed_tool=allowed_tool,
             has_human_escalation=has_human_escalation,
             skill_ids=skill_id_set,
         )
-        merged: dict[str, SkillInfo] = {item.skill_id: item for item in local_items}
-
-        if self._nacos_registry_service is not None:
-            for item in self._nacos_registry_service.list_remote_skill_infos(
-                biz_domain=biz_domain,
-                allowed_tool=allowed_tool,
-                has_human_escalation=has_human_escalation,
-                skill_ids=skill_id_set,
-            ):
-                merged.setdefault(item.skill_id, item)
-
-        return sorted(merged.values(), key=lambda item: item.skill_id)
 
     def get_skill(self, skill_id: str) -> SkillDetailInfo | None:
-        local_item = self._registry.describe_skill(skill_id)
-        if local_item is not None:
-            return local_item
         if self._nacos_registry_service is None:
-            return None
+            return self._registry.describe_skill(skill_id)
         return self._nacos_registry_service.get_remote_skill_detail(skill_id)

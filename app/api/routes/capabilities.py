@@ -2,12 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_capability_registry, get_task_service
 from app.registry.base import CapabilityResolver
-from app.schemas import (
-    AgentTaskSummaryResponse,
-    BizDomain,
-    CapabilityInfo,
-    CapabilityOverviewResponse,
-)
+from app.schemas import AgentTaskSummaryResponse, BizDomain, CapabilityInfo, CapabilityOverviewResponse
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/capabilities", tags=["capabilities"])

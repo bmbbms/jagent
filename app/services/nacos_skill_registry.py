@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import json
-import re
-from typing import Any
+from typing import Any, Iterable
 
 from app.config import Settings
 from app.registry.nacos_ai_client import NacosAiHttpClient
-from app.schemas import BizDomain, MCPToolInfo, SkillDetailInfo, SkillInfo
-from app.services.skill_registry import SkillRegistry
+from app.schemas import BizDomain, SkillDetailInfo, SkillInfo
+from app.services.skill_registry import SkillRuntimeSpec
 
 
-class NacosRegistryService:
-    def __init__(self, settings: Settings, skill_registry: SkillRegistry | None) -> None:
+class NacosSkillRegistry:
+    def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._skill_registry = skill_registry or SkillRegistry([])
         self._client = NacosAiHttpClient(
             settings.nacos_ai_server_address or settings.nacos_server_address,
             namespace_id=settings.nacos_ai_namespace or settings.nacos_namespace,
@@ -21,56 +19,13 @@ class NacosRegistryService:
             password=settings.nacos_ai_password or settings.nacos_password,
         )
 
-    def get_overview(self) -> dict[str, object]:
-        skill_count = 0
-        mcp_count = 0
-        agent_count = 0
-        if self._settings.nacos_ai_enabled:
-            try:
-                agent_count = len(
-                    self._client.list_agent_cards(page_size=self._settings.nacos_ai_page_size)
-                )
-            except Exception:
-                agent_count = 0
-            try:
-                skill_count = len(
-                    self._client.list_skills(page_size=self._settings.nacos_ai_page_size)
-                )
-            except Exception:
-                skill_count = 0
-            try:
-                mcp_count = len(
-                    self._client.list_mcp_servers(page_size=self._settings.nacos_ai_page_size)
-                )
-            except Exception:
-                mcp_count = 0
-        return {
-            "backend": "nacos" if self._settings.nacos_ai_enabled else "local",
-            "enabled": self._settings.nacos_ai_enabled,
-            "server_address": self._settings.nacos_ai_server_address
-            or self._settings.nacos_server_address,
-            "namespace": self._settings.nacos_ai_namespace or self._settings.nacos_namespace,
-            "agent_count": agent_count,
-            "skill_count": skill_count,
-            "mcp_count": mcp_count,
-        }
-
-    def list_agent_cards(self):
-        return self._client.list_agent_cards(page_size=self._settings.nacos_ai_page_size)
-
-    def list_skills(self):
-        return self._client.list_skills(page_size=self._settings.nacos_ai_page_size)
-
-    def list_mcp_servers(self):
-        return self._client.list_mcp_servers(page_size=self._settings.nacos_ai_page_size)
-
-    def list_remote_skill_infos(
+    def describe_skills(
         self,
-        *,
         biz_domain: BizDomain | None = None,
+        *,
         allowed_tool: str | None = None,
         has_human_escalation: bool | None = None,
-        skill_ids: set[str] | None = None,
+        skill_ids: Iterable[str] | None = None,
     ) -> list[SkillInfo]:
         items = [
             self._map_skill_detail_payload(payload)
@@ -79,7 +34,8 @@ class NacosRegistryService:
         if biz_domain is not None:
             items = [item for item in items if item.biz_domain == biz_domain]
         if skill_ids is not None:
-            items = [item for item in items if item.skill_id in skill_ids]
+            skill_id_set = set(skill_ids)
+            items = [item for item in items if item.skill_id in skill_id_set]
         if allowed_tool:
             items = [item for item in items if allowed_tool in item.allowed_tools]
         if has_human_escalation is not None:
@@ -101,9 +57,7 @@ class NacosRegistryService:
             for item in items
         ]
 
-    def get_remote_skill_detail(self, skill_id: str) -> SkillDetailInfo | None:
-        if not self._settings.nacos_ai_enabled:
-            return None
+    def describe_skill(self, skill_id: str) -> SkillDetailInfo | None:
         payload = self._client.get_skill_detail(skill_id)
         if payload:
             return self._map_skill_detail_payload(payload)
@@ -112,16 +66,28 @@ class NacosRegistryService:
                 return self._map_skill_detail_payload(item)
         return None
 
-    def list_remote_mcp_tools(
-        self,
-        usage_map: dict[str, dict[str, object]] | None = None,
-    ) -> list[MCPToolInfo]:
-        usage_map = usage_map or {}
-        items = [
-            self._map_mcp_tool_payload(payload, usage_map=usage_map)
-            for payload in self._safe_list_mcp_servers()
-        ]
-        items.sort(key=lambda item: item.tool_id)
+    def load_runtime_skills(self, skill_ids: Iterable[str]) -> list[SkillRuntimeSpec]:
+        items: list[SkillRuntimeSpec] = []
+        for skill_id in skill_ids:
+            detail = self.describe_skill(skill_id)
+            if detail is None:
+                continue
+            items.append(
+                SkillRuntimeSpec(
+                    skill_id=detail.skill_id,
+                    biz_domain=detail.biz_domain,
+                    name=detail.name,
+                    path=detail.path,
+                    purpose=detail.purpose,
+                    when_to_use=list(detail.when_to_use),
+                    required_inputs=list(detail.required_inputs),
+                    steps=list(detail.steps),
+                    output_fields=list(detail.output_fields),
+                    allowed_tools=list(detail.allowed_tools),
+                    human_escalation=list(detail.human_escalation),
+                    content=json.dumps(detail.model_dump(mode="json"), ensure_ascii=False),
+                )
+            )
         return items
 
     def _safe_list_skills(
@@ -136,16 +102,6 @@ class NacosRegistryService:
             return self._client.list_skills(
                 skill_name=skill_name,
                 page_size=page_size or self._settings.nacos_ai_page_size,
-            )
-        except Exception:
-            return []
-
-    def _safe_list_mcp_servers(self) -> list[dict[str, Any]]:
-        if not self._settings.nacos_ai_enabled:
-            return []
-        try:
-            return self._client.list_mcp_servers(
-                page_size=self._settings.nacos_ai_page_size
             )
         except Exception:
             return []
@@ -193,58 +149,8 @@ class NacosRegistryService:
             ),
         )
 
-    def _map_mcp_tool_payload(
-        self,
-        payload: dict[str, Any],
-        *,
-        usage_map: dict[str, dict[str, object]],
-    ) -> MCPToolInfo:
-        metadata = self._coerce_dict(payload.get("metadata"))
-        server_name = self._mcp_payload_name(payload)
-        tool_id = f"nacos_mcp_{_slugify(server_name)}"
-        usage = usage_map.get(tool_id, {})
-        transport = str(
-            payload.get("transport")
-            or payload.get("transportType")
-            or metadata.get("transport")
-            or metadata.get("protocol")
-            or "http"
-        )
-        command = (
-            payload.get("url")
-            or payload.get("endpoint")
-            or metadata.get("url")
-            or metadata.get("endpoint")
-            or payload.get("command")
-            or metadata.get("command")
-        )
-        version = str(payload.get("version") or payload.get("latestPublishedVersion") or "").strip()
-        config_path = f"nacos://mcp/{server_name}"
-        if version:
-            config_path = f"{config_path}:{version}"
-
-        return MCPToolInfo(
-            tool_id=tool_id,
-            provider=str(payload.get("provider") or server_name or "nacos"),
-            description=str(payload.get("description") or metadata.get("description") or ""),
-            transport=transport,
-            command=str(command) if command else None,
-            args=self._coerce_list(payload.get("args") or metadata.get("args")),
-            enabled=self._coerce_enabled(payload, metadata),
-            config_path=config_path,
-            call_count=int(usage.get("call_count", 0)),
-            success_count=int(usage.get("success_count", 0)),
-            failure_count=int(usage.get("failure_count", 0)),
-            last_status=self._coerce_optional_str(usage.get("last_status")),
-            last_called_at=self._coerce_optional_str(usage.get("last_called_at")),
-            average_duration_ms=self._coerce_optional_int(usage.get("average_duration_ms")),
-        )
-
-    def _infer_biz_domain(
-        self,
-        payload: dict[str, Any],
-        metadata: dict[str, Any],
-    ) -> BizDomain:
+    @staticmethod
+    def _infer_biz_domain(payload: dict[str, Any], metadata: dict[str, Any]) -> BizDomain:
         candidates = [
             metadata.get("biz_domain"),
             metadata.get("bizDomain"),
@@ -254,19 +160,21 @@ class NacosRegistryService:
             payload.get("domain"),
         ]
         for value in candidates:
-            domain = self._match_biz_domain(value)
+            domain = NacosSkillRegistry._match_biz_domain(value)
             if domain is not None:
                 return domain
 
-        tags = self._coerce_list(payload.get("tags")) + self._coerce_list(metadata.get("tags"))
+        tags = NacosSkillRegistry._coerce_list(payload.get("tags")) + NacosSkillRegistry._coerce_list(
+            metadata.get("tags")
+        )
         for value in tags:
-            domain = self._match_biz_domain(value)
+            domain = NacosSkillRegistry._match_biz_domain(value)
             if domain is not None:
                 return domain
 
-        skill_name = self._skill_payload_name(payload)
+        skill_name = NacosSkillRegistry._skill_payload_name(payload)
         for value in skill_name.split(".") + skill_name.split("-") + skill_name.split("_"):
-            domain = self._match_biz_domain(value)
+            domain = NacosSkillRegistry._match_biz_domain(value)
             if domain is not None:
                 return domain
         return BizDomain.merchant
@@ -278,15 +186,6 @@ class NacosRegistryService:
             or payload.get("name")
             or payload.get("id")
             or ""
-        ).strip()
-
-    @staticmethod
-    def _mcp_payload_name(payload: dict[str, Any]) -> str:
-        return str(
-            payload.get("mcpName")
-            or payload.get("name")
-            or payload.get("id")
-            or "remote_mcp"
         ).strip()
 
     @staticmethod
@@ -326,37 +225,6 @@ class NacosRegistryService:
         return [str(value).strip()] if str(value).strip() else []
 
     @staticmethod
-    def _coerce_enabled(payload: dict[str, Any], metadata: dict[str, Any]) -> bool:
-        status = str(payload.get("status") or metadata.get("status") or "").strip().lower()
-        if status in {"disabled", "inactive", "down", "offline"}:
-            return False
-        enabled_value = payload.get("enabled", metadata.get("enabled"))
-        if isinstance(enabled_value, bool):
-            return enabled_value
-        if isinstance(enabled_value, str):
-            if enabled_value.lower() in {"false", "0", "no"}:
-                return False
-            if enabled_value.lower() in {"true", "1", "yes"}:
-                return True
-        return True
-
-    @staticmethod
-    def _coerce_optional_str(value: Any) -> str | None:
-        if value is None:
-            return None
-        text = str(value).strip()
-        return text or None
-
-    @staticmethod
-    def _coerce_optional_int(value: Any) -> int | None:
-        if value is None:
-            return None
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return None
-
-    @staticmethod
     def _match_biz_domain(value: Any) -> BizDomain | None:
         if value is None:
             return None
@@ -372,8 +240,3 @@ class NacosRegistryService:
             "partner": BizDomain.partner,
         }
         return alias_map.get(normalized)
-
-
-def _slugify(value: str) -> str:
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", value.strip().lower())
-    return normalized.strip("_") or "remote"

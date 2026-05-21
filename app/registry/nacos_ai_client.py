@@ -25,7 +25,10 @@ class NacosAiHttpClient:
         username: str = "",
         password: str = "",
     ) -> None:
-        self.base_url = base_url.rstrip("/")
+        normalized_base_url = base_url.strip()
+        if normalized_base_url and not normalized_base_url.startswith(("http://", "https://")):
+            normalized_base_url = f"http://{normalized_base_url}"
+        self.base_url = normalized_base_url.rstrip("/")
         self.namespace_id = namespace_id
         self.timeout = timeout
         self.username = username

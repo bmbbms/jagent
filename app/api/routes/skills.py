@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_capability_registry, get_skill_catalog_service
-from app.registry.composite_registry import CompositeCapabilityRegistry
-
+from app.registry.base import CapabilityResolver
 from app.schemas import BizDomain, SkillDetailInfo, SkillInfo
 from app.services.skill_catalog_service import SkillCatalogService
 
@@ -16,7 +15,7 @@ def list_skills(
     has_human_escalation: bool | None = Query(default=None),
     capability_id: str | None = Query(default=None),
     service: SkillCatalogService = Depends(get_skill_catalog_service),
-    capability_registry: CompositeCapabilityRegistry = Depends(get_capability_registry),
+    capability_registry: CapabilityResolver = Depends(get_capability_registry),
 ) -> list[SkillInfo]:
     bound_skill_ids: list[str] | None = None
     if capability_id:
@@ -30,7 +29,7 @@ def list_skills(
         )
         if metadata is None:
             return []
-        bound_skill_ids = metadata.skills
+        bound_skill_ids = list(metadata.skills)
     return service.list_skills(
         biz_domain,
         allowed_tool=allowed_tool,

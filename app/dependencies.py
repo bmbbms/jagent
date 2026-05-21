@@ -12,6 +12,7 @@ from app.registry.composite_registry import CompositeCapabilityRegistry
 from app.registry.local_registry import LocalCapabilityRegistry
 from app.registry.manual_remote_registry import ManualRemoteCapabilityRegistry
 from app.registry.nacos_registry import NacosCapabilityRegistry
+from app.registry.null_registry import NullCapabilityRegistry
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.evaluation_repository import EvaluationRepository
@@ -48,6 +49,7 @@ from app.services.observation_service import ObservationService
 from app.services.service_ticket_service import ServiceTicketService
 from app.services.skill_catalog_service import SkillCatalogService
 from app.services.skill_registry import SkillRegistry
+from app.services.nacos_skill_registry import NacosSkillRegistry
 from app.services.task_service import TaskService
 from app.services.tool_execution_service import ToolExecutionService
 from app.services.tool_execution_log_service import ToolExecutionLogService
@@ -79,18 +81,20 @@ def get_manual_remote_registry() -> ManualRemoteCapabilityRegistry:
 @lru_cache
 def get_capability_registry() -> CompositeCapabilityRegistry:
     settings = get_settings()
-    local_registry = LocalCapabilityRegistry()
     secondary_registries = [get_manual_remote_registry()]
     if settings.capability_registry_backend == "nacos" or settings.nacos_ai_enabled:
         secondary_registries.append(NacosCapabilityRegistry(settings))
 
     registry = CompositeCapabilityRegistry(
-        local_registry=local_registry,
+        local_registry=LocalCapabilityRegistry()
+        if not settings.nacos_ai_enabled
+        else NullCapabilityRegistry(),
         secondary_registries=secondary_registries,
     )
     set_active_registrar(registry)
 
-    load_capability_modules(settings.capability_module_packages)
+    if not settings.nacos_ai_enabled:
+        load_capability_modules(settings.capability_module_packages)
 
     return registry
 
@@ -108,7 +112,9 @@ def get_agent_runtime() -> AgentRuntime:
     settings = get_settings()
     if settings.agent_runtime == "agentscope":
         return AgentScopeAgentRuntime(
-            skill_registry=get_skill_registry(),
+            skill_registry=get_nacos_skill_registry()
+            if settings.nacos_ai_enabled
+            else get_skill_registry(),
             settings=settings,
             tool_execution_service=get_tool_execution_service(),
             observation_service=get_observation_service(),
@@ -290,21 +296,37 @@ def get_service_ticket_service() -> ServiceTicketService:
 @lru_cache
 def get_skill_registry() -> SkillRegistry:
     settings = get_settings()
+    if settings.nacos_ai_enabled:
+        return SkillRegistry([])
     return SkillRegistry.from_directory(settings.skill_root)
 
 
 @lru_cache
 def get_skill_catalog_service() -> SkillCatalogService:
+    settings = get_settings()
+    if settings.nacos_ai_enabled:
+        return SkillCatalogService(
+            registry=get_nacos_skill_registry(),
+            nacos_registry_service=None,
+        )
     return SkillCatalogService(
         registry=get_skill_registry(),
-        nacos_registry_service=get_nacos_registry_service(),
+        nacos_registry_service=None,
     )
 
 
 @lru_cache
 def get_nacos_registry_service() -> NacosRegistryService:
     settings = get_settings()
-    return NacosRegistryService(settings, get_skill_registry())
+    return NacosRegistryService(
+        settings,
+        get_nacos_skill_registry() if settings.nacos_ai_enabled else None,
+    )
+
+
+@lru_cache
+def get_nacos_skill_registry() -> NacosSkillRegistry:
+    return NacosSkillRegistry(get_settings())
 
 
 @lru_cache
