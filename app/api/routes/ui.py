@@ -13,6 +13,12 @@ def task_realtime_page() -> FileResponse:
     return FileResponse(page_path)
 
 
+@router.get("/chat")
+def chat_page() -> FileResponse:
+    page_path = Path(__file__).resolve().parents[2] / "static" / "chat-console.html"
+    return FileResponse(page_path)
+
+
 @router.get("/external-agents")
 def external_agent_page() -> FileResponse:
     page_path = (

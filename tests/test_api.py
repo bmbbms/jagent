@@ -737,6 +737,7 @@ def test_task_runtime_governance_overview_api(client: TestClient) -> None:
 def test_task_realtime_ui_page(client: TestClient) -> None:
     response = client.get("/ui/tasks")
     assert response.status_code == 200
+    assert 'id="chatConsoleBtn"' in response.text
     assert 'id="agentManagerBtn"' in response.text
     assert 'id="capabilityCenterBtn"' in response.text
     assert 'id="workflowCenterBtn"' in response.text
@@ -896,6 +897,7 @@ def test_external_agent_governance_issues_support_filters(client: TestClient) ->
 def test_evaluations_ui_page(client: TestClient) -> None:
     response = client.get("/ui/evaluations")
     assert response.status_code == 200
+    assert 'id="agentProfilePageBtn"' in response.text
     assert 'id="evaluationList"' in response.text
     assert 'id="evaluationDetail"' in response.text
     assert 'id="evaluationIdInput"' in response.text

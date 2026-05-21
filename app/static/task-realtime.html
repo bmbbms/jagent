@@ -367,6 +367,7 @@
         <p>这个页面面向二期联调与验收，重点展示任务时间线、工具真实产出、数据访问和评估结果，让“Agent 实际做了什么”可以被直接看见。</p>
       </div>
       <div class="toolbar">
+        <button id="chatConsoleBtn" class="secondary">Chat 控制台</button>
         <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
         <button id="agentProfileBtn" class="secondary">Agent Profile</button>
         <button id="mcpCenterBtn" class="secondary">MCP 中心</button>
@@ -622,6 +623,7 @@
     const el = {
       taskIdInput: document.getElementById("taskIdInput"),
       agentManagerBtn: document.getElementById("agentManagerBtn"),
+      chatConsoleBtn: document.getElementById("chatConsoleBtn"),
       agentProfileBtn: document.getElementById("agentProfileBtn"),
       mcpCenterBtn: document.getElementById("mcpCenterBtn"),
       capabilityCenterBtn: document.getElementById("capabilityCenterBtn"),
@@ -1732,6 +1734,9 @@
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
       window.location.href = "/ui/external-agents";
+    });
+    el.chatConsoleBtn.addEventListener("click", () => {
+      window.location.href = "/ui/chat";
     });
     el.agentProfileBtn.addEventListener("click", () => {
       const agentId = state.task?.selected_agent_id || "";

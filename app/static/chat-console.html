@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat 控制台</title>
+  <style>
+    :root {
+      --bg: #f5f1ea;
+      --panel: #fffdf9;
+      --line: #e4d6c5;
+      --text: #221a13;
+      --muted: #6f6559;
+      --accent: #9a4f25;
+      --shadow: 0 18px 40px rgba(74, 42, 19, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: linear-gradient(180deg, #faf5ed 0%, var(--bg) 100%); }
+    .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 10px 0 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .toolbar input, .toolbar select, .toolbar button, a.btn {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 14px;
+      color: var(--text);
+      font: inherit;
+      text-decoration: none;
+    }
+    .toolbar button, a.btn.primary { background: var(--accent); border: 0; color: #fff; cursor: pointer; font-weight: 700; }
+    .toolbar a.btn.secondary { background: #efe1d0; }
+    .panel {
+      background: rgba(255, 253, 249, 0.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .grid { display: grid; gap: 14px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }
+    .field textarea { min-height: 110px; resize: vertical; }
+    .chat-box {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #fffaf4;
+      border: 1px solid #eadcca;
+      margin-bottom: 14px;
+    }
+    .chat-line {
+      padding: 12px 14px;
+      border-radius: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .user { background: #f1e3d4; }
+    .assistant { background: #ffffff; border: 1px solid #e8dbc9; }
+    .meta { color: var(--muted); font-size: 13px; }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      background: #fff;
+      border: 1px solid #eadcca;
+      border-radius: 14px;
+      padding: 12px;
+      overflow: auto;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>/api/chat 控制台</h1>
+        <p>用于直接发起聊天请求，查看路由结果、任务 ID、评估 ID 和最终回答。</p>
+      </div>
+      <div class="toolbar">
+        <a class="btn secondary" href="/ui/tasks">任务看板</a>
+        <a class="btn secondary" href="/ui/evaluations">评估中心</a>
+        <a class="btn secondary" href="/ui/agent-profiles">Agent Profile</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <section class="panel">
+        <h2>发起请求</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="userIdInput">user_id</label>
+            <input id="userIdInput" value="ui-chat-user" />
+          </div>
+          <div class="field">
+            <label for="bizDomainInput">biz_domain</label>
+            <select id="bizDomainInput">
+              <option value="merchant">merchant</option>
+              <option value="operations">operations</option>
+              <option value="data_support">data_support</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="messageInput">message</label>
+            <textarea id="messageInput" placeholder="输入要发送给 /api/chat 的内容">请帮我解答商户规则问题</textarea>
+          </div>
+          <div class="field">
+            <label for="requestedAgentInput">requested_agent_id（可选）</label>
+            <input id="requestedAgentInput" placeholder="例如 merchant.qa" />
+          </div>
+          <button id="sendBtn">发送</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>响应结果</h2>
+        <div id="resultBox" class="chat-box">
+          <div class="meta">等待请求...</div>
+        </div>
+        <h2>路由与评估</h2>
+        <pre id="traceBox">{}</pre>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const el = {
+      userIdInput: document.getElementById("userIdInput"),
+      bizDomainInput: document.getElementById("bizDomainInput"),
+      messageInput: document.getElementById("messageInput"),
+      requestedAgentInput: document.getElementById("requestedAgentInput"),
+      sendBtn: document.getElementById("sendBtn"),
+      resultBox: document.getElementById("resultBox"),
+      traceBox: document.getElementById("traceBox"),
+    };
+
+    async function sendChat() {
+      el.resultBox.innerHTML = `<div class="meta">请求中...</div>`;
+      el.traceBox.textContent = "{}";
+      const payload = {
+        user_id: el.userIdInput.value.trim(),
+        biz_domain: el.bizDomainInput.value,
+        message: el.messageInput.value.trim(),
+        metadata: {},
+      };
+      const requestedAgentId = el.requestedAgentInput.value.trim();
+      if (requestedAgentId) payload.metadata.requested_agent_id = requestedAgentId;
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.detail || "chat failed");
+      el.resultBox.innerHTML = `
+        <div class="chat-line user"><strong>用户：</strong>${escapeHtml(payload.message)}</div>
+        <div class="chat-line assistant"><strong>助手：</strong>${escapeHtml(data.summary || "")}</div>
+        <div class="meta">task_id: ${escapeHtml(data.task_id || "-")} | evaluation_id: ${escapeHtml(data.evaluation_id || "-")} | capability_id: ${escapeHtml(data.capability_id || "-")}</div>
+      `;
+      el.traceBox.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    el.sendBtn.addEventListener("click", () => sendChat().catch((err) => {
+      alert(err.message || "发送失败");
+    }));
+  </script>
+</body>
+</html>
