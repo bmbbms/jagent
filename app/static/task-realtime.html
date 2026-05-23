@@ -368,7 +368,7 @@
       </div>
       <div class="toolbar">
         <button id="chatConsoleBtn" class="secondary">Chat 控制台</button>
-        <button id="agentManagerBtn" class="secondary">外部 Agent 管理</button>
+        <button id="agentManagerBtn" class="secondary">Agent 资源中心</button>
         <button id="agentProfileBtn" class="secondary">Agent Profile</button>
         <button id="mcpCenterBtn" class="secondary">MCP 中心</button>
         <button id="capabilityCenterBtn" class="secondary">Capability 中心</button>
@@ -1733,7 +1733,7 @@
 
     el.loadBtn.addEventListener("click", loadAndConnect);
     el.agentManagerBtn.addEventListener("click", () => {
-      window.location.href = "/ui/external-agents";
+      window.location.href = "/ui/agent-profiles";
     });
     el.chatConsoleBtn.addEventListener("click", () => {
       window.location.href = "/ui/chat";

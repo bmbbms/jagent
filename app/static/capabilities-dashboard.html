@@ -199,11 +199,11 @@
     <div class="header">
       <div>
         <h1>Capability Center</h1>
-        <p>集中查看主 Agent 当前可路由的全部业务能力，包括本地能力与外部注册能力，并支持按来源、风险、审批要求和传输方式做运营筛选。</p>
+        <p>集中查看主控 Agent 当前可路由的 Nacos Agent 能力，支持按业务域、风险、健康状态和 transport 过滤，并联动 Skill、任务和资源视图。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
-        <button id="agentPageBtn" class="secondary">外部 Agent</button>
+        <button id="agentPageBtn" class="secondary">Agent 资源中心</button>
         <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
         <button id="skillPageBtn" class="secondary">Skill 中心</button>
         <button id="mcpPageBtn" class="secondary">MCP 中心</button>
@@ -213,14 +213,6 @@
           <option value="operations">operations</option>
           <option value="data_support">data_support</option>
           <option value="partner">partner</option>
-        </select>
-        <select id="sourceFilter">
-          <option value="">全部来源</option>
-          <option value="local">local</option>
-          <option value="external">external</option>
-          <option value="manual_remote">manual_remote</option>
-          <option value="generic_add">generic_add</option>
-          <option value="nacos">nacos</option>
         </select>
         <select id="riskFilter">
           <option value="">全部 risk</option>
@@ -293,7 +285,6 @@
       skillPageBtn: document.getElementById("skillPageBtn"),
       mcpPageBtn: document.getElementById("mcpPageBtn"),
       domainFilter: document.getElementById("domainFilter"),
-      sourceFilter: document.getElementById("sourceFilter"),
       riskFilter: document.getElementById("riskFilter"),
       approvalFilter: document.getElementById("approvalFilter"),
       transportFilter: document.getElementById("transportFilter"),
@@ -330,7 +321,6 @@
       const pairs = {
         capability_id: state.capabilityId,
         biz_domain: el.domainFilter.value,
-        source: el.sourceFilter.value,
         risk_level: el.riskFilter.value,
         requires_approval: el.approvalFilter.value,
         transport: el.transportFilter.value,
@@ -362,7 +352,7 @@
       el.capabilityOverview.innerHTML = `
         <div class="detail-grid">
           <div class="detail-row"><div class="label">Capability 总数</div><div class="value">${escapeHtml(overview.total)}</div></div>
-          <div class="detail-row"><div class="label">本地 / 外部</div><div class="value">${escapeHtml(overview.local_count)} / ${escapeHtml(overview.external_count)}</div></div>
+          <div class="detail-row"><div class="label">接入来源</div><div class="value">${escapeHtml(Object.entries(overview.source_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
           <div class="detail-row"><div class="label">高风险 / 需审批</div><div class="value">${escapeHtml(overview.high_risk_count)} / ${escapeHtml(overview.approval_required_count)}</div></div>
           <div class="detail-row"><div class="label">健康 / 异常 / 未知</div><div class="value">${escapeHtml(overview.healthy_count)} / ${escapeHtml(overview.unhealthy_count)} / ${escapeHtml(overview.unknown_health_count)}</div></div>
           <div class="detail-row"><div class="label">业务域分布</div><div class="value">${escapeHtml(Object.entries(overview.domain_counts || {}).map(([key, value]) => `${key}:${value}`).join(", ") || "-")}</div></div>
@@ -381,7 +371,7 @@
       if (capability?.source) {
         return capability.source;
       }
-      return getExternalMetadata(capabilityId) ? "external" : "local";
+      return "nacos";
     }
 
     function renderCapabilityList() {
@@ -397,7 +387,7 @@
           <div>
             <span class="tag">${escapeHtml(item.biz_domain)}</span>
             <span class="tag">${escapeHtml(item.capability_id)}</span>
-            <span class="tag ${getCapabilitySource(item.capability_id) === "local" ? "success" : "warning"}">${escapeHtml(getCapabilitySource(item.capability_id))}</span>
+            <span class="tag success">${escapeHtml(getCapabilitySource(item.capability_id))}</span>
             ${item.health_status ? `<span class="tag ${item.health_status === "healthy" ? "success" : item.health_status === "unhealthy" ? "danger" : ""}">health:${escapeHtml(item.health_status)}</span>` : ""}
           </div>
           <div class="subtle">${escapeHtml(item.description || "暂无描述")}</div>
@@ -529,7 +519,7 @@
       }
       if (openExternalAgentBtn) {
         openExternalAgentBtn.addEventListener("click", () => {
-          window.location.href = `/ui/external-agents?capability_id=${encodeURIComponent(item.capability_id)}`;
+          window.location.href = `/ui/agent-profiles?agent_id=${encodeURIComponent(item.capability_id)}`;
         });
       }
       if (openSkillPageBtn && (item.skills || [])[0]) {
@@ -581,20 +571,18 @@
     async function loadCapabilities() {
       const query = new URLSearchParams();
       if (el.domainFilter.value) query.set("biz_domain", el.domainFilter.value);
-      if (el.sourceFilter.value) query.set("source", el.sourceFilter.value);
       if (el.riskFilter.value) query.set("risk_level", el.riskFilter.value);
       if (el.approvalFilter.value) query.set("requires_approval", el.approvalFilter.value);
       if (el.transportFilter.value) query.set("transport", el.transportFilter.value);
       if (el.healthFilter.value) query.set("health_status", el.healthFilter.value);
       if (el.skillFilterInput.value.trim()) query.set("skill_id", el.skillFilterInput.value.trim());
 
-      const [capabilities, externalAgents, overview] = await Promise.all([
+      const [capabilities, overview] = await Promise.all([
         fetchJson(`/api/capabilities?${query.toString()}`),
-        fetchJson("/api/external-agents"),
         fetchJson("/api/capabilities/overview/summary"),
       ]);
       state.capabilities = capabilities;
-      state.externalAgents = externalAgents;
+      state.externalAgents = [];
       renderOverview(overview);
       renderCapabilityList();
       updateQuery();
@@ -632,7 +620,6 @@
       state.capabilityId = query.get("capability_id") || "";
       el.capabilityIdInput.value = state.capabilityId;
       el.domainFilter.value = query.get("biz_domain") || "";
-      el.sourceFilter.value = query.get("source") || "";
       el.riskFilter.value = query.get("risk_level") || "";
       el.approvalFilter.value = query.get("requires_approval") || "";
       el.transportFilter.value = query.get("transport") || "";
@@ -652,7 +639,7 @@
       window.location.href = "/ui/tasks";
     });
     el.agentPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/external-agents";
+      window.location.href = "/ui/agent-profiles";
     });
     el.workflowPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/workflows";
@@ -663,7 +650,7 @@
     el.mcpPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/mcp";
     });
-    [el.domainFilter, el.sourceFilter, el.riskFilter, el.approvalFilter, el.transportFilter, el.healthFilter].forEach(node => {
+    [el.domainFilter, el.riskFilter, el.approvalFilter, el.transportFilter, el.healthFilter].forEach(node => {
       node.addEventListener("change", bootstrap);
     });
     el.skillFilterInput.addEventListener("keydown", async event => {

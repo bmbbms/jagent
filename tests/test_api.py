@@ -775,27 +775,10 @@ def test_task_realtime_ui_page(client: TestClient) -> None:
 def test_external_agent_manager_ui_page(client: TestClient) -> None:
     response = client.get("/ui/external-agents?capability_id=external.stub.agent")
     assert response.status_code == 200
-    assert '/ui/capabilities' in response.text
-    assert '/ui/skills' in response.text
-    assert 'id="listDomainFilter"' in response.text
-    assert 'id="listSourceFilter"' in response.text
-    assert 'id="listRiskFilter"' in response.text
-    assert 'id="listApprovalFilter"' in response.text
-    assert 'id="listTransportFilter"' in response.text
-    assert 'id="listHealthFilter"' in response.text
-    assert 'id="listCapabilityFilter"' in response.text
-    assert 'id="healthOverview"' in response.text
-    assert 'id="governanceOverview"' in response.text
-    assert 'id="governanceIssueList"' in response.text
-    assert 'id="agentUrlInput"' in response.text
-    assert 'id="capabilityNameInput"' in response.text
-    assert 'id="discoverBtn"' in response.text
-    assert 'id="addBtn"' in response.text
-    assert 'id="updateBtn"' in response.text
-    assert 'id="healthCheckBtn"' in response.text
-    assert 'id="verifyBtn"' in response.text
-    assert 'id="agentList"' in response.text
-    assert 'id="recentTaskList"' in response.text
+    assert 'id="agentIdInput"' in response.text
+    assert 'id="loadBtn"' in response.text
+    assert "/ui/chat" in response.text
+    assert "/ui/evaluations" in response.text
 
 
 def test_external_agent_recent_tasks_api(client: TestClient) -> None:
@@ -1151,6 +1134,7 @@ def test_skills_ui_page(client: TestClient) -> None:
     assert 'id="capabilityFilterInput"' in response.text
     assert 'id="skillIdInput"' in response.text
     assert 'id="loadBtn"' in response.text
+    assert "/ui/agent-profiles" in response.text
 
 
 def test_capabilities_ui_page(client: TestClient) -> None:
@@ -1161,13 +1145,13 @@ def test_capabilities_ui_page(client: TestClient) -> None:
     assert 'id="capabilityDetail"' in response.text
     assert 'id="capabilityRecentTaskList"' in response.text
     assert 'id="domainFilter"' in response.text
-    assert 'id="sourceFilter"' in response.text
     assert 'id="riskFilter"' in response.text
     assert 'id="approvalFilter"' in response.text
     assert 'id="transportFilter"' in response.text
     assert 'id="healthFilter"' in response.text
     assert 'id="skillFilterInput"' in response.text
     assert 'id="capabilityIdInput"' in response.text
+    assert "/ui/agent-profiles" in response.text
 
 
 def test_mcp_ui_page(client: TestClient) -> None:

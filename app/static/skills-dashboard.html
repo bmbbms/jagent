@@ -208,11 +208,11 @@
     <div class="header">
       <div>
         <h1>Skill Center</h1>
-        <p>集中查看 AgentScope runtime 下的 skill 定义，支持按业务域、允许工具和人工升级要求过滤，并联动展示哪些 Agent 已声明依赖该 skill。</p>
+        <p>集中查看 Nacos AI 中心中声明的 skill 资源，支持按业务域、允许工具和人工升级要求过滤，并联动展示哪些 Agent 已声明依赖该 skill。</p>
       </div>
       <div class="toolbar">
         <button id="taskPageBtn" class="secondary">任务面板</button>
-        <button id="agentPageBtn" class="secondary">外部 Agent</button>
+        <button id="agentPageBtn" class="secondary">Agent 资源中心</button>
         <button id="workflowPageBtn" class="secondary">Workflow 中心</button>
         <button id="capabilityPageBtn" class="secondary">Capability 中心</button>
         <button id="mcpPageBtn" class="secondary">MCP 中心</button>
@@ -442,7 +442,7 @@
         <div class="section-split">
           <h2>External Agents</h2>
           <div id="externalAgentList" class="stack">
-            <div class="empty">正在加载外部 Agent...</div>
+            <div class="empty">正在加载 Agent 资源...</div>
           </div>
         </div>
       `;
@@ -467,7 +467,7 @@
         const items = await fetchJson(`/api/external-agents/skills/${encodeURIComponent(skillId)}`);
         state.externalAgents = items;
         if (!items.length) {
-          target.innerHTML = '<div class="empty">当前没有外部 Agent 绑定该 Skill。</div>';
+          target.innerHTML = '<div class="empty">当前没有 Agent 资源绑定该 Skill。</div>';
           return;
         }
         target.innerHTML = items.map(item => `
@@ -481,7 +481,7 @@
             <div class="subtle">${escapeHtml(item.description || "-")}</div>
             <div class="subtle">health: ${escapeHtml(item.health_status || "unknown")} / governance: ${escapeHtml(item.governance_status || "healthy")}</div>
             <div class="actions">
-              <button class="secondary" type="button" data-open-external-agent="${escapeHtml(item.capability_id)}">打开外部 Agent</button>
+              <button class="secondary" type="button" data-open-external-agent="${escapeHtml(item.capability_id)}">打开 Agent 资源</button>
               <button class="secondary" type="button" data-open-skill-from-agent="${escapeHtml(skillId)}">回到 Skill</button>
             </div>
           </div>
@@ -490,7 +490,7 @@
           node.addEventListener("click", () => {
             const capabilityId = node.getAttribute("data-open-external-agent") || "";
             if (!capabilityId) return;
-            window.location.href = `/ui/external-agents?capability_id=${encodeURIComponent(capabilityId)}`;
+            window.location.href = `/ui/agent-profiles?agent_id=${encodeURIComponent(capabilityId)}`;
           });
         });
         target.querySelectorAll("[data-open-skill-from-agent]").forEach(node => {
@@ -501,7 +501,7 @@
           });
         });
       } catch (error) {
-        target.innerHTML = `<div class="empty">外部 Agent 加载失败：${escapeHtml(error.message)}</div>`;
+        target.innerHTML = `<div class="empty">Agent 资源加载失败：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -577,7 +577,7 @@
       window.location.href = "/ui/tasks";
     });
     el.agentPageBtn.addEventListener("click", () => {
-      window.location.href = "/ui/external-agents";
+      window.location.href = "/ui/agent-profiles";
     });
     el.workflowPageBtn.addEventListener("click", () => {
       window.location.href = "/ui/workflows";

@@ -81,7 +81,9 @@ def get_manual_remote_registry() -> ManualRemoteCapabilityRegistry:
 @lru_cache
 def get_capability_registry() -> CompositeCapabilityRegistry:
     settings = get_settings()
-    secondary_registries = [get_manual_remote_registry()]
+    secondary_registries = []
+    if not settings.nacos_ai_enabled:
+        secondary_registries.append(get_manual_remote_registry())
     if settings.capability_registry_backend == "nacos" or settings.nacos_ai_enabled:
         secondary_registries.append(NacosCapabilityRegistry(settings))
 

@@ -22,7 +22,7 @@ def home(
         endpoints=[
             "/health",
             f"{settings.api_prefix}/chat",
-            f"{settings.api_prefix}/ui/chat",
+            "/ui/chat",
             f"{settings.api_prefix}/agent-gateway/route",
             f"{settings.api_prefix}/agent-gateway/invoke",
             f"{settings.api_prefix}/agent-governance/overview",
@@ -31,6 +31,8 @@ def home(
             f"{settings.api_prefix}/capabilities",
             f"{settings.api_prefix}/external-agents",
             f"{settings.api_prefix}/evaluations",
+            f"{settings.api_prefix}/skills",
+            f"{settings.api_prefix}/nacos/overview",
             f"{settings.api_prefix}/tasks",
         ],
     )

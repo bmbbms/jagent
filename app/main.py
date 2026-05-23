@@ -44,12 +44,18 @@ async def lifespan(_: FastAPI):
         get_capability_registry()
         print("[startup] step=capability_registry ok", flush=True)
 
-        print("[startup] step=restore_external_capabilities", flush=True)
-        restored = get_external_capability_persistence_service().restore_into_registry()
-        print(
-            f"[startup] step=restore_external_capabilities ok restored={restored}",
-            flush=True,
-        )
+        if not settings.nacos_ai_enabled:
+            print("[startup] step=restore_external_capabilities", flush=True)
+            restored = get_external_capability_persistence_service().restore_into_registry()
+            print(
+                f"[startup] step=restore_external_capabilities ok restored={restored}",
+                flush=True,
+            )
+        else:
+            print(
+                "[startup] step=restore_external_capabilities skipped in nacos mode",
+                flush=True,
+            )
         print("[startup] initialization complete", flush=True)
     except Exception as exc:
         print(f"[startup] initialization failed: {exc!r}", flush=True)
